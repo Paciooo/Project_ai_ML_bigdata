@@ -69,7 +69,8 @@ def plot_accuracy_bars(results, out_dir, seed):
     ax.set_xticklabels([f.capitalize() for f in freqs])
     ax.set_ylim(0.35, 0.65)
     ax.set_ylabel("Out-of-sample accuracy (test set)")
-    ax.set_title(f"Test accuracy by model and frequency, seed {seed} (error bars: 95% CI)")
+    ax.set_title(f"Test accuracy by model and frequency, seed {seed} "
+                 f"(error bars: approx. 95% binomial CI)")
     ax.legend(fontsize=8, ncol=4, loc="upper left")
     ax.grid(axis="y", alpha=0.3)
     fig.tight_layout()
@@ -79,16 +80,19 @@ def plot_accuracy_bars(results, out_dir, seed):
 
 def plot_results_table(results, out_dir, seed):
     """Render the results table as an image (handy for slides)."""
-    cols = ["frequency", "model", "n_test", "accuracy", "balanced_accuracy", "f1"]
+    cols = ["frequency", "model", "n_test", "accuracy", "acc_vs_baseline_pp", "balanced_accuracy", "f1"]
     tbl = results[cols].copy()
     for c in ["accuracy", "balanced_accuracy", "f1"]:
         tbl[c] = tbl[c].map("{:.3f}".format)
+    tbl["acc_vs_baseline_pp"] = tbl["acc_vs_baseline_pp"].map("{:+.1f} pp".format)
+    tbl.loc[tbl["model"] == "Majority baseline", "acc_vs_baseline_pp"] = "–"
     tbl["n_test"] = tbl["n_test"].map("{:,}".format)
 
-    fig, ax = plt.subplots(figsize=(10, 0.3 * len(tbl) + 0.6))
+    fig, ax = plt.subplots(figsize=(11, 0.3 * len(tbl) + 0.6))
     ax.axis("off")
     t = ax.table(cellText=tbl.values,
-                 colLabels=["Frequency", "Model", "Test obs.", "Accuracy", "Balanced acc.", "F1"],
+                 colLabels=["Frequency", "Model", "Test obs.", "Accuracy", "vs baseline",
+                            "Balanced acc.", "F1"],
                  loc="center", cellLoc="center")
     t.auto_set_font_size(False)
     t.set_fontsize(9)

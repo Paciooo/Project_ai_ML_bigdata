@@ -40,9 +40,9 @@ faster while experimenting, use a single seed: `SEEDS = [42]`.
 |---|---|
 | `config.py` | All parameters (GBM, ticks, seeds, features, split, model hyperparameters) |
 | `data.py` | GBM tick simulation, OHLC aggregation, aggregation checks, CSV loader for real data |
-| `features.py` | Features, UP/DOWN target, chronological 60/20/20 split with gap |
+| `features.py` | Features, UP/DOWN target, common calendar 60/20/20 split with gap |
 | `models.py` | Majority baseline, Logistic Regression, Decision Tree, Random Forest, two small neural networks, XGBoost (optional) |
-| `evaluation.py` | Accuracy, balanced accuracy, F1, confusion matrix |
+| `evaluation.py` | Accuracy, balanced accuracy, F1, confusion matrix, improvement over baseline |
 | `plots.py` | All figures |
 | `main.py` | Runs the full experiment for every seed |
 
@@ -119,14 +119,26 @@ out keeps the synthetic market free of any learnable signal.
 At tick level a "period" is one trade, so these are trade-by-trade features.
 The first 10 rows (warm-up) and the last row (no next price) are dropped.
 
+*Limitation of the tick volatility feature:* trades are irregularly spaced, so
+the last 5 or 10 tick returns cover different amounts of clock time. At tick
+level, `vol_5` and `vol_10` therefore measure volatility per trade, not per
+unit of time. The feature is kept as is for simplicity. When moving to real
+data, consider adding the elapsed time between trades as a feature and
+dividing each tick return by $\sqrt{\Delta t}$ before taking the rolling std.
+
 ### 4. Training and testing
 
-* **Chronological split** for each frequency: 60% train / 20% validation /
-  20% test, with no shuffling.
-* **One-observation gap** between train/validation and validation/test
+* **Common calendar split:** the 1,095 days are split 60% / 20% / 20% into
+  train / validation / test, with no shuffling. The **same dates** apply to
+  tick, hourly and daily data (here: training until 2024-10-18, validation
+  from 2024-10-19, test from 2025-05-26). Every frequency is therefore tested
+  on exactly the same period. A split by observation count would put the
+  boundaries at slightly different times, because ticks arrive irregularly.
+* **One-observation gap** at the start of validation and of test
   (`SPLIT_GAP = 1`). The label at time $t$ uses the price at $t+1$. Without
   the gap, the last training label would depend on the first price of the
-  validation period.
+  validation period. The gap is one observation at each frequency: one trade,
+  one hour or one day.
 * **No leakage from scaling:** every model sits in a
   `Pipeline(StandardScaler → model)`, so the scaling statistics are fitted on
   the training set only.
@@ -149,6 +161,22 @@ The first 10 rows (warm-up) and the last row (no next price) are dropped.
   with the same parameters. The mean and the spread across seeds show how much
   of any single result is luck.
 
+### How results are reported
+
+* **Improvement over baseline** (`acc_vs_baseline_pp`): the model's test
+  accuracy minus the majority baseline's accuracy on the same test sample, in
+  percentage points. This is the headline number, because a model is only
+  useful if it beats the trivial rule. It is reported for each seed, and as
+  mean ± std across seeds, together with how many of the 5 seeds the model
+  beat the baseline on.
+* **Balanced accuracy:** the baseline always scores exactly 0.500, so balanced
+  accuracy above 0.5 also means "better than the baseline".
+* **Accuracy ± 95% interval** (`acc_ci95`): the normal approximation to the
+  binomial. It is only a rough guide to how much accuracy moves by chance
+  alone on a test set of that size. It is **not** a test of whether a model
+  beats the baseline; use the improvement and its variation across seeds for
+  that.
+
 ### Models highlighted in the presentation
 
 All seven models stay in the code. The presentation focuses on four, which go
@@ -161,69 +189,70 @@ hidden layer → NN with 3 hidden layers**, compared with the majority baseline.
 
 ### Across 5 seeds (main result)
 
-Test accuracy over five independent GBM paths:
+Mean ± std over five independent GBM paths. "Beats baseline" counts the seeds
+on which the model's test accuracy was above the baseline's.
 
-| Frequency | Model | Mean accuracy | Std across seeds | Min – max | Mean balanced acc. |
+| Frequency | Model | Accuracy | Improvement over baseline (pp) | Beats baseline | Balanced acc. |
 |---|---|---|---|---|---|
-| tick | Majority baseline | 0.501 | 0.002 | 0.498 – 0.503 | 0.500 |
-| tick | Logistic Regression | 0.499 | 0.002 | 0.496 – 0.501 | 0.499 |
-| tick | Random Forest | 0.500 | 0.002 | 0.497 – 0.502 | 0.500 |
-| tick | NN 1 layer | 0.499 | 0.001 | 0.499 – 0.500 | 0.500 |
-| tick | NN 3 layers | 0.501 | 0.001 | 0.500 – 0.503 | 0.501 |
-| hourly | Majority baseline | 0.506 | 0.005 | 0.499 – 0.511 | 0.500 |
-| hourly | Logistic Regression | 0.500 | 0.007 | 0.490 – 0.506 | 0.499 |
-| hourly | Random Forest | 0.495 | 0.009 | 0.488 – 0.510 | 0.494 |
-| hourly | NN 1 layer | 0.497 | 0.006 | 0.489 – 0.506 | 0.497 |
-| hourly | NN 3 layers | 0.504 | 0.005 | 0.498 – 0.509 | 0.503 |
-| daily | Majority baseline | 0.514 | 0.055 | 0.454 – 0.593 | 0.500 |
-| daily | Logistic Regression | 0.502 | 0.039 | 0.454 – 0.556 | 0.500 |
-| daily | Random Forest | 0.486 | 0.043 | 0.440 – 0.532 | 0.489 |
-| daily | NN 1 layer | 0.527 | 0.031 | 0.491 – 0.569 | 0.525 |
-| daily | NN 3 layers | 0.518 | 0.017 | 0.505 – 0.546 | 0.521 |
+| tick | Majority baseline | 0.501 ± 0.002 | – | – | 0.500 |
+| tick | Logistic Regression | 0.499 ± 0.002 | −0.17 ± 0.06 | 0 / 5 | 0.499 |
+| tick | Random Forest | 0.501 ± 0.003 | −0.03 ± 0.23 | 2 / 5 | 0.501 |
+| tick | NN 1 layer | 0.500 ± 0.002 | −0.10 ± 0.16 | 1 / 5 | 0.500 |
+| tick | NN 3 layers | 0.500 ± 0.002 | −0.06 ± 0.16 | 1 / 5 | 0.500 |
+| hourly | Majority baseline | 0.506 ± 0.005 | – | – | 0.500 |
+| hourly | Logistic Regression | 0.500 ± 0.006 | −0.62 ± 0.48 | 0 / 5 | 0.499 |
+| hourly | Random Forest | 0.494 ± 0.010 | −1.24 ± 1.04 | 1 / 5 | 0.493 |
+| hourly | NN 1 layer | 0.496 ± 0.005 | −1.00 ± 0.90 | 1 / 5 | 0.496 |
+| hourly | NN 3 layers | 0.502 ± 0.011 | −0.43 ± 1.41 | 1 / 5 | 0.502 |
+| daily | Majority baseline | 0.515 ± 0.054 | – | – | 0.500 |
+| daily | Logistic Regression | 0.497 ± 0.042 | −1.84 ± 1.38 | 0 / 5 | 0.495 |
+| daily | Random Forest | 0.488 ± 0.047 | −2.77 ± 5.83 | 1 / 5 | 0.491 |
+| daily | NN 1 layer | 0.515 ± 0.019 | +0.00 ± 4.97 | 3 / 5 | 0.514 |
+| daily | NN 3 layers | 0.511 ± 0.006 | −0.46 ± 5.10 | 2 / 5 | 0.513 |
 
 Decision Tree and XGBoost behave the same way; see `results/multi_seed_summary.csv`.
 
 ### Single path in detail (seed 42)
 
-Observations per split: tick ≈ 316k / 105k / 105k; hourly 15,761 / 5,253 / 5,253;
-daily 650 / 216 / 216. Share of UP moves in each split: `results/dataset_summary.csv`.
+Observations per split (train / validation / test): tick 315,933 / 105,343 /
+105,248; hourly 15,758 / 5,255 / 5,254; daily 647 / 218 / 217. Share of UP
+moves in each split: `results/dataset_summary.csv`.
 
-± is the 95% binomial confidence half-width of accuracy, i.e. how much the
-accuracy can vary by chance alone.
-
-| Frequency | Model | Test obs. | Accuracy | Balanced acc. | F1 |
-|---|---|---|---|---|---|
-| tick | Majority baseline | 105,305 | 0.501 ± 0.003 | 0.500 | 0.667 |
-| tick | Logistic Regression | 105,305 | 0.499 ± 0.003 | 0.499 | 0.472 |
-| tick | Decision Tree | 105,305 | 0.501 ± 0.003 | 0.501 | 0.199 |
-| tick | Random Forest | 105,305 | 0.500 ± 0.003 | 0.500 | 0.431 |
-| tick | NN 1 layer | 105,305 | 0.499 ± 0.003 | 0.500 | 0.191 |
-| tick | NN 3 layers | 105,305 | 0.501 ± 0.003 | 0.501 | 0.478 |
-| tick | XGBoost | 105,305 | 0.498 ± 0.003 | 0.498 | 0.469 |
-| hourly | Majority baseline | 5,253 | 0.511 ± 0.013 | 0.500 | 0.677 |
-| hourly | Logistic Regression | 5,253 | 0.499 ± 0.013 | 0.497 | 0.543 |
-| hourly | Decision Tree | 5,253 | 0.489 ± 0.013 | 0.491 | 0.437 |
-| hourly | Random Forest | 5,253 | 0.496 ± 0.013 | 0.494 | 0.535 |
-| hourly | NN 1 layer | 5,253 | 0.493 ± 0.013 | 0.493 | 0.508 |
-| hourly | NN 3 layers | 5,253 | 0.509 ± 0.013 | 0.507 | 0.538 |
-| hourly | XGBoost | 5,253 | 0.505 ± 0.013 | 0.505 | 0.515 |
-| daily | Majority baseline | 216 | 0.542 ± 0.066 | 0.500 | 0.703 |
-| daily | Logistic Regression | 216 | 0.518 ± 0.067 | 0.521 | 0.527 |
-| daily | Decision Tree | 216 | 0.532 ± 0.067 | 0.519 | 0.610 |
-| daily | Random Forest | 216 | 0.532 ± 0.067 | 0.529 | 0.570 |
-| daily | NN 1 layer | 216 | 0.532 ± 0.067 | 0.537 | 0.526 |
-| daily | NN 3 layers | 216 | 0.546 ± 0.066 | 0.545 | 0.574 |
-| daily | XGBoost | 216 | 0.509 ± 0.067 | 0.514 | 0.505 |
+| Frequency | Model | Test obs. | Accuracy ± approx. 95% CI | vs baseline (pp) | Balanced acc. | F1 |
+|---|---|---|---|---|---|---|
+| tick | Majority baseline | 105,248 | 0.501 ± 0.003 | – | 0.500 | 0.667 |
+| tick | Logistic Regression | 105,248 | 0.499 ± 0.003 | −0.2 | 0.499 | 0.472 |
+| tick | Decision Tree | 105,248 | 0.501 ± 0.003 | −0.0 | 0.501 | 0.199 |
+| tick | Random Forest | 105,248 | 0.500 ± 0.003 | −0.0 | 0.500 | 0.431 |
+| tick | NN 1 layer | 105,248 | 0.501 ± 0.003 | −0.0 | 0.501 | 0.430 |
+| tick | NN 3 layers | 105,248 | 0.500 ± 0.003 | −0.1 | 0.500 | 0.419 |
+| tick | XGBoost | 105,248 | 0.499 ± 0.003 | −0.1 | 0.499 | 0.468 |
+| hourly | Majority baseline | 5,254 | 0.511 ± 0.013 | – | 0.500 | 0.677 |
+| hourly | Logistic Regression | 5,254 | 0.499 ± 0.013 | −1.3 | 0.497 | 0.543 |
+| hourly | Decision Tree | 5,254 | 0.489 ± 0.013 | −2.2 | 0.491 | 0.436 |
+| hourly | Random Forest | 5,254 | 0.494 ± 0.013 | −1.7 | 0.493 | 0.529 |
+| hourly | NN 1 layer | 5,254 | 0.496 ± 0.013 | −1.6 | 0.494 | 0.532 |
+| hourly | NN 3 layers | 5,254 | 0.508 ± 0.013 | −0.3 | 0.508 | 0.508 |
+| hourly | XGBoost | 5,254 | 0.500 ± 0.013 | −1.1 | 0.499 | 0.511 |
+| daily | Majority baseline | 217 | 0.539 ± 0.066 | – | 0.500 | 0.701 |
+| daily | Logistic Regression | 217 | 0.521 ± 0.067 | −1.8 | 0.523 | 0.527 |
+| daily | Decision Tree | 217 | 0.535 ± 0.066 | −0.5 | 0.523 | 0.610 |
+| daily | Random Forest | 217 | 0.535 ± 0.066 | −0.5 | 0.530 | 0.577 |
+| daily | NN 1 layer | 217 | 0.530 ± 0.066 | −0.9 | 0.533 | 0.532 |
+| daily | NN 3 layers | 217 | 0.516 ± 0.067 | −2.3 | 0.519 | 0.520 |
+| daily | XGBoost | 217 | 0.530 ± 0.066 | −0.9 | 0.531 | 0.540 |
 
 F1 is computed for the UP class. When the baseline predicts only UP, its F1 is
 high even though it has no skill; when it predicts only DOWN, its F1 is 0.
-This is why balanced accuracy is the fairer headline metric.
+This is why balanced accuracy and the improvement over baseline are the
+fairer headline metrics.
 
 ### Interpretation
 
-* **No model finds a pattern that isn't there.** Averaged over five
-  independent paths, every model is at about 50% at tick and hourly
-  frequency, with balanced accuracy at 0.49–0.50. Past returns, momentum and
+* **No model beats the baseline.** Averaged over five independent paths, the
+  improvement over the majority baseline is zero or negative for every model
+  at every frequency (from −2.8 to +0.0 pp). No model beats the baseline
+  consistently; the best case is 3 seeds out of 5. Past returns, momentum and
   volatility carry no information about the next move in a GBM market, and
   the pipeline correctly reports that.
 * **More complexity does not help.** Going from Logistic Regression to Random
@@ -231,19 +260,18 @@ This is why balanced accuracy is the fairer headline metric.
   improvement. On hourly and daily data the networks hit the 200-epoch limit
   without converging: they keep fitting noise in the training set
   (overfitting).
-* **Single daily results are mostly luck.** With only 216 daily test
-  observations, the same model on different paths ranges from about 44% to
-  57%. The majority baseline alone ranges from 45% to 59%, depending on
-  whether the test period happened to trend. The daily neural networks'
-  slightly higher mean (0.52–0.53) sits well inside this spread, comes from
-  just five paths and is one of many comparisons, so it is not evidence of
-  skill.
+* **Single daily results are mostly luck.** With only 217 daily test
+  observations, a model's improvement over the baseline on a single path
+  ranges from −12 pp to +6 pp. The baseline's own accuracy ranges from 46%
+  to 59%, depending on whether the test period happened to trend. At tick
+  level the same range is only ±0.3 pp.
 * **The drift is too small to show up.** In theory P(UP) is about 50.03% per
   tick, 50.1% per hour and 50.6% per day, which is smaller than the sampling
   noise.
-* **Lesson for real data:** a reported accuracy is only meaningful next to
-  its chance band and its variability across samples. Here, at the daily
-  frequency, a single backtest could easily show 55% from pure noise.
+* **Lesson for real data:** a result should be judged by its improvement over
+  a simple baseline on the same test period, and by how stable that
+  improvement is across samples. A single daily backtest could easily show
+  55% accuracy from pure noise.
 
 ---
 
@@ -253,15 +281,15 @@ This is why balanced accuracy is the fairer headline metric.
 |---|---|
 | `01_gbm_price_path.png` | Simulated tick path and daily closes (seed 42) |
 | `02_candlesticks.png` | Sample daily and hourly candlestick charts |
-| `03_accuracy_comparison.png` | Test accuracy by model and frequency, seed 42, with 95% CI |
-| `04_results_table.png` | Results table as an image (seed 42, for slides) |
+| `03_accuracy_comparison.png` | Test accuracy by model and frequency, seed 42, with approx. 95% CI |
+| `04_results_table.png` | Results table with improvement over baseline (seed 42, for slides) |
 | `05_rf_feature_importance.png` | Random Forest feature importance per frequency (seed 42) |
 | `06_confusion_matrices.png` | Test-set confusion matrices (seed 42) |
 | `07_multi_seed_accuracy.png` | **Focus models across 5 seeds**: mean ± std, individual seeds, baseline range |
 | `results_table.csv` | Full metrics for seed 42 (test, validation, confusion-matrix counts) |
 | `results_all_seeds.csv` | The same for every seed |
-| `multi_seed_summary.csv` | Mean / std / min / max across seeds |
-| `dataset_summary.csv` | Observations, dropped rows and class distribution per split, per seed |
+| `multi_seed_summary.csv` | Mean / std / min / max across seeds, improvement over baseline, seeds beating it |
+| `dataset_summary.csv` | Observations, period dates, dropped rows and class distribution per split, per seed |
 | `rf_feature_importance.csv` | Feature importance values (seed 42) |
 
 ---

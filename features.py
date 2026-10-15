@@ -24,6 +24,11 @@ def make_features(df, return_lags, momentum_windows, volatility_windows):
     for n in momentum_windows:
         feats[f"mom_{n}"] = log_close - log_close.shift(n)
     for n in volatility_windows:
+        # Note for tick data: trades are irregularly spaced, so these n returns
+        # cover different amounts of clock time. This is volatility per trade,
+        # not per unit of time. Kept as is for simplicity; with real data,
+        # consider adding the elapsed time between trades and scaling returns
+        # by sqrt(elapsed time).
         feats[f"vol_{n}"] = r.rolling(n).std()
     return feats
 
@@ -58,18 +63,33 @@ def build_dataset(df, return_lags, momentum_windows, volatility_windows):
     return X[valid], y[valid].astype(int), info
 
 
-def chronological_split(X, y, train_frac, val_frac, gap=1):
-    """Split into train / validation / test in time order (no shuffling).
+def calendar_boundaries(daily_index, train_frac, val_frac):
+    """Common split dates for all frequencies, on whole-day boundaries.
 
-    `gap` observations are dropped at each boundary. The label of the last
-    training row uses the next price, which is the first price of the next
-    block; the gap keeps the three samples' label periods apart.
+    Returns (val_start, test_start): training covers the first `train_frac`
+    of the calendar days, validation the next `val_frac`, test the rest.
     """
-    n = len(X)
-    i_train = int(n * train_frac)
-    i_val = int(n * (train_frac + val_frac))
+    n_days = len(daily_index)
+    val_start = daily_index[0] + pd.Timedelta(days=round(n_days * train_frac))
+    test_start = daily_index[0] + pd.Timedelta(days=round(n_days * (train_frac + val_frac)))
+    return val_start, test_start
+
+
+def calendar_split(X, y, val_start, test_start, gap=1):
+    """Split into train / validation / test by calendar date (no shuffling).
+
+    The same dates are used for tick, hourly and daily data, so every
+    frequency is trained and tested on exactly the same period.
+    `gap` observations are dropped at the start of validation and test: the
+    label of the last training row uses the next price, which falls in the
+    next period; the gap keeps the label periods apart.
+    """
+    t = X.index
+    train = t < val_start
+    val = (t >= val_start) & (t < test_start)
+    test = t >= test_start
     return {
-        "train": (X.iloc[:i_train], y.iloc[:i_train]),
-        "val": (X.iloc[i_train + gap:i_val], y.iloc[i_train + gap:i_val]),
-        "test": (X.iloc[i_val + gap:], y.iloc[i_val + gap:]),
+        "train": (X[train], y[train]),
+        "val": (X[val].iloc[gap:], y[val].iloc[gap:]),
+        "test": (X[test].iloc[gap:], y[test].iloc[gap:]),
     }

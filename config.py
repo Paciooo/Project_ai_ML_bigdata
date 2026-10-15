@@ -33,6 +33,7 @@ VOLATILITY_WINDOWS = [5, 10]    # rolling std of log returns over n periods
 # ---------------------------------------------------------------------------
 # Chronological train / validation / test split
 # ---------------------------------------------------------------------------
+# Fractions of CALENDAR DAYS: the split dates are the same for every frequency
 TRAIN_FRAC = 0.60
 VAL_FRAC = 0.20                 # the remaining 20% is the test set
 SPLIT_GAP = 1                   # observations dropped between train/val and
