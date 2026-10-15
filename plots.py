@@ -13,7 +13,8 @@ import numpy as np
 def plot_price_path(ticks, daily, out_dir):
     """Full simulated GBM path (ticks) with the daily closes on top."""
     fig, ax = plt.subplots(figsize=(11, 4.5))
-    ax.plot(ticks.index, ticks["price"], lw=0.4, color="tab:blue", label="Tick price (5-min)")
+    ax.plot(ticks.index, ticks["price"], lw=0.3, color="tab:blue",
+            label=f"Tick (trade) prices: {len(ticks):,} ticks at random times")
     ax.plot(daily.index, daily["close"], lw=1.2, color="tab:orange", label="Daily close")
     ax.set_title("Simulated GBM price path (one path, all frequencies derived from it)")
     ax.set_ylabel("Price")
@@ -51,7 +52,7 @@ def plot_candlesticks(daily, hourly, out_dir, n_days=60, n_hours=72):
     plt.close(fig)
 
 
-def plot_accuracy_bars(results, out_dir):
+def plot_accuracy_bars(results, out_dir, seed):
     """Grouped bar chart: test accuracy per model and frequency."""
     freqs = list(results["frequency"].unique())
     models = list(results["model"].unique())
@@ -68,7 +69,7 @@ def plot_accuracy_bars(results, out_dir):
     ax.set_xticklabels([f.capitalize() for f in freqs])
     ax.set_ylim(0.35, 0.65)
     ax.set_ylabel("Out-of-sample accuracy (test set)")
-    ax.set_title("Test accuracy by model and frequency (error bars: 95% CI)")
+    ax.set_title(f"Test accuracy by model and frequency, seed {seed} (error bars: 95% CI)")
     ax.legend(fontsize=8, ncol=4, loc="upper left")
     ax.grid(axis="y", alpha=0.3)
     fig.tight_layout()
@@ -76,7 +77,7 @@ def plot_accuracy_bars(results, out_dir):
     plt.close(fig)
 
 
-def plot_results_table(results, out_dir):
+def plot_results_table(results, out_dir, seed):
     """Render the results table as an image (handy for slides)."""
     cols = ["frequency", "model", "n_test", "accuracy", "balanced_accuracy", "f1"]
     tbl = results[cols].copy()
@@ -92,7 +93,7 @@ def plot_results_table(results, out_dir):
     t.auto_set_font_size(False)
     t.set_fontsize(9)
     t.scale(1, 1.3)
-    ax.set_title("Out-of-sample (test set) results", pad=10)
+    ax.set_title(f"Out-of-sample (test set) results, seed {seed}", pad=10)
     fig.tight_layout()
     fig.savefig(os.path.join(out_dir, "04_results_table.png"), dpi=150, bbox_inches="tight")
     plt.close(fig)
@@ -141,4 +142,45 @@ def plot_confusion_matrices(results, out_dir):
     fig.suptitle("Test-set confusion matrices")
     fig.tight_layout()
     fig.savefig(os.path.join(out_dir, "06_confusion_matrices.png"), dpi=150)
+    plt.close(fig)
+
+
+def plot_multi_seed(results_all, focus_models, out_dir):
+    """Test accuracy of the focus models across seeds.
+
+    Each dot is one seed (one independent price path); the bar is the mean.
+    The grey band is the spread of the majority baseline across seeds.
+    """
+    freqs = list(results_all["frequency"].unique())
+    width = 0.8 / len(focus_models)
+    x = np.arange(len(freqs))
+    fig, ax = plt.subplots(figsize=(11, 5))
+
+    for k, f in enumerate(freqs):
+        base = results_all[(results_all["frequency"] == f) &
+                           (results_all["model"] == "Majority baseline")]["accuracy"]
+        ax.fill_between([k - 0.45, k + 0.45], base.min(), base.max(), color="grey", alpha=0.25,
+                        label="Majority baseline (range over seeds)" if k == 0 else None)
+
+    for i, m in enumerate(focus_models):
+        pos = x + i * width - 0.4 + width / 2
+        sub = results_all[results_all["model"] == m]
+        means = [sub[sub["frequency"] == f]["accuracy"].mean() for f in freqs]
+        stds = [sub[sub["frequency"] == f]["accuracy"].std() for f in freqs]
+        ax.bar(pos, means, width, yerr=stds, capsize=3, alpha=0.8, label=f"{m} (mean ± std)")
+        for p, f in zip(pos, freqs):
+            vals = sub[sub["frequency"] == f]["accuracy"]
+            ax.scatter(np.full(len(vals), p), vals, color="black", s=8, zorder=3)
+
+    ax.axhline(0.5, color="black", ls="--", lw=1)
+    n_seeds = results_all["seed"].nunique()
+    ax.set_xticks(x)
+    ax.set_xticklabels([f.capitalize() for f in freqs])
+    ax.set_ylim(0.35, 0.65)
+    ax.set_ylabel("Out-of-sample accuracy (test set)")
+    ax.set_title(f"Test accuracy over {n_seeds} independent GBM paths (dots = individual seeds)")
+    ax.legend(fontsize=8, ncol=3, loc="upper left")
+    ax.grid(axis="y", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(os.path.join(out_dir, "07_multi_seed_accuracy.png"), dpi=150)
     plt.close(fig)

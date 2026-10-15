@@ -12,11 +12,14 @@ S0 = 100.0              # initial price
 MU = 0.08               # annual drift (8%)
 SIGMA = 0.20            # annual volatility (20%)
 YEARS = 3               # length of the simulation in years
-SEED = 42               # random seed (simulation and models)
+SEEDS = [42, 43, 44, 45, 46]  # one simulated path per seed; the first one
+                              # also produces the detailed figures
 
 DAYS_PER_YEAR = 365     # synthetic 24/7 market
 HOURS_PER_DAY = 24
-TICKS_PER_HOUR = 12     # one synthetic price observation every 5 minutes
+TICKS_PER_HOUR = 20     # AVERAGE trades per hour; trade times are random
+                        # (Poisson), so ticks arrive irregularly.
+                        # Higher = more ticks but slower (60 -> ~4 min per seed)
 
 START_DATE = "2023-01-01"  # arbitrary calendar anchor for the timestamps
 
@@ -32,6 +35,8 @@ VOLATILITY_WINDOWS = [5, 10]    # rolling std of log returns over n periods
 # ---------------------------------------------------------------------------
 TRAIN_FRAC = 0.60
 VAL_FRAC = 0.20                 # the remaining 20% is the test set
+SPLIT_GAP = 1                   # observations dropped between train/val and
+                                # val/test: the label at t uses the price at t+1
 
 # ---------------------------------------------------------------------------
 # Models (same hyperparameters for every frequency)
@@ -56,3 +61,6 @@ MLP_DEEP_LAYERS = (64, 32, 16)      # 3 hidden layers
 # Output
 # ---------------------------------------------------------------------------
 RESULTS_DIR = "results"
+
+# Models highlighted in the multi-seed chart (simple -> complex)
+FOCUS_MODELS = ["Logistic Regression", "Random Forest", "NN 1 layer", "NN 3 layers"]

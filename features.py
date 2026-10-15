@@ -58,13 +58,18 @@ def build_dataset(df, return_lags, momentum_windows, volatility_windows):
     return X[valid], y[valid].astype(int), info
 
 
-def chronological_split(X, y, train_frac, val_frac):
-    """Split into train / validation / test in time order (no shuffling)."""
+def chronological_split(X, y, train_frac, val_frac, gap=1):
+    """Split into train / validation / test in time order (no shuffling).
+
+    `gap` observations are dropped at each boundary. The label of the last
+    training row uses the next price, which is the first price of the next
+    block; the gap keeps the three samples' label periods apart.
+    """
     n = len(X)
     i_train = int(n * train_frac)
     i_val = int(n * (train_frac + val_frac))
     return {
         "train": (X.iloc[:i_train], y.iloc[:i_train]),
-        "val": (X.iloc[i_train:i_val], y.iloc[i_train:i_val]),
-        "test": (X.iloc[i_val:], y.iloc[i_val:]),
+        "val": (X.iloc[i_train + gap:i_val], y.iloc[i_train + gap:i_val]),
+        "test": (X.iloc[i_val + gap:], y.iloc[i_val + gap:]),
     }
