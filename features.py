@@ -80,16 +80,22 @@ def calendar_split(X, y, val_start, test_start, gap=1):
 
     The same dates are used for tick, hourly and daily data, so every
     frequency is trained and tested on exactly the same period.
-    `gap` observations are dropped at the start of validation and test: the
-    label of the last training row uses the next price, which falls in the
-    next period; the gap keeps the label periods apart.
+    The label at t uses the price at t+1, so the last row before a boundary
+    has a label that reaches into the next period. The last `gap` rows of
+    the training and validation sets are therefore dropped: every label then
+    depends only on prices inside its own period.
     """
     t = X.index
     train = t < val_start
     val = (t >= val_start) & (t < test_start)
     test = t >= test_start
+
+    def drop_last(mask):
+        n_keep = int(mask.sum()) - gap  # not iloc[:-gap]: that is empty when gap=0
+        return X[mask].iloc[:n_keep], y[mask].iloc[:n_keep]
+
     return {
-        "train": (X[train], y[train]),
-        "val": (X[val].iloc[gap:], y[val].iloc[gap:]),
-        "test": (X[test].iloc[gap:], y[test].iloc[gap:]),
+        "train": drop_last(train),
+        "val": drop_last(val),
+        "test": (X[test], y[test]),
     }

@@ -137,11 +137,12 @@ dividing each tick return by $\sqrt{\Delta t}$ before taking the rolling std.
   from 2024-10-19, test from 2025-05-26). Every frequency is therefore tested
   on exactly the same period. A split by observation count would put the
   boundaries at slightly different times, because ticks arrive irregularly.
-* **One-observation gap** at the start of validation and of test
-  (`SPLIT_GAP = 1`). The label at time $t$ uses the price at $t+1$. Without
-  the gap, the last training label would depend on the first price of the
-  validation period. The gap is one observation at each frequency: one trade,
-  one hour or one day.
+* **One-observation gap** at the end of training and of validation
+  (`SPLIT_GAP = 1`). The label at time $t$ uses the price at $t+1$, so the
+  last row before a boundary has a label that reaches into the next period.
+  That row is dropped, so every label depends only on prices inside its own
+  period. The gap is one observation at each frequency: one trade, one hour
+  or one day.
 * **No leakage from scaling:** every model sits in a
   `Pipeline(StandardScaler → model)`, so the scaling statistics are fitted on
   the training set only.
@@ -198,52 +199,52 @@ on which the model's test accuracy was above the baseline's.
 | Frequency | Model | Accuracy | Improvement over baseline (pp) | Beats baseline | Balanced acc. |
 |---|---|---|---|---|---|
 | tick | Majority baseline | 0.501 ± 0.002 | – | – | 0.500 |
-| tick | Logistic Regression | 0.499 ± 0.002 | −0.17 ± 0.06 | 0 / 5 | 0.499 |
-| tick | Random Forest | 0.501 ± 0.003 | −0.03 ± 0.23 | 2 / 5 | 0.501 |
-| tick | NN 1 layer | 0.500 ± 0.002 | −0.10 ± 0.16 | 1 / 5 | 0.500 |
-| tick | NN 3 layers | 0.500 ± 0.002 | −0.06 ± 0.16 | 1 / 5 | 0.500 |
+| tick | Logistic Regression | 0.499 ± 0.002 | −0.16 ± 0.07 | 0 / 5 | 0.499 |
+| tick | Random Forest | 0.500 ± 0.003 | −0.03 ± 0.21 | 2 / 5 | 0.501 |
+| tick | NN 1 layer | 0.500 ± 0.002 | −0.09 ± 0.25 | 3 / 5 | 0.500 |
+| tick | NN 3 layers | 0.500 ± 0.002 | −0.10 ± 0.17 | 1 / 5 | 0.500 |
 | hourly | Majority baseline | 0.506 ± 0.005 | – | – | 0.500 |
-| hourly | Logistic Regression | 0.500 ± 0.006 | −0.62 ± 0.48 | 0 / 5 | 0.499 |
-| hourly | Random Forest | 0.494 ± 0.010 | −1.24 ± 1.04 | 1 / 5 | 0.493 |
-| hourly | NN 1 layer | 0.496 ± 0.005 | −1.00 ± 0.90 | 1 / 5 | 0.496 |
-| hourly | NN 3 layers | 0.502 ± 0.011 | −0.43 ± 1.41 | 1 / 5 | 0.502 |
-| daily | Majority baseline | 0.515 ± 0.054 | – | – | 0.500 |
-| daily | Logistic Regression | 0.497 ± 0.042 | −1.84 ± 1.38 | 0 / 5 | 0.495 |
-| daily | Random Forest | 0.488 ± 0.047 | −2.77 ± 5.83 | 1 / 5 | 0.491 |
-| daily | NN 1 layer | 0.515 ± 0.019 | +0.00 ± 4.97 | 3 / 5 | 0.514 |
-| daily | NN 3 layers | 0.511 ± 0.006 | −0.46 ± 5.10 | 2 / 5 | 0.513 |
+| hourly | Logistic Regression | 0.501 ± 0.005 | −0.57 ± 0.44 | 0 / 5 | 0.499 |
+| hourly | Random Forest | 0.494 ± 0.009 | −1.26 ± 0.96 | 1 / 5 | 0.492 |
+| hourly | NN 1 layer | 0.495 ± 0.006 | −1.13 ± 0.91 | 1 / 5 | 0.494 |
+| hourly | NN 3 layers | 0.503 ± 0.005 | −0.35 ± 0.44 | 1 / 5 | 0.503 |
+| daily | Majority baseline | 0.516 ± 0.052 | – | – | 0.500 |
+| daily | Logistic Regression | 0.504 ± 0.042 | −1.19 ± 1.67 | 0 / 5 | 0.502 |
+| daily | Random Forest | 0.489 ± 0.053 | −2.66 ± 6.71 | 2 / 5 | 0.492 |
+| daily | NN 1 layer | 0.520 ± 0.020 | +0.46 ± 4.39 | 3 / 5 | 0.518 |
+| daily | NN 3 layers | 0.513 ± 0.045 | −0.28 ± 5.20 | 4 / 5 | 0.515 |
 
 Decision Tree and XGBoost behave the same way; see `results/multi_seed_summary.csv`.
 
 ### Single path in detail (seed 42)
 
-Observations per split (train / validation / test): tick 315,933 / 105,343 /
-105,248; hourly 15,758 / 5,255 / 5,254; daily 647 / 218 / 217. Share of UP
+Observations per split (train / validation / test): tick 315,932 / 105,343 /
+105,249; hourly 15,757 / 5,255 / 5,255; daily 646 / 218 / 218. Share of UP
 moves in each split: `results/dataset_summary.csv`.
 
 | Frequency | Model | Test obs. | Accuracy ± approx. 95% CI | vs baseline (pp) | Balanced acc. | F1 |
 |---|---|---|---|---|---|---|
-| tick | Majority baseline | 105,248 | 0.501 ± 0.003 | – | 0.500 | 0.667 |
-| tick | Logistic Regression | 105,248 | 0.499 ± 0.003 | −0.2 | 0.499 | 0.472 |
-| tick | Decision Tree | 105,248 | 0.501 ± 0.003 | −0.0 | 0.501 | 0.199 |
-| tick | Random Forest | 105,248 | 0.500 ± 0.003 | −0.0 | 0.500 | 0.431 |
-| tick | NN 1 layer | 105,248 | 0.501 ± 0.003 | −0.0 | 0.501 | 0.430 |
-| tick | NN 3 layers | 105,248 | 0.500 ± 0.003 | −0.1 | 0.500 | 0.419 |
-| tick | XGBoost | 105,248 | 0.499 ± 0.003 | −0.1 | 0.499 | 0.468 |
-| hourly | Majority baseline | 5,254 | 0.511 ± 0.013 | – | 0.500 | 0.677 |
-| hourly | Logistic Regression | 5,254 | 0.499 ± 0.013 | −1.3 | 0.497 | 0.543 |
-| hourly | Decision Tree | 5,254 | 0.489 ± 0.013 | −2.2 | 0.491 | 0.436 |
-| hourly | Random Forest | 5,254 | 0.494 ± 0.013 | −1.7 | 0.493 | 0.529 |
-| hourly | NN 1 layer | 5,254 | 0.496 ± 0.013 | −1.6 | 0.494 | 0.532 |
-| hourly | NN 3 layers | 5,254 | 0.508 ± 0.013 | −0.3 | 0.508 | 0.508 |
-| hourly | XGBoost | 5,254 | 0.500 ± 0.013 | −1.1 | 0.499 | 0.511 |
-| daily | Majority baseline | 217 | 0.539 ± 0.066 | – | 0.500 | 0.701 |
-| daily | Logistic Regression | 217 | 0.521 ± 0.067 | −1.8 | 0.523 | 0.527 |
-| daily | Decision Tree | 217 | 0.535 ± 0.066 | −0.5 | 0.523 | 0.610 |
-| daily | Random Forest | 217 | 0.535 ± 0.066 | −0.5 | 0.530 | 0.577 |
-| daily | NN 1 layer | 217 | 0.530 ± 0.066 | −0.9 | 0.533 | 0.532 |
-| daily | NN 3 layers | 217 | 0.516 ± 0.067 | −2.3 | 0.519 | 0.520 |
-| daily | XGBoost | 217 | 0.530 ± 0.066 | −0.9 | 0.531 | 0.540 |
+| tick | Majority baseline | 105,249 | 0.501 ± 0.003 | – | 0.500 | 0.667 |
+| tick | Logistic Regression | 105,249 | 0.499 ± 0.003 | −0.2 | 0.499 | 0.472 |
+| tick | Decision Tree | 105,249 | 0.501 ± 0.003 | −0.0 | 0.501 | 0.199 |
+| tick | Random Forest | 105,249 | 0.500 ± 0.003 | −0.0 | 0.501 | 0.432 |
+| tick | NN 1 layer | 105,249 | 0.501 ± 0.003 | +0.0 | 0.500 | 0.595 |
+| tick | NN 3 layers | 105,249 | 0.500 ± 0.003 | −0.0 | 0.501 | 0.357 |
+| tick | XGBoost | 105,249 | 0.498 ± 0.003 | −0.3 | 0.498 | 0.468 |
+| hourly | Majority baseline | 5,255 | 0.511 ± 0.013 | – | 0.500 | 0.677 |
+| hourly | Logistic Regression | 5,255 | 0.499 ± 0.013 | −1.2 | 0.497 | 0.543 |
+| hourly | Decision Tree | 5,255 | 0.489 ± 0.013 | −2.2 | 0.491 | 0.436 |
+| hourly | Random Forest | 5,255 | 0.493 ± 0.013 | −1.9 | 0.491 | 0.529 |
+| hourly | NN 1 layer | 5,255 | 0.494 ± 0.013 | −1.7 | 0.494 | 0.505 |
+| hourly | NN 3 layers | 5,255 | 0.511 ± 0.013 | −0.0 | 0.512 | 0.491 |
+| hourly | XGBoost | 5,255 | 0.500 ± 0.013 | −1.1 | 0.500 | 0.511 |
+| daily | Majority baseline | 218 | 0.541 ± 0.066 | – | 0.500 | 0.702 |
+| daily | Logistic Regression | 218 | 0.541 ± 0.066 | +0.0 | 0.541 | 0.561 |
+| daily | Decision Tree | 218 | 0.505 ± 0.066 | −3.7 | 0.501 | 0.542 |
+| daily | Random Forest | 218 | 0.546 ± 0.066 | +0.5 | 0.539 | 0.596 |
+| daily | NN 1 layer | 218 | 0.537 ± 0.066 | −0.5 | 0.541 | 0.535 |
+| daily | NN 3 layers | 218 | 0.578 ± 0.066 | +3.7 | 0.579 | 0.593 |
+| daily | XGBoost | 218 | 0.537 ± 0.066 | −0.5 | 0.538 | 0.547 |
 
 F1 is computed for the UP class. When the baseline predicts only UP, its F1 is
 high even though it has no skill; when it predicts only DOWN, its F1 is 0.
@@ -253,9 +254,11 @@ fairer headline metrics.
 ### Interpretation
 
 * **No model beats the baseline.** Averaged over five independent paths, the
-  improvement over the majority baseline is zero or negative for every model
-  at every frequency (from −2.8 to +0.0 pp). No model beats the baseline
-  consistently; the best case is 3 seeds out of 5. Past returns, momentum and
+  improvement over the majority baseline is between −2.7 and +0.5 pp for every
+  model at every frequency. The only positive mean (daily 1-layer network,
+  +0.46 pp) comes with a seed-to-seed std of 4.4 pp, so it is indistinguishable
+  from zero. Some models beat the baseline on a few seeds (at most 4 out of 5),
+  but never by a stable margin. Past returns, momentum and
   volatility carry no information about the next move in a GBM market, and
   the pipeline correctly reports that.
 * **More complexity does not help.** Going from Logistic Regression to Random
@@ -263,11 +266,12 @@ fairer headline metrics.
   improvement. On hourly and daily data the networks hit the 200-epoch limit
   without converging: they keep fitting noise in the training set
   (overfitting).
-* **Single daily results are mostly luck.** With only 217 daily test
+* **Single daily results are mostly luck.** With only 218 daily test
   observations, a model's improvement over the baseline on a single path
-  ranges from −12 pp to +6 pp. The baseline's own accuracy ranges from 46%
+  ranges from −14 pp to +5 pp. The baseline's own accuracy ranges from 46%
   to 59%, depending on whether the test period happened to trend. At tick
-  level the same range is only ±0.3 pp.
+  level the same range is only about ±0.5 pp. Even moving the test period by
+  a single day changed one daily result by 6 pp.
 * **The drift is too small to show up.** In theory P(UP) is about 50.03% per
   tick, 50.1% per hour and 50.6% per day, which is smaller than the sampling
   noise.

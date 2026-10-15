@@ -36,8 +36,9 @@ VOLATILITY_WINDOWS = [5, 10]    # rolling std of log returns over n periods
 # Fractions of CALENDAR DAYS: the split dates are the same for every frequency
 TRAIN_FRAC = 0.60
 VAL_FRAC = 0.20                 # the remaining 20% is the test set
-SPLIT_GAP = 1                   # observations dropped between train/val and
-                                # val/test: the label at t uses the price at t+1
+SPLIT_GAP = 1                   # last observations of train and of validation
+                                # dropped: the label at t uses the price at t+1,
+                                # which would fall in the next period
 
 # ---------------------------------------------------------------------------
 # Models (same hyperparameters for every frequency)
