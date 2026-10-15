@@ -58,7 +58,7 @@ def plot_accuracy_bars(results, out_dir):
     width = 0.8 / len(models)
     x = np.arange(len(freqs))
 
-    fig, ax = plt.subplots(figsize=(10, 5))
+    fig, ax = plt.subplots(figsize=(12, 5))
     for i, m in enumerate(models):
         sub = results[results["model"] == m].set_index("frequency").loc[freqs]
         ax.bar(x + i * width - 0.4 + width / 2, sub["accuracy"], width,
@@ -69,7 +69,7 @@ def plot_accuracy_bars(results, out_dir):
     ax.set_ylim(0.35, 0.65)
     ax.set_ylabel("Out-of-sample accuracy (test set)")
     ax.set_title("Test accuracy by model and frequency (error bars: 95% CI)")
-    ax.legend(fontsize=8, ncol=3, loc="upper left")
+    ax.legend(fontsize=8, ncol=4, loc="upper left")
     ax.grid(axis="y", alpha=0.3)
     fig.tight_layout()
     fig.savefig(os.path.join(out_dir, "03_accuracy_comparison.png"), dpi=150)

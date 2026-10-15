@@ -44,6 +44,14 @@ FOREST_PARAMS = dict(n_estimators=200, max_depth=6, min_samples_leaf=50, n_jobs=
 XGB_PARAMS = dict(n_estimators=200, max_depth=3, learning_rate=0.05,
                   subsample=0.8, n_jobs=-1)
 
+# Small neural networks (multi-layer perceptrons). Both share the same training
+# settings; only the architecture differs. No early stopping, because it would
+# carve a *shuffled* validation set out of the training data.
+MLP_COMMON = dict(activation="relu", alpha=1e-3, learning_rate_init=1e-3,
+                  batch_size=256, max_iter=200)
+MLP_SHALLOW_LAYERS = (16,)          # 1 hidden layer with 16 neurons
+MLP_DEEP_LAYERS = (64, 32, 16)      # 3 hidden layers
+
 # ---------------------------------------------------------------------------
 # Output
 # ---------------------------------------------------------------------------

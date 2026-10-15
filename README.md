@@ -20,7 +20,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-It takes about 20–30 seconds. All tables and figures are written to `results/`.
+It takes about 1 minute (the neural networks on 189k tick rows take most of it). All tables and figures are written to `results/`.
 
 To change the simulation (drift, volatility, length, seed), the features or the
 model hyperparameters, edit `config.py`.
@@ -34,7 +34,7 @@ model hyperparameters, edit `config.py`.
 | `config.py` | All parameters (GBM, features, split, model hyperparameters) |
 | `data.py` | GBM simulation, OHLC aggregation, aggregation checks, CSV loader for real data |
 | `features.py` | Features, UP/DOWN target, chronological 60/20/20 split |
-| `models.py` | Majority baseline, Logistic Regression, Decision Tree, Random Forest, XGBoost (optional) |
+| `models.py` | Majority baseline, Logistic Regression, Decision Tree, Random Forest, two small neural networks, XGBoost (optional) |
 | `evaluation.py` | Accuracy, balanced accuracy, F1, confusion matrix |
 | `plots.py` | All figures |
 | `main.py` | Runs the full experiment |
@@ -103,6 +103,11 @@ The first 10 rows (warm-up) and the last row (no next price) are dropped.
   * Decision Tree: depth 5, min 50 samples per leaf
   * Random Forest: 200 trees, depth 6, min 50 samples per leaf
   * XGBoost: 200 trees, depth 3, learning rate 0.05
+  * Neural network, 1 hidden layer: 16 neurons
+  * Neural network, 3 hidden layers: 64 → 32 → 16 neurons
+  * Both networks (scikit-learn `MLPClassifier`): ReLU, Adam, L2 penalty 0.001,
+    batch 256, max 200 epochs. Early stopping is off because it would draw a
+    *shuffled* validation sample from the training data.
 * Baseline: always predict the majority class **of the training set**.
 
 ---
@@ -128,16 +133,22 @@ accuracy can vary by chance alone.
 | tick | Logistic Regression | 63,070 | 0.503 ± 0.004 | 0.502 | 0.434 |
 | tick | Decision Tree | 63,070 | 0.499 ± 0.004 | 0.498 | 0.471 |
 | tick | Random Forest | 63,070 | 0.502 ± 0.004 | 0.502 | 0.415 |
+| tick | NN 1 layer | 63,070 | 0.499 ± 0.004 | 0.500 | 0.566 |
+| tick | NN 3 layers | 63,070 | 0.500 ± 0.004 | 0.500 | 0.496 |
 | tick | XGBoost | 63,070 | 0.502 ± 0.004 | 0.502 | 0.462 |
 | hourly | Majority baseline | 5,254 | 0.507 ± 0.013 | 0.500 | 0.000 |
 | hourly | Logistic Regression | 5,254 | 0.497 ± 0.013 | 0.494 | 0.349 |
 | hourly | Decision Tree | 5,254 | 0.496 ± 0.013 | 0.494 | 0.409 |
 | hourly | Random Forest | 5,254 | 0.491 ± 0.013 | 0.489 | 0.383 |
+| hourly | NN 1 layer | 5,254 | 0.510 ± 0.013 | 0.509 | 0.462 |
+| hourly | NN 3 layers | 5,254 | 0.493 ± 0.013 | 0.493 | 0.487 |
 | hourly | XGBoost | 5,254 | 0.494 ± 0.013 | 0.493 | 0.459 |
 | daily | Majority baseline | 217 | 0.488 ± 0.067 | 0.500 | 0.000 |
 | daily | Logistic Regression | 217 | 0.475 ± 0.066 | 0.476 | 0.457 |
 | daily | Decision Tree | 217 | 0.493 ± 0.067 | 0.492 | 0.513 |
 | daily | Random Forest | 217 | 0.419 ± 0.066 | 0.420 | 0.417 |
+| daily | NN 1 layer | 217 | 0.479 ± 0.067 | 0.479 | 0.479 |
+| daily | NN 3 layers | 217 | 0.465 ± 0.066 | 0.467 | 0.437 |
 | daily | XGBoost | 217 | 0.461 ± 0.066 | 0.460 | 0.475 |
 
 F1 is computed for the UP class. The majority baseline predicts only DOWN here,
@@ -153,11 +164,17 @@ so its F1 is 0 by construction.
   tick, 50.1% per hour and 50.6% per day. Sampling noise is larger than that
   bias: in this sample the training set even has slightly more DOWN moves, so
   the majority baseline predicts DOWN.
+* **Neural networks don't help either.** Both networks score about 50% on
+  tick data. The 1-layer network's 51.0% on hourly data is inside the chance
+  band, and the 3-layer network does no better than the 1-layer one. Extra
+  layers add capacity, but there is no pattern to capture. On hourly and
+  daily data the networks hit the 200-epoch limit without converging: they
+  keep fitting noise in the training set, which is overfitting.
 * **Fewer observations means noisier results.** The confidence band is
   ±0.4 pp for tick data, ±1.3 pp for hourly and ±6.7 pp for daily. With only
   217 daily test points, single results move a lot by chance. The Random
   Forest's 41.9% daily accuracy is noise and overfitting, not a real
-  "anti-signal", and it is one of 15 comparisons.
+  "anti-signal", and it is one of 21 comparisons.
 * **Feature importance is close to uniform** for tick and hourly data. The
   daily Random Forest leans more on the latest returns, but this is fitted
   noise from a small sample, as its poor test score shows.
