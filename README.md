@@ -27,6 +27,9 @@ python main.py
 
 The full run (5 simulated paths × 3 frequencies × 7 models) takes about
 5 minutes on a laptop. All tables and figures are written to `results/`.
+This folder is not tracked by Git (it is in `.gitignore`): every run
+regenerates it, so each person keeps their own copy and `git pull` never
+conflicts with it.
 
 To change the simulation (drift, volatility, length, seeds, trade rate), the
 features, the split or the model hyperparameters, edit `config.py`. To run
