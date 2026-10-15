@@ -1,0 +1,4 @@
+frequency,n_raw,n_unchanged_dropped,n_warmup_or_last_dropped,train_n,train_n_up,train_n_down,train_share_up,val_n,val_n_up,val_n_down,val_share_up,test_n,test_n_up,test_n_down,test_share_up
+tick,315360,0,11,189209,94345,94864,0.4986,63070,31829,31241,0.5047,63070,31378,31692,0.4975
+hourly,26280,0,11,15761,7838,7923,0.4973,5254,2656,2598,0.5055,5254,2591,2663,0.4931
+daily,1095,0,11,650,318,332,0.4892,217,111,106,0.5115,217,111,106,0.5115
