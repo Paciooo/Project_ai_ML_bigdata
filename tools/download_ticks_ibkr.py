@@ -8,16 +8,23 @@ IB limits (official docs):
   * tick history only for the last ~3 years, and expired futures only up to
     2 years after expiry;
   * at most 1000 ticks per request and 60 requests per 10 minutes.
-  This script waits ~10.5 s between requests to stay within the limit, so it
-  downloads ~340,000 ticks per hour. A full NQ trading day can take 1-2 hours:
-  it is meant for a recent window of a few weeks, not for years.
+
+To leave room for other programs using the same IB connection, this script:
+  * makes at most --max-requests per 10 minutes (default 30, half of IB's
+    limit), i.e. about 180,000 ticks per hour;
+  * pauses while the US stock and options markets are open (Monday-Friday
+    09:25-16:20 New York time) and works at night and on weekends;
+    use --run-during-us-hours to disable the pause;
+  * reconnects by itself if IB Gateway disconnects (e.g. daily restart).
+A full NQ trading day takes a few hours, so it is meant for a recent window
+of a few weeks, not for years.
 
 It saves one Parquet file per day (UTC) and skips days already on disk, so it
 can be stopped with Ctrl+C and restarted at any time.
 
 Usage (IB Gateway or TWS running and logged in, API enabled):
   pip install ib_async pandas pyarrow
-  python tools/download_ticks_ibkr.py --symbol NQ --contract-month 202612 --start 2026-09-21 --end 2026-10-20
+  python tools/download_ticks_ibkr.py --symbol NQ --contract-month 202612 --start 2026-09-21 --end 2026-10-20 --port 4001
 
   --port: 4001 Gateway live, 4002 Gateway paper, 7496 TWS live, 7497 TWS paper.
   A CME market data subscription is required (otherwise IB returns error 354/162).
@@ -30,19 +37,63 @@ Output columns: ts (UTC), price, size.
 import argparse
 import time
 from datetime import datetime, timedelta, timezone
+from datetime import time as dtime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
-PACING_SECONDS = 10.5  # 60 requests per 10 minutes, with a small margin
+# Set from the command line in main()
+PACING_SECONDS = 20.0            # 600 s / max requests per 10 minutes
+PAUSE_DURING_US_HOURS = True
+CONNECT = {}                     # host, port, clientId for reconnecting
+
+NEW_YORK = ZoneInfo("America/New_York")
+US_SESSION = (dtime(9, 25), dtime(16, 20))  # stocks 9:30-16:00, index options to 16:15
+
+
+def us_markets_open(now=None):
+    """True during the US stock/options session (Mon-Fri, New York time)."""
+    now = (now or datetime.now(timezone.utc)).astimezone(NEW_YORK)
+    return now.weekday() < 5 and US_SESSION[0] <= now.time() < US_SESSION[1]
+
+
+def wait(ib, seconds):
+    """Sleep while keeping the IB connection alive."""
+    (ib.sleep if hasattr(ib, "sleep") else time.sleep)(max(0.0, seconds))
 
 
 def request(fn, *args, **kwargs):
-    """Call an IB historical-data function respecting the pacing limit."""
-    t0 = time.time()
-    out = fn(*args, **kwargs)
-    time.sleep(max(0.0, PACING_SECONDS - (time.time() - t0)))
-    return out
+    """Call an IB historical-data function politely.
+
+    Waits while the US markets are open, reconnects if needed, and spaces
+    requests by PACING_SECONDS. Retries the same request after a disconnect,
+    so a lost connection never looks like "no data".
+    """
+    ib = fn.__self__
+    while True:
+        if PAUSE_DURING_US_HOURS and us_markets_open():
+            print(f"\n  US markets open: paused until 16:20 New York time "
+                  f"(now {datetime.now(NEW_YORK):%a %H:%M} NY)")
+            while us_markets_open():
+                wait(ib, 60)
+            print("  resuming")
+        while not ib.isConnected():
+            try:
+                ib.connect(**CONNECT)
+                print("  reconnected to IB")
+            except Exception as e:  # Gateway restarting or not logged in yet
+                print(f"  IB not reachable ({e}); retrying in 60 s")
+                time.sleep(60)
+        t0 = time.time()
+        try:
+            out = fn(*args, **kwargs)
+        except ConnectionError:
+            out = None
+        wait(ib, PACING_SECONDS - (time.time() - t0))
+        if out is not None and ib.isConnected():
+            return out
+        print("  connection lost during a request; retrying it")
 
 
 def active_minutes(ib, contract, day_start, day_end):
@@ -117,12 +168,23 @@ def main():
     p.add_argument("--port", type=int, default=4002)
     p.add_argument("--client-id", type=int, default=77)
     p.add_argument("--out", default="data_raw/ticks_ibkr")
+    p.add_argument("--max-requests", type=int, default=30,
+                   help="max historical requests per 10 minutes (IB limit: 60)")
+    p.add_argument("--run-during-us-hours", action="store_true",
+                   help="do not pause while US stocks/options are trading")
     args = p.parse_args()
+
+    global PACING_SECONDS, PAUSE_DURING_US_HOURS
+    PACING_SECONDS = 600 / min(args.max_requests, 60) + 0.5
+    PAUSE_DURING_US_HOURS = not args.run_during_us_hours
+    print(f"Max {600 / PACING_SECONDS:.0f} requests per 10 min; "
+          f"{'pausing' if PAUSE_DURING_US_HOURS else 'NOT pausing'} during US market hours")
 
     from ib_async import IB, Future  # imported here so --help works without the package
 
+    CONNECT.update(host=args.host, port=args.port, clientId=args.client_id, readonly=True)
     ib = IB()
-    ib.connect(args.host, args.port, clientId=args.client_id, readonly=True)
+    ib.connect(**CONNECT)
     contract = Future(args.symbol, lastTradeDateOrContractMonth=args.contract_month,
                       exchange=args.exchange, currency="USD", includeExpired=True)
     ib.qualifyContracts(contract)
