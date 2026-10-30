@@ -8,13 +8,15 @@ University project for *AI, Machine Learning and Big Data for Finance and Manage
 
 The project is designed as two experiments:
 
-1. **Synthetic experiment (this stage):** do ML models wrongly appear to
-   find predictive patterns in a market whose returns are independent
-   (Geometric Brownian Motion)? The honest answer should be "no": about 50%
-   accuracy, no better than a simple baseline.
-2. **Real-market experiment (next stage):** do real market features predict
-   the next move's direction out of sample, better than simple baselines, and
-   does this differ by frequency? The same pipeline is reused.
+1. **Synthetic experiment:** do ML models wrongly appear to find predictive
+   patterns in a market whose returns are independent (Geometric Brownian
+   Motion)? The honest answer should be "no": about 50% accuracy, no better
+   than a simple baseline. (Results below.)
+2. **Real-market experiment:** do real market features predict the next
+   move's direction out of sample, better than simple baselines, and does
+   this differ by frequency? Same pipeline on NQ (Nasdaq-100 E-mini futures)
+   1-minute bars, 2006-2025. (Results in
+   [Real-market experiment](#real-market-experiment-nq-futures-2006-2025).)
 
 ---
 
@@ -25,8 +27,17 @@ pip install -r requirements.txt
 python main.py
 ```
 
-The full run (5 simulated paths × 3 frequencies × 7 models) takes about
-5 minutes on a laptop. All tables and figures are written to `results/`.
+`DATA_SOURCE` in `config.py` chooses the experiment:
+
+* `"synthetic"`: 5 simulated paths × 3 frequencies × 7 models, about
+  5 minutes on a laptop. Output in `results/synthetic/`.
+* `"nq"`: real NQ futures. Needs a local clone of the `futures-data`
+  repository; tell the program where it is (PowerShell:
+  `$env:FUTURES_DATA_DIR="C:\path\to\futures-data"`). Output in
+  `results/nq/`. The full 2006-2025 run is much slower (the models train on
+  2.7 million 1-minute rows); for a quick test set
+  `FUTURES_YEARS = (2023, 2025)` (about 2 minutes).
+
 This folder is not tracked by Git (it is in `.gitignore`): every run
 regenerates it, so each person keeps their own copy and `git pull` never
 conflicts with it.
@@ -42,12 +53,16 @@ faster while experimenting, use a single seed: `SEEDS = [42]`.
 | File | Purpose |
 |---|---|
 | `config.py` | All parameters (GBM, ticks, seeds, features, split, model hyperparameters) |
-| `data.py` | GBM tick simulation, OHLC aggregation, aggregation checks, CSV loader for real data |
+| `data.py` | GBM tick simulation, OHLC aggregation, aggregation checks; loading, cleaning and aggregating real 1-minute futures bars |
 | `features.py` | Features, UP/DOWN target, common calendar 60/20/20 split with gap |
 | `models.py` | Majority baseline, Logistic Regression, Decision Tree, Random Forest, two small neural networks, XGBoost (optional) |
 | `evaluation.py` | Accuracy, balanced accuracy, F1, confusion matrix, improvement over baseline |
 | `plots.py` | All figures |
-| `main.py` | Runs the full experiment for every seed |
+| `main.py` | Runs the synthetic (all seeds) or the real NQ experiment |
+| `tools/timestral_direction.py` | Zero-shot UP/DOWN test with Mistral's Timestral on the NQ test period |
+| `tools/download_ticks_ibkr.py` | Downloads recent NQ tick data (CME trades) from Interactive Brokers |
+| `tools/download_ticks_databento.py` | Cost estimate / download of CME tick data from Databento (paid) |
+| `tools/check_ticks.py` | Summary of downloaded tick files |
 
 ---
 
@@ -189,7 +204,7 @@ hidden layer → NN with 3 hidden layers**, compared with the majority baseline.
 
 ---
 
-## Results
+## Results: synthetic experiment
 
 ### Across 5 seeds (main result)
 
@@ -282,11 +297,109 @@ fairer headline metrics.
 
 ---
 
+## Real-market experiment: NQ futures 2006-2025
+
+### Data
+
+* **Instrument:** NQ, the E-mini Nasdaq-100 future traded on CME Globex.
+  It is a traded instrument with nearly 23 hours of trading per day.
+  (The cash index NDX is not used: it is a calculated value that cannot be
+  traded, and its stale component prices make short-horizon returns look
+  predictable when they are not.)
+* **Source:** 1-minute OHLCV bars exported from TradeStation, stored in the
+  `futures-data` repository: 6,193,869 bars from 2006-01-03 to 2025-05-30.
+  Continuous contract, back-adjusted at each roll by adding a constant.
+* **Cleaning** (`data.clean_minute_bars`): 35 Saturday bars and 5 isolated
+  bad prints removed. The bad prints are single bars about 990 points away
+  from both neighbours (a price that was not back-adjusted, e.g.
+  2010-03-16 23:00); they are detected as a 1-minute move above 2% that
+  immediately reverses.
+* **Frequencies:** the 1-minute bars themselves, plus hourly and daily candles
+  built from the same minutes (`data.minute_datasets`). Daily candles follow
+  the CME session, not the calendar day: the export is in Italian time, so in
+  the weeks when US and European daylight saving time differ a session starts
+  at 23:01 of the previous day. Checked against TradeStation's own daily file:
+  open, high and low match on 95-99.6% of days; the close differs slightly
+  because TradeStation uses the official settlement price, while we use the
+  last trade of the session.
+* **Split:** same calendar dates for all frequencies, 60/20/20 of the
+  trading days: training until 2017-08-21, validation 2017-08-22 to
+  2021-07-13, test 2021-07-14 to 2025-05-30. Because recent years have more
+  traded minutes, the 1-minute split is 2.71M / 1.24M / 1.32M observations.
+* Unchanged closes are dropped: 15% of 1-minute bars (927,991), 3% of hours,
+  16 days.
+
+### Results (test set 2021-07-14 to 2025-05-30)
+
+| Frequency | Model | Test obs. | Accuracy ± approx. 95% CI | vs baseline (pp) | Balanced acc. |
+|---|---|---|---|---|---|
+| 1-min | Majority baseline | 1,318,336 | 0.504 ± 0.001 | – | 0.500 |
+| 1-min | Logistic Regression | 1,318,336 | 0.513 ± 0.001 | +0.91 | 0.513 |
+| 1-min | Decision Tree | 1,318,336 | 0.513 ± 0.001 | +0.84 | 0.513 |
+| 1-min | Random Forest | 1,318,336 | 0.513 ± 0.001 | +0.91 | 0.513 |
+| 1-min | NN 1 layer | 1,318,336 | 0.514 ± 0.001 | +0.95 | 0.513 |
+| 1-min | NN 3 layers | 1,318,336 | 0.514 ± 0.001 | +0.97 | 0.514 |
+| 1-min | XGBoost | 1,318,336 | 0.513 ± 0.001 | +0.94 | 0.513 |
+| hourly | Majority baseline | 23,769 | 0.517 ± 0.006 | – | 0.500 |
+| hourly | Logistic Regression | 23,769 | 0.506 ± 0.006 | −1.14 | 0.495 |
+| hourly | Decision Tree | 23,769 | 0.509 ± 0.006 | −0.86 | 0.503 |
+| hourly | Random Forest | 23,769 | 0.516 ± 0.006 | −0.12 | 0.507 |
+| hourly | NN 1 layer | 23,769 | 0.505 ± 0.006 | −1.19 | 0.500 |
+| hourly | NN 3 layers | 23,769 | 0.504 ± 0.006 | −1.39 | 0.500 |
+| hourly | XGBoost | 23,769 | 0.508 ± 0.006 | −0.98 | 0.501 |
+| daily | Majority baseline | 1,002 | 0.533 ± 0.031 | – | 0.500 |
+| daily | Logistic Regression | 1,002 | 0.524 ± 0.031 | −0.90 | 0.508 |
+| daily | Decision Tree | 1,002 | 0.525 ± 0.031 | −0.80 | 0.514 |
+| daily | Random Forest | 1,002 | 0.531 ± 0.031 | −0.20 | 0.500 |
+| daily | NN 1 layer | 1,002 | 0.502 ± 0.031 | −3.09 | 0.488 |
+| daily | NN 3 layers | 1,002 | 0.486 ± 0.031 | −4.69 | 0.479 |
+| daily | XGBoost | 1,002 | 0.513 ± 0.031 | −2.00 | 0.506 |
+
+### Interpretation
+
+* **1 minute: a small but real effect.** Every model beats the baseline by
+  about +0.9 pp (balanced accuracy 0.513). With 1.3 million test minutes this
+  is far outside chance (±0.1 pp). The Random Forest puts 57% of its
+  importance on the last 1-minute return, and a one-line rule, "predict the
+  opposite of the last move", scores 51.2% on the same test period, stable in
+  every year 2021-2025 (51.0-51.4%). This is the **bid-ask bounce**: trade
+  prices jump between the bid and the ask, so an up-minute is slightly more
+  often followed by a down-minute. Complex models add nothing over this rule.
+* **It is not a trading opportunity.** A 1-minute move is typically one or
+  two ticks; a 51% hit rate on such moves does not cover the bid-ask spread
+  and commissions.
+* **Hourly and daily: no predictability.** No model beats the majority
+  baseline (improvements from −4.7 to −0.1 pp). The baseline itself is above
+  50% (51.7% hourly, 53.3% daily) only because NQ rose over the test period.
+* **Compared with the synthetic experiment:** GBM has no bid-ask bounce, so
+  there even the 1-minute level showed nothing. Real data differs from
+  the random walk only at the shortest horizon, and only through market
+  microstructure.
+
+### Limitations
+
+* **Back-adjusted prices:** additive back-adjustment keeps price
+  *differences* (and therefore every UP/DOWN label) exact, but percentage
+  returns in early years are smaller than the real ones (in 2006 the series
+  is about 2,400 points above the actual price). Feature scales therefore
+  drift over the 20 years.
+* **Labels across breaks:** the "next close" after a session break or a
+  weekend is the first bar of the next session. These are a tiny share of
+  the 1-minute observations.
+* **One history:** unlike the synthetic experiment, there is a single real
+  path, so there is no seed-to-seed spread. The yearly stability of the
+  1-minute effect plays that role.
+
+---
+
 ## Output files (`results/`)
+
+Synthetic run: `results/synthetic/`; NQ run: `results/nq/` (same files except
+the multi-seed ones; Timestral results go to `results/nq/timestral_results.csv`).
 
 | File | Content |
 |---|---|
-| `01_gbm_price_path.png` | Simulated tick path and daily closes (seed 42) |
+| `01_price_path.png` | Simulated tick path (or NQ hourly closes) and daily closes |
 | `02_candlesticks.png` | Sample daily and hourly candlestick charts |
 | `03_accuracy_comparison.png` | Test accuracy by model and frequency, seed 42, with approx. 95% CI |
 | `04_results_table.png` | Results table with improvement over baseline (seed 42, for slides) |
@@ -301,23 +414,21 @@ fairer headline metrics.
 
 ---
 
-## Using real market data later
+## Timestral (Mistral's pretrained forecasting model)
 
-The ML pipeline only needs a DataFrame with a timestamp index and a `close`
-column. For real data, replace the simulation in `main.py` (`run_seed`) with:
+[Timestral](https://github.com/mistralai/timestral) is a pretrained
+time-series foundation model (5M-209M parameters) that forecasts without
+training on our data ("zero-shot"). `tools/timestral_direction.py` asks it
+for the next close given the last 512 closes and predicts UP if the forecast
+median is above the current close. It is scored on a random sample of the
+same NQ test bars (default 2,000 per frequency), against the same majority
+baseline.
 
-```python
-import data
-ticks = data.load_ohlcv_csv("my_trades.csv")          # transaction-level data
-datasets = {
-    "tick":   ticks,                                   # one row per trade
-    "hourly": data.load_ohlcv_csv("my_hourly.csv"),    # or aggregate the trades
-    "daily":  data.load_ohlcv_csv("my_daily.csv"),
-}
+```bash
+pip install git+https://github.com/mistralai/timestral.git   # needs torch >= 2.4
+python tools/timestral_direction.py                            # Timestral-5M
+python tools/timestral_direction.py --model mistralai/Timestral-209M --n-samples 500
 ```
 
-For tick data, set `open = high = low = close = trade price`. With a `price`
-column, `data.ticks_to_ohlc(ticks, "1h")` builds the candles. Drop the
-GBM-specific checks and use a single "seed" (there is only one real history).
-Real tick data often contains unchanged prices; they are removed and counted
-automatically. Features, models and evaluation stay the same.
+The weights are downloaded from Hugging Face on the first run (Modified MIT
+licence; the code is Apache 2.0).
