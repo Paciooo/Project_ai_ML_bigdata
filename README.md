@@ -442,14 +442,19 @@ connection resets, set `HF_HUB_DISABLE_XET=1` (PowerShell:
 | 1-min | 2,000 | 0.499 ± 0.022 | 0.506 | −0.75 | 0.499 | 52% |
 | hourly | 2,000 | 0.512 ± 0.022 | 0.529 | −1.75 | 0.508 | 56% |
 | daily | 1,002 | 0.514 ± 0.031 | 0.533 | −1.90 | 0.500 | 71% |
+| 1-min (larger sample) | 20,000 | 0.505 ± 0.007 | 0.505 | +0.04 | 0.505 | 52% |
 
 * **No skill at any frequency:** balanced accuracy is 0.50 everywhere.
 * **Daily: it only follows the trend.** It predicts UP 71% of the time
   (NQ rose over the long run), so it behaves like a weaker majority
   baseline.
-* **1-minute: too few bars to compare.** With 2,000 bars the interval is
-  ±2.2 pp, too wide to detect the ~1 pp bid-ask bounce effect that the
-  simple models find. Use `--frequency 1-min --n-samples 20000` for a fair
-  comparison.
+* **1-minute: it misses the bid-ask bounce.** On 20,000 bars Timestral is
+  exactly at the baseline (+0.04 ± 0.7 pp), while the simple models gain
+  about +0.9 pp on the full test set and the "opposite of the last move"
+  rule scores 51.2%. The gap is just outside Timestral's interval, so it is
+  very likely, not proven, that Timestral is worse; a paired comparison on
+  the same bars would settle it. A generic forecaster trained on smooth
+  series does not know this microstructure effect, while a logistic
+  regression with the last return as a feature learns it in seconds.
 * A large pretrained forecaster does not beat "always predict the majority
   class" on the direction of NQ.
