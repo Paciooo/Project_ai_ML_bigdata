@@ -5,8 +5,28 @@ Change the values here to re-run the experiment with different simulation
 settings, features or model hyperparameters. Nothing else needs editing.
 """
 
+import os
+
 # ---------------------------------------------------------------------------
-# Synthetic GBM simulation
+# Which data to use
+# ---------------------------------------------------------------------------
+# "synthetic": simulated GBM ticks (pipeline check, 5 seeds)
+# "nq":        real NQ futures 1-minute bars from the futures-data repository
+DATA_SOURCE = "nq"
+
+# ---------------------------------------------------------------------------
+# Real futures data (DATA_SOURCE = "nq")
+# ---------------------------------------------------------------------------
+# Folder of your local clone of github.com/Paciooo/futures-data.
+# Default: next to this project. Override without editing the file with
+#   PowerShell:  $env:FUTURES_DATA_DIR="C:\path\to\futures-data"
+FUTURES_DATA_DIR = os.environ.get("FUTURES_DATA_DIR", "../futures-data")
+FUTURES_SYMBOL = "NQ"
+FUTURES_YEARS = (2006, 2025)    # first and last year of 1-minute bars to load
+SPIKE_THRESHOLD = 0.02          # 1-minute moves above 2% that revert at once = bad prints
+
+# ---------------------------------------------------------------------------
+# Synthetic GBM simulation (DATA_SOURCE = "synthetic")
 # ---------------------------------------------------------------------------
 S0 = 100.0              # initial price
 MU = 0.08               # annual drift (8%)
@@ -62,7 +82,7 @@ MLP_DEEP_LAYERS = (64, 32, 16)      # 3 hidden layers
 # ---------------------------------------------------------------------------
 # Output
 # ---------------------------------------------------------------------------
-RESULTS_DIR = "results"
+RESULTS_DIR = "results"          # results go to results/synthetic or results/nq
 
 # Models highlighted in the multi-seed chart (simple -> complex)
 FOCUS_MODELS = ["Logistic Regression", "Random Forest", "NN 1 layer", "NN 3 layers"]

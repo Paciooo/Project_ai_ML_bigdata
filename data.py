@@ -6,6 +6,8 @@ Every function returns a pandas DataFrame indexed by timestamp with at least a
 data can later be replaced by real market data (see `load_ohlcv_csv`).
 """
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -146,3 +148,67 @@ def load_ohlcv_csv(path, time_col="timestamp"):
     df = pd.read_csv(path, parse_dates=[time_col]).set_index(time_col).sort_index()
     df.columns = [c.lower() for c in df.columns]
     return df
+
+
+# ---------------------------------------------------------------------------
+# Real futures data (1-minute bars from the futures-data repository)
+# ---------------------------------------------------------------------------
+
+def load_futures_minutes(data_dir, symbol, year_from, year_to):
+    """Load 1-minute OHLCV bars saved as data/minute/<SYMBOL>/<YEAR>.parquet.
+
+    Format of the futures-data repository (TradeStation export): columns ts,
+    open, high, low, close, volume; one file per year; continuous contract,
+    back-adjusted at the rolls; each bar is stamped with its END time.
+    """
+    folder = Path(data_dir) / "data" / "minute" / symbol
+    files = [folder / f"{y}.parquet" for y in range(year_from, year_to + 1)]
+    files = [f for f in files if f.exists()]
+    if not files:
+        raise FileNotFoundError(f"No minute files for {symbol} in {folder}. "
+                                f"Set FUTURES_DATA_DIR in config.py to your futures-data folder.")
+    df = pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
+    return df.set_index("ts").sort_index()[["open", "high", "low", "close", "volume"]]
+
+
+def clean_minute_bars(df, spike_threshold):
+    """Remove obviously wrong bars and return (clean_df, report).
+
+    * Saturday bars: CME futures do not trade on Saturday.
+    * Isolated spikes: a bar whose close jumps by more than `spike_threshold`
+      (log return) and immediately jumps back. In the NQ file these are
+      single prints about 990 points away from their neighbours (a price
+      that was not back-adjusted), e.g. 2010-03-16 23:00.
+    """
+    report = {"bars_raw": len(df)}
+    weekend = df.index.dayofweek == 5
+    df = df[~weekend]
+    report["saturday_bars_removed"] = int(weekend.sum())
+
+    r = np.log(df["close"]).diff()
+    r_next = r.shift(-1)
+    spike = (r.abs() > spike_threshold) & (r_next.abs() > spike_threshold) & (np.sign(r) != np.sign(r_next))
+    df = df[~spike.values]
+    report["spike_bars_removed"] = int(spike.sum())
+    report["bars_clean"] = len(df)
+    return df, report
+
+
+def minute_datasets(minutes):
+    """1-minute bars plus hourly and daily OHLCV candles built from them.
+
+    Daily candles follow the CME trading session, not the calendar day. In
+    this export (Italian time, bars stamped with their end time) a session
+    runs 00:01 -> 23:00, or 23:01 of the previous day -> 22:00 in the weeks
+    when US and European daylight saving time differ. Shifting the stamps by
+    59 minutes puts every bar after 23:00 into the next session. The daily
+    close is the last trade of the session (the official CME settlement
+    price is computed differently, so it can differ slightly).
+    """
+    agg = {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
+    hourly = minutes.resample("1h").agg(agg).dropna(subset=["close"])
+    session_day = (minutes.index + pd.Timedelta(minutes=59)).floor("D")
+    daily = minutes.groupby(session_day).agg(agg).dropna(subset=["close"])
+    daily = daily[daily.index.dayofweek != 5]  # stray bars after the Friday close
+    daily.index.name = minutes.index.name
+    return {"1-min": minutes, "hourly": hourly, "daily": daily}

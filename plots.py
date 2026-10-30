@@ -10,18 +10,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_price_path(ticks, daily, out_dir):
-    """Full simulated GBM path (ticks) with the daily closes on top."""
+def plot_price_path(prices, daily, out_dir, label, title):
+    """Highest-frequency price series with the daily closes on top."""
     fig, ax = plt.subplots(figsize=(11, 4.5))
-    ax.plot(ticks.index, ticks["price"], lw=0.3, color="tab:blue",
-            label=f"Tick (trade) prices: {len(ticks):,} ticks at random times")
+    ax.plot(prices.index, prices.values, lw=0.3, color="tab:blue", label=label)
     ax.plot(daily.index, daily["close"], lw=1.2, color="tab:orange", label="Daily close")
-    ax.set_title("Simulated GBM price path (one path, all frequencies derived from it)")
+    ax.set_title(title)
     ax.set_ylabel("Price")
     ax.legend()
     ax.grid(alpha=0.3)
     fig.tight_layout()
-    fig.savefig(os.path.join(out_dir, "01_gbm_price_path.png"), dpi=150)
+    fig.savefig(os.path.join(out_dir, "01_price_path.png"), dpi=150)
     plt.close(fig)
 
 
@@ -42,17 +41,19 @@ def _candles(ax, ohlc, title):
     ax.grid(alpha=0.3)
 
 
-def plot_candlesticks(daily, hourly, out_dir, n_days=60, n_hours=72):
-    """Sample candlestick charts for daily and hourly data."""
+def plot_candlesticks(daily, hourly, out_dir, n_days=60, n_hours=72, last=False):
+    """Sample candlestick charts for daily and hourly data (first or last periods)."""
+    which = "last" if last else "first"
+    pick = (lambda df, n: df.iloc[-n:]) if last else (lambda df, n: df.iloc[:n])
     fig, axes = plt.subplots(2, 1, figsize=(11, 8))
-    _candles(axes[0], daily.iloc[:n_days], f"Daily candles (first {n_days} days)")
-    _candles(axes[1], hourly.iloc[:n_hours], f"Hourly candles (first {n_hours} hours)")
+    _candles(axes[0], pick(daily, n_days), f"Daily candles ({which} {n_days} days)")
+    _candles(axes[1], pick(hourly, n_hours), f"Hourly candles ({which} {n_hours} hours)")
     fig.tight_layout()
     fig.savefig(os.path.join(out_dir, "02_candlesticks.png"), dpi=150)
     plt.close(fig)
 
 
-def plot_accuracy_bars(results, out_dir, seed):
+def plot_accuracy_bars(results, out_dir, subtitle):
     """Grouped bar chart: test accuracy per model and frequency."""
     freqs = list(results["frequency"].unique())
     models = list(results["model"].unique())
@@ -69,7 +70,7 @@ def plot_accuracy_bars(results, out_dir, seed):
     ax.set_xticklabels([f.capitalize() for f in freqs])
     ax.set_ylim(0.35, 0.65)
     ax.set_ylabel("Out-of-sample accuracy (test set)")
-    ax.set_title(f"Test accuracy by model and frequency, seed {seed} "
+    ax.set_title(f"Test accuracy by model and frequency, {subtitle} "
                  f"(error bars: approx. 95% binomial CI)")
     ax.legend(fontsize=8, ncol=4, loc="upper left")
     ax.grid(axis="y", alpha=0.3)
@@ -78,7 +79,7 @@ def plot_accuracy_bars(results, out_dir, seed):
     plt.close(fig)
 
 
-def plot_results_table(results, out_dir, seed):
+def plot_results_table(results, out_dir, subtitle):
     """Render the results table as an image (handy for slides)."""
     cols = ["frequency", "model", "n_test", "accuracy", "acc_vs_baseline_pp", "balanced_accuracy", "f1"]
     tbl = results[cols].copy()
@@ -97,7 +98,7 @@ def plot_results_table(results, out_dir, seed):
     t.auto_set_font_size(False)
     t.set_fontsize(9)
     t.scale(1, 1.3)
-    ax.set_title(f"Out-of-sample (test set) results, seed {seed}", pad=10)
+    ax.set_title(f"Out-of-sample (test set) results, {subtitle}", pad=10)
     fig.tight_layout()
     fig.savefig(os.path.join(out_dir, "04_results_table.png"), dpi=150, bbox_inches="tight")
     plt.close(fig)

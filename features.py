@@ -67,11 +67,12 @@ def calendar_boundaries(daily_index, train_frac, val_frac):
     """Common split dates for all frequencies, on whole-day boundaries.
 
     Returns (val_start, test_start): training covers the first `train_frac`
-    of the calendar days, validation the next `val_frac`, test the rest.
+    of the days in `daily_index` (trading days for real data), validation the
+    next `val_frac`, test the rest.
     """
     n_days = len(daily_index)
-    val_start = daily_index[0] + pd.Timedelta(days=round(n_days * train_frac))
-    test_start = daily_index[0] + pd.Timedelta(days=round(n_days * (train_frac + val_frac)))
+    val_start = daily_index[round(n_days * train_frac)]
+    test_start = daily_index[round(n_days * (train_frac + val_frac))]
     return val_start, test_start
 
 
