@@ -431,4 +431,25 @@ python tools/timestral_direction.py --model mistralai/Timestral-209M --n-samples
 ```
 
 The weights are downloaded from Hugging Face on the first run (Modified MIT
-licence; the code is Apache 2.0).
+licence; the code is Apache 2.0). If the download keeps failing with
+connection resets, set `HF_HUB_DISABLE_XET=1` (PowerShell:
+`$env:HF_HUB_DISABLE_XET="1"`) to use plain HTTPS downloads.
+
+### Results (Timestral-5M, context 512, NQ test period 2021-07-14 to 2025-05-30)
+
+| Frequency | Bars scored | Accuracy ± approx. 95% CI | Baseline (same bars) | vs baseline (pp) | Balanced acc. | Predicts UP |
+|---|---|---|---|---|---|---|
+| 1-min | 2,000 | 0.499 ± 0.022 | 0.506 | −0.75 | 0.499 | 52% |
+| hourly | 2,000 | 0.512 ± 0.022 | 0.529 | −1.75 | 0.508 | 56% |
+| daily | 1,002 | 0.514 ± 0.031 | 0.533 | −1.90 | 0.500 | 71% |
+
+* **No skill at any frequency:** balanced accuracy is 0.50 everywhere.
+* **Daily: it only follows the trend.** It predicts UP 71% of the time
+  (NQ rose over the long run), so it behaves like a weaker majority
+  baseline.
+* **1-minute: too few bars to compare.** With 2,000 bars the interval is
+  ±2.2 pp, too wide to detect the ~1 pp bid-ask bounce effect that the
+  simple models find. Use `--frequency 1-min --n-samples 20000` for a fair
+  comparison.
+* A large pretrained forecaster does not beat "always predict the majority
+  class" on the direction of NQ.
