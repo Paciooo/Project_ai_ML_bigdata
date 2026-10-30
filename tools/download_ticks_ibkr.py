@@ -19,12 +19,22 @@ To leave room for other programs using the same IB connection, this script:
 A full NQ trading day takes a few hours, so it is meant for a recent window
 of a few weeks, not for years.
 
-It saves one Parquet file per day (UTC) and skips days already on disk, so it
-can be stopped with Ctrl+C and restarted at any time.
+Robustness:
+  * every request has a timeout (--timeout, default 120 s): if IB never
+    answers, the request is retried, and after 3 timeouts in a row the
+    connection is reset;
+  * everything is written to <out>/<contract>/download.log (with IB's own
+    error messages), so you can see what happened even if the window closed;
+  * the day in progress is saved every ~10 minutes to <day>.partial.parquet
+    and resumed from there after a restart; the final <day>.parquet replaces
+    it when the day is complete;
+  * a day for which IB returns no 1-minute bars (an error, not a holiday) is
+    not saved, so the next run retries it.
+Days already on disk are skipped: stop with Ctrl+C and restart at any time.
 
 Usage (IB Gateway or TWS running and logged in, API enabled):
   pip install ib_async pandas pyarrow
-  python tools/download_ticks_ibkr.py --symbol NQ --contract-month 202612 --start 2026-09-21 --end 2026-10-20 --port 4001
+  python tools/download_ticks_ibkr.py --symbol NQ --contract-month 202612 --start 2026-09-21 --end 2026-10-20 --port 4002
 
   --port: 4001 Gateway live, 4002 Gateway paper, 7496 TWS live, 7497 TWS paper.
   A CME market data subscription is required (otherwise IB returns error 354/162).
@@ -35,6 +45,8 @@ Output columns: ts (UTC), price, size.
 """
 
 import argparse
+import asyncio
+import logging
 import time
 from datetime import datetime, timedelta, timezone
 from datetime import time as dtime
@@ -46,10 +58,31 @@ import pandas as pd
 # Set from the command line in main()
 PACING_SECONDS = 20.0            # 600 s / max requests per 10 minutes
 PAUSE_DURING_US_HOURS = True
+REQUEST_TIMEOUT = 120.0          # seconds to wait for an answer from IB
+CHECKPOINT_EVERY = 30            # requests between partial saves (~10 min at 30/10 min)
 CONNECT = {}                     # host, port, clientId for reconnecting
 
 NEW_YORK = ZoneInfo("America/New_York")
 US_SESSION = (dtime(9, 25), dtime(16, 20))  # stocks 9:30-16:00, index options to 16:15
+INFO_CODES = {2104, 2106, 2107, 2108, 2119, 2158}  # IB "data farm OK" messages
+
+log = logging.getLogger("ticks")
+
+
+def setup_logging(log_file):
+    """Log to the console and to a file (appending across runs)."""
+    log.setLevel(logging.INFO)
+    fmt = logging.Formatter("%(asctime)s  %(message)s", "%Y-%m-%d %H:%M:%S")
+    for h in (logging.StreamHandler(), logging.FileHandler(log_file, encoding="utf-8")):
+        h.setFormatter(fmt)
+        log.addHandler(h)
+
+
+def on_ib_error(reqId, errorCode, errorString, contract=None):
+    """Write IB's error messages to the log."""
+    if errorCode in INFO_CODES:
+        return
+    log.warning(f"IB error {errorCode} (req {reqId}): {errorString}")
 
 
 def us_markets_open(now=None):
@@ -63,59 +96,90 @@ def wait(ib, seconds):
     (ib.sleep if hasattr(ib, "sleep") else time.sleep)(max(0.0, seconds))
 
 
-def request(fn, *args, **kwargs):
-    """Call an IB historical-data function politely.
+def request(ib, name, **kwargs):
+    """Call IB's async historical-data method `name` politely and safely.
 
-    Waits while the US markets are open, reconnects if needed, and spaces
-    requests by PACING_SECONDS. Retries the same request after a disconnect,
-    so a lost connection never looks like "no data".
+    Waits while the US markets are open, reconnects if needed, spaces
+    requests by PACING_SECONDS and gives up on an answer after
+    REQUEST_TIMEOUT seconds. A timeout or a lost connection never looks like
+    "no data": the same request is retried.
     """
-    ib = fn.__self__
+    timeouts = 0
     while True:
         if PAUSE_DURING_US_HOURS and us_markets_open():
-            print(f"\n  US markets open: paused until 16:20 New York time "
-                  f"(now {datetime.now(NEW_YORK):%a %H:%M} NY)")
+            log.info(f"US markets open: paused until 16:20 New York time "
+                     f"(now {datetime.now(NEW_YORK):%a %H:%M} NY)")
             while us_markets_open():
                 wait(ib, 60)
-            print("  resuming")
+            log.info("resuming")
         while not ib.isConnected():
             try:
                 ib.connect(**CONNECT)
-                print("  reconnected to IB")
+                log.info("reconnected to IB")
             except Exception as e:  # Gateway restarting or not logged in yet
-                print(f"  IB not reachable ({e}); retrying in 60 s")
+                log.warning(f"IB not reachable ({e}); retrying in 60 s")
                 time.sleep(60)
+
         t0 = time.time()
+        out = None
         try:
-            out = fn(*args, **kwargs)
-        except ConnectionError:
-            out = None
+            coro = getattr(ib, name + "Async")(**kwargs)
+            out = ib.run(asyncio.wait_for(coro, REQUEST_TIMEOUT))
+        except asyncio.TimeoutError:
+            timeouts += 1
+            log.warning(f"{name}: no answer from IB after {REQUEST_TIMEOUT:.0f} s "
+                        f"(timeout {timeouts}); retrying")
+            if timeouts >= 3:
+                log.warning("3 timeouts in a row: resetting the connection")
+                ib.disconnect()
+                timeouts = 0
+        except ConnectionError as e:
+            log.warning(f"{name}: connection error ({e}); retrying")
         wait(ib, PACING_SECONDS - (time.time() - t0))
         if out is not None and ib.isConnected():
             return out
-        print("  connection lost during a request; retrying it")
+        if out is not None:
+            log.warning(f"{name}: connection lost during the request; retrying")
 
 
 def active_minutes(ib, contract, day_start, day_end):
     """UTC minutes of the day that contain at least one trade (1-min bars)."""
-    bars = request(ib.reqHistoricalData, contract, endDateTime=day_end, durationStr="86400 S",
-                   barSizeSetting="1 min", whatToShow="TRADES", useRTH=False, formatDate=2)
+    bars = request(ib, "reqHistoricalData", contract=contract, endDateTime=day_end,
+                   durationStr="86400 S", barSizeSetting="1 min", whatToShow="TRADES",
+                   useRTH=False, formatDate=2, timeout=0)  # timeout=0: ours applies
     return [b.date for b in bars if b.volume > 0 and day_start <= b.date < day_end]
 
 
-def download_day(ib, contract, day_start, day_end):
-    """All trades between day_start and day_end (UTC)."""
+def save_rows(rows, path):
+    pd.DataFrame(rows, columns=["ts", "price", "size"]).to_parquet(path, index=False, compression="zstd")
+
+
+def download_day(ib, contract, day_start, day_end, partial_file):
+    """All trades between day_start and day_end (UTC), or None if IB gave no bars.
+
+    Progress is saved to `partial_file` every CHECKPOINT_EVERY requests and
+    resumed from it if it exists.
+    """
     minutes = active_minutes(ib, contract, day_start, day_end)
     if not minutes:
-        return pd.DataFrame(columns=["ts", "price", "size"])
+        return None
 
     rows, cursor, i_min = [], minutes[0], 0
     seen_at_last_ts = 0  # ticks already kept with the same timestamp as `cursor`
-    skipped_seconds = 0  # seconds with >1000 trades that could not be completed
+    if partial_file.exists():
+        old = pd.read_parquet(partial_file)
+        if len(old):
+            rows = list(old.itertuples(index=False, name=None))
+            cursor = rows[-1][0].to_pydatetime() if hasattr(rows[-1][0], "to_pydatetime") else rows[-1][0]
+            seen_at_last_ts = int((old["ts"] == old["ts"].iloc[-1]).sum())
+            log.info(f"resuming from {cursor:%H:%M:%S} UTC ({len(rows):,} ticks already saved)")
+
+    skipped_seconds, n_requests = 0, 0  # skipped: seconds with >1000 trades
     while True:
-        ticks = request(ib.reqHistoricalTicks, contract, startDateTime=cursor, endDateTime="",
-                        numberOfTicks=1000, whatToShow="TRADES", useRth=False)
+        ticks = request(ib, "reqHistoricalTicks", contract=contract, startDateTime=cursor,
+                        endDateTime="", numberOfTicks=1000, whatToShow="TRADES", useRth=False)
         ticks = [t for t in ticks if t.time < day_end]
+        n_requests += 1
 
         # The batch starts at `cursor`, which we already partly have: skip the
         # ticks at that exact timestamp that were kept in the previous batch.
@@ -134,7 +198,7 @@ def download_day(ib, contract, day_start, day_end):
             else:
                 seen_at_last_ts = sum(1 for t in new if t.time == last)
             cursor = last
-            print(f"    {cursor:%H:%M:%S}  {len(rows):,} ticks", end="\r")
+            print(f"    {cursor:%H:%M:%S} UTC  {len(rows):,} ticks", end="\r")
         elif ticks:
             # Only ticks we already have: this second holds more than 1000
             # trades, more than one request can return. Move on to the next
@@ -151,9 +215,13 @@ def download_day(ib, contract, day_start, day_end):
                 break
             cursor, seen_at_last_ts = minutes[i_min], 0
 
+        if n_requests % CHECKPOINT_EVERY == 0 and rows:
+            save_rows(rows, partial_file)
+            log.info(f"checkpoint: up to {cursor:%H:%M:%S} UTC, {len(rows):,} ticks")
+
     print()
     if skipped_seconds:
-        print(f"    note: {skipped_seconds} second(s) may have had more than 1000 trades (possibly incomplete)")
+        log.info(f"note: {skipped_seconds} second(s) may have had more than 1000 trades (possibly incomplete)")
     return pd.DataFrame(rows, columns=["ts", "price", "size"])
 
 
@@ -170,41 +238,58 @@ def main():
     p.add_argument("--out", default="data_raw/ticks_ibkr")
     p.add_argument("--max-requests", type=int, default=30,
                    help="max historical requests per 10 minutes (IB limit: 60)")
+    p.add_argument("--timeout", type=float, default=120, help="seconds to wait for each IB answer")
     p.add_argument("--run-during-us-hours", action="store_true",
                    help="do not pause while US stocks/options are trading")
     args = p.parse_args()
 
-    global PACING_SECONDS, PAUSE_DURING_US_HOURS
+    global PACING_SECONDS, PAUSE_DURING_US_HOURS, REQUEST_TIMEOUT
     PACING_SECONDS = 600 / min(args.max_requests, 60) + 0.5
     PAUSE_DURING_US_HOURS = not args.run_during_us_hours
-    print(f"Max {600 / PACING_SECONDS:.0f} requests per 10 min; "
-          f"{'pausing' if PAUSE_DURING_US_HOURS else 'NOT pausing'} during US market hours")
+    REQUEST_TIMEOUT = args.timeout
 
     from ib_async import IB, Future  # imported here so --help works without the package
 
     CONNECT.update(host=args.host, port=args.port, clientId=args.client_id, readonly=True)
     ib = IB()
+    ib.errorEvent += on_ib_error
     ib.connect(**CONNECT)
     contract = Future(args.symbol, lastTradeDateOrContractMonth=args.contract_month,
                       exchange=args.exchange, currency="USD", includeExpired=True)
     ib.qualifyContracts(contract)
-    print(f"Contract: {contract.localSymbol}  (conId {contract.conId})")
 
     out = Path(args.out) / contract.localSymbol
     out.mkdir(parents=True, exist_ok=True)
+    setup_logging(out / "download.log")
+    log.info(f"start: {contract.localSymbol} (conId {contract.conId}), {args.start} -> {args.end}, "
+             f"max {600 / PACING_SECONDS:.0f} requests/10 min, timeout {REQUEST_TIMEOUT:.0f} s, "
+             f"{'pausing' if PAUSE_DURING_US_HOURS else 'NOT pausing'} during US market hours")
+
     day = datetime.fromisoformat(args.start).replace(tzinfo=timezone.utc)
     end = datetime.fromisoformat(args.end).replace(tzinfo=timezone.utc)
     try:
         while day < end:
             f = out / f"{day:%Y-%m-%d}.parquet"
+            partial = out / f"{day:%Y-%m-%d}.partial.parquet"
             if day.weekday() == 5 or f.exists():  # CME is closed on Saturday (UTC)
                 day += timedelta(days=1)
                 continue
-            print(f"  {day:%Y-%m-%d} ...")
-            df = download_day(ib, contract, day, day + timedelta(days=1))
-            df.to_parquet(f, index=False, compression="zstd")
-            print(f"  saved {f}  ({len(df):,} trades)")
+            log.info(f"{day:%Y-%m-%d}: downloading")
+            df = download_day(ib, contract, day, day + timedelta(days=1), partial)
+            if df is None:
+                log.warning(f"{day:%Y-%m-%d}: IB returned no 1-minute bars (error or no data); "
+                            f"day NOT saved, it will be retried on the next run")
+            else:
+                df.to_parquet(f, index=False, compression="zstd")
+                partial.unlink(missing_ok=True)
+                log.info(f"{day:%Y-%m-%d}: saved {f} ({len(df):,} trades)")
             day += timedelta(days=1)
+        log.info("finished")
+    except KeyboardInterrupt:
+        log.info("stopped by the user (Ctrl+C); restart the same command to continue")
+    except Exception:
+        log.exception("stopped by an error")
+        raise
     finally:
         ib.disconnect()
 
