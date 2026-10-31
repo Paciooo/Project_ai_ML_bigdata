@@ -92,8 +92,19 @@ def us_markets_open(now=None):
 
 
 def wait(ib, seconds):
-    """Sleep while keeping the IB connection alive."""
-    (ib.sleep if hasattr(ib, "sleep") else time.sleep)(max(0.0, seconds))
+    """Sleep while keeping the IB connection alive.
+
+    If the connection drops during the wait (e.g. IB Gateway's daily
+    restart), ib.sleep raises ConnectionError: log it and finish the wait
+    with a plain sleep; the next request reconnects.
+    """
+    end = time.time() + max(0.0, seconds)
+    while (left := end - time.time()) > 0:
+        try:
+            (ib.sleep if hasattr(ib, "sleep") else time.sleep)(left)
+        except (ConnectionError, OSError) as e:
+            log.warning(f"connection lost while waiting ({e})")
+            time.sleep(max(0.0, end - time.time()))
 
 
 def request(ib, name, **kwargs):
@@ -133,7 +144,7 @@ def request(ib, name, **kwargs):
                 log.warning("3 timeouts in a row: resetting the connection")
                 ib.disconnect()
                 timeouts = 0
-        except ConnectionError as e:
+        except (ConnectionError, OSError) as e:
             log.warning(f"{name}: connection error ({e}); retrying")
         wait(ib, PACING_SECONDS - (time.time() - t0))
         if out is not None and ib.isConnected():
@@ -275,7 +286,14 @@ def main():
                 day += timedelta(days=1)
                 continue
             log.info(f"{day:%Y-%m-%d}: downloading")
-            df = download_day(ib, contract, day, day + timedelta(days=1), partial)
+            try:
+                df = download_day(ib, contract, day, day + timedelta(days=1), partial)
+            except (ConnectionError, OSError) as e:
+                # Last line of defence: anything not caught inside. The
+                # partial file keeps the progress; retry the same day.
+                log.warning(f"{day:%Y-%m-%d}: connection problem ({e}); resuming in 60 s")
+                time.sleep(60)
+                continue
             if df is None:
                 log.warning(f"{day:%Y-%m-%d}: IB returned no 1-minute bars (error or no data); "
                             f"day NOT saved, it will be retried on the next run")
