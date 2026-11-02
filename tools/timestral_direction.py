@@ -19,6 +19,8 @@ Setup (once):
 Usage (from the project folder, with DATA_SOURCE = "nq" data available):
   python tools/timestral_direction.py                              # Timestral-5M, all frequencies
   python tools/timestral_direction.py --model mistralai/Timestral-209M --n-samples 500
+  Sizes: Timestral-5M, -28M, -123M, -209M (bigger = slower on a CPU).
+  Results of every run are appended to the same CSV, so sizes can be compared.
   python tools/timestral_direction.py --frequency daily
 
 Output: results/nq/timestral_results.csv
@@ -108,6 +110,10 @@ def main():
     p.add_argument("--device", default="cpu", help='"cuda" if you have an NVIDIA GPU')
     args = p.parse_args()
 
+    # Plain HTTPS downloads from Hugging Face: the newer "Xet" protocol kept
+    # failing with connection resets on Windows (WinError 10054).
+    os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
+    os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
     from timestral import TimestralForecaster  # imported here so --help works without it
 
     print(f"Loading {config.FUTURES_SYMBOL} data ...")
