@@ -1,5 +1,14 @@
 # Financial Market Direction Prediction Using Machine Learning
 
+> **Audit of 2026-11-02:** the pipeline was rebuilt for correct timing
+> (sessions, bar availability, flat outcomes, purged splits, causal
+> quarantine, cost-aware backtest, safer IBKR downloads). See
+> **[RUN_GUIDE.md](RUN_GUIDE.md)** for the status, the commands and which
+> results are final. The result tables further down in this README are
+> **LEGACY** (old pipeline: flat moves dropped, future-dependent spike
+> removal, no costs). They are kept for reference and are reproducible
+> with `python main.py --data-source nq --legacy`.
+
 University project for *AI, Machine Learning and Big Data for Finance and Management*.
 
 **Question:** can simple ML models predict whether the next price move is
@@ -24,8 +33,14 @@ The project is designed as two experiments:
 
 ```bash
 pip install -r requirements.txt
-python main.py
+python -m pytest tests -q
+python main.py --smoke                     # offline check
+python main.py --data-source nq            # final pipeline, all time frames
+python main.py --help                      # every option
 ```
+
+The `DATA_SOURCE` text below describes the legacy pipeline
+(`python main.py --legacy`, or `--data-source synthetic`).
 
 `DATA_SOURCE` in `config.py` chooses the experiment:
 

@@ -1,6 +1,9 @@
+# Core (python main.py, tests). Exact tested versions: requirements-lock.txt
 numpy>=1.24
 pandas>=2.0
+scipy>=1.10
 matplotlib>=3.7
 scikit-learn>=1.3
 pyarrow>=14.0   # reads the Parquet files of futures-data and the tick downloads
-xgboost>=2.0   # optional: remove this line (or set USE_XGBOOST = False) to skip XGBoost
+xgboost>=2.0    # optional: drop it and leave "xgboost" out of --models
+pytest>=8

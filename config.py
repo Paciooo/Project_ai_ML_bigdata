@@ -21,6 +21,7 @@ DATA_SOURCE = "nq"
 # Folder of your local clone of github.com/Paciooo/futures-data.
 # Default: next to this project. Override without editing the file with
 #   PowerShell:  $env:FUTURES_DATA_DIR="C:\path\to\futures-data"
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 FUTURES_DATA_DIR = os.environ.get("FUTURES_DATA_DIR", "../futures-data")
 FUTURES_SYMBOL = "NQ"
 FUTURES_YEARS = (2006, 2025)    # first and last year of 1-minute bars to load
@@ -28,6 +29,19 @@ SPIKE_THRESHOLD = 0.02          # 1-minute moves above 2% that revert at once = 
 
 # Real tick data (DATA_SOURCE = "nq_ticks"): folder of the daily tick files
 TICKS_DIR = os.environ.get("TICKS_DIR", "data_raw/ticks_ibkr/NQZ6")
+
+
+def _project_path(p):
+    """Relative paths are resolved from this project folder, not the shell's."""
+    return p if os.path.isabs(p) else os.path.normpath(os.path.join(PROJECT_DIR, p))
+
+
+def futures_data_dir():
+    return _project_path(FUTURES_DATA_DIR)
+
+
+def ticks_dir():
+    return _project_path(TICKS_DIR)
 
 # ---------------------------------------------------------------------------
 # Synthetic GBM simulation (DATA_SOURCE = "synthetic")
@@ -86,7 +100,18 @@ MLP_DEEP_LAYERS = (64, 32, 16)      # 3 hidden layers
 # ---------------------------------------------------------------------------
 # Output
 # ---------------------------------------------------------------------------
-RESULTS_DIR = "results"          # results go to results/synthetic or results/nq
+RESULTS_DIR = "results"          # resolved from the project folder; runs go to
+                                 # results/<data source>/runs/<run id>/
+
+# Economic test (backtest.py): capital used ONLY to express P&L in percent
+CAPITAL_USD = 100_000            # assumption, one NQ contract per signal
+
+# Confirmatory protocol. Everything up to 2025-05-30 (the end of the
+# futures-data NQ export) has already been looked at, so results on it are
+# exploratory. Sessions on or after this date are a reserved forward holdout:
+# they are excluded from every run unless --confirmatory is passed, which
+# should be done once, with a model/feature/threshold choice fixed in advance.
+CONFIRMATORY_HOLDOUT_START = "2025-06-02"
 
 # Models highlighted in the multi-seed chart (simple -> complex)
 FOCUS_MODELS = ["Logistic Regression", "Random Forest", "NN 1 layer", "NN 3 layers"]

@@ -16,8 +16,16 @@ Common steps:
   3. Split by common calendar dates 60/20/20 (with a gap), train on train.
   4. Use the validation set for model selection, report the test set.
 
-Usage:  python main.py
+Usage (see README for all options):
+  python main.py --smoke                              # offline fixture, ~1 minute
+  python main.py --data-source nq --frequency 1min 1h session
+  python main.py --data-source nq --legacy            # the original pipeline
+  python main.py --data-source synthetic              # GBM null experiment (legacy)
+Without --data-source the value of config.DATA_SOURCE is used. Every run
+writes to its own folder results/<source>/runs/<run id>/.
 """
+
+import argparse
 
 import os
 
@@ -134,13 +142,16 @@ def print_results(results, title):
     print(results[cols].to_string(index=False, float_format=lambda v: f"{v:.3f}"))
 
 
-def main_nq():
-    """Real NQ futures: 1-minute bars plus hourly and daily candles."""
-    out = os.path.join(config.RESULTS_DIR, "nq")
-    os.makedirs(out, exist_ok=True)
+def main_nq(out):
+    """LEGACY pipeline. Real NQ futures: 1-minute bars plus hourly and daily candles.
+
+    Kept for comparison with the saved results; known issues fixed in
+    experiment.py: implicit resampling labels, future-dependent spike removal,
+    flats dropped before evaluation.
+    """
     y0, y1 = config.FUTURES_YEARS
-    print(f"Loading {config.FUTURES_SYMBOL} 1-minute bars {y0}-{y1} from {config.FUTURES_DATA_DIR} ...")
-    minutes = data.load_futures_minutes(config.FUTURES_DATA_DIR, config.FUTURES_SYMBOL, y0, y1)
+    print(f"Loading {config.FUTURES_SYMBOL} 1-minute bars {y0}-{y1} from {config.futures_data_dir()} ...")
+    minutes = data.load_futures_minutes(config.futures_data_dir(), config.FUTURES_SYMBOL, y0, y1)
     minutes, report = data.clean_minute_bars(minutes, config.SPIKE_THRESHOLD)
     print(f"  {report['bars_raw']:,} bars loaded; removed {report['saturday_bars_removed']} Saturday bars "
           f"and {report['spike_bars_removed']} isolated spikes -> {report['bars_clean']:,} bars")
@@ -158,12 +169,10 @@ def main_nq():
     print(f"\nAll tables and figures saved to '{out}/'.")
 
 
-def main_nq_ticks():
-    """Real NQ trades (one month): every trade, 1-minute and hourly candles."""
-    out = os.path.join(config.RESULTS_DIR, "nq_ticks")
-    os.makedirs(out, exist_ok=True)
-    print(f"Loading tick files from {config.TICKS_DIR} ...")
-    ticks = data.load_tick_files(config.TICKS_DIR)
+def main_nq_ticks(out):
+    """LEGACY pipeline. Real NQ trades (one month): every trade, 1-minute and hourly candles."""
+    print(f"Loading tick files from {config.ticks_dir()} ...")
+    ticks = data.load_tick_files(config.ticks_dir())
     datasets, daily = data.tick_datasets(ticks)
     print(f"  {len(ticks):,} trades, {ticks.index.min()} -> {ticks.index.max()}, {len(daily)} sessions: "
           + ", ".join(f"{k} {len(v):,}" for k, v in datasets.items()))
@@ -180,13 +189,8 @@ def main_nq_ticks():
     print(f"\nAll tables and figures saved to '{out}/'.")
 
 
-def main():
-    if config.DATA_SOURCE == "nq":
-        return main_nq()
-    if config.DATA_SOURCE == "nq_ticks":
-        return main_nq_ticks()
-    out = os.path.join(config.RESULTS_DIR, "synthetic")
-    os.makedirs(out, exist_ok=True)
+def main_synthetic(out):
+    """GBM null experiment over several seeds (legacy pipeline, kept as is)."""
     main_seed = config.SEEDS[0]
 
     all_results, all_summaries = [], []
@@ -232,6 +236,73 @@ def main():
                       "n_seeds_beating_baseline", "balanced_accuracy_mean"]]
           .to_string(index=False, float_format=lambda v: f"{v:.3f}"))
     print(f"\nAll tables and figures saved to '{out}/'.")
+
+
+SOURCES = ["synthetic", "nq", "nq_ticks", "fixture"]
+FREQS = ["tick", "1min", "5min", "15min", "1h", "4h", "session"]
+
+
+def parse_args(argv=None):
+    import experiment
+    import features
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--data-source", choices=SOURCES, default=None,
+                   help="default: config.DATA_SOURCE")
+    p.add_argument("--legacy", action="store_true", help="run the original pipeline (nq, nq_ticks)")
+    p.add_argument("--target", choices=[t for t in features.TARGETS if t != "next_trade_direction"],
+                   default="next_close_direction")
+    p.add_argument("--frequency", nargs="+", choices=FREQS, default=["1min", "5min", "15min", "1h", "4h", "session"])
+    p.add_argument("--models", nargs="+", choices=experiment.MODELS, default=["logreg", "xgboost"])
+    p.add_argument("--seed", type=int, default=config.SEEDS[0])
+    p.add_argument("--scheme", choices=["holdout", "expanding", "rolling"], default="holdout")
+    p.add_argument("--folds", type=int, default=4, help="test blocks for expanding/rolling")
+    p.add_argument("--rolling-train-sessions", type=int, default=750)
+    p.add_argument("--years", type=int, nargs=2, default=None, metavar=("FIRST", "LAST"))
+    p.add_argument("--spike-policy", choices=["quarantine", "none", "legacy_remove"], default="quarantine")
+    p.add_argument("--extra-features", nargs="*", default=[], choices=["volume", "range", "rv", "time"])
+    p.add_argument("--context-features", action="store_true",
+                   help="add completed-session returns to intraday rows (as-of join)")
+    p.add_argument("--regimes", action="store_true", help="paper-inspired change-point regime models")
+    p.add_argument("--regime-min-rows", type=int, default=2000)
+    p.add_argument("--latency", default="1s", help="inference latency added to the decision time")
+    p.add_argument("--max-train-rows", type=int, default=0, help="0 = all (most recent rows kept)")
+    p.add_argument("--min-rows", type=int, default=30, help="minimum rows per split")
+    p.add_argument("--confirmatory", action="store_true",
+                   help="include the reserved forward holdout (use once, choices fixed in advance)")
+    p.add_argument("--smoke", action="store_true",
+                   help="quick offline run on the synthetic fixture; writes to results/smoke")
+    p.add_argument("--fixture-signal", type=float, default=0.5, help="bounce size of the fixture (0 = null)")
+    p.add_argument("--tag", default="")
+    a = p.parse_args(argv)
+    a.data_source = a.data_source or config.DATA_SOURCE
+    if a.data_source not in SOURCES:  # never fall back silently
+        p.error(f"config.DATA_SOURCE={a.data_source!r} is not one of {SOURCES}")
+    if a.smoke:
+        a.data_source, a.smoke_fixture = "fixture", True
+        a.max_train_rows = a.max_train_rows or 20000
+        if "--frequency" not in (argv or __import__("sys").argv):
+            a.frequency = ["1min", "5min", "1h"]
+    else:
+        a.smoke_fixture = False
+    if "tick" in a.frequency and a.data_source != "nq_ticks":
+        p.error("--frequency tick needs --data-source nq_ticks")
+    if a.max_train_rows < 0 or a.folds < 1 or a.min_rows < 1:
+        p.error("--max-train-rows >= 0, --folds >= 1 and --min-rows >= 1 required")
+    return a
+
+
+def main(argv=None):
+    args = parse_args(argv)
+    if args.data_source == "synthetic" or args.legacy:
+        import runlog
+        if args.data_source == "fixture":
+            raise SystemExit("--legacy does not support the fixture")
+        out = runlog.new_run_dir(config.RESULTS_DIR, args.data_source, tag="legacy")
+        runlog.write_run_json(out, {"args": vars(args), "config": runlog.config_snapshot(config),
+                                    "pipeline": "legacy"})
+        return {"synthetic": main_synthetic, "nq": main_nq, "nq_ticks": main_nq_ticks}[args.data_source](str(out))
+    import experiment
+    return experiment.run(args)
 
 
 if __name__ == "__main__":

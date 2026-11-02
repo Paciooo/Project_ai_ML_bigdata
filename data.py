@@ -161,6 +161,10 @@ def load_futures_minutes(data_dir, symbol, year_from, year_to):
     open, high, low, close, volume; one file per year; continuous contract,
     back-adjusted at the rolls; each bar is stamped with its END time.
     """
+    if not Path(data_dir).is_dir():
+        raise FileNotFoundError(
+            f"futures-data folder not found: {data_dir}. Clone github.com/Paciooo/futures-data "
+            f"next to this project or set FUTURES_DATA_DIR. (No replacement data is generated.)")
     folder = Path(data_dir) / "data" / "minute" / symbol
     files = [folder / f"{y}.parquet" for y in range(year_from, year_to + 1)]
     files = [f for f in files if f.exists()]
@@ -224,7 +228,7 @@ def load_tick_files(folder):
     Unfinished days (*.partial.parquet) are ignored. Trades keep their
     original order, also within the same timestamp.
     """
-    files = sorted(f for f in Path(folder).glob("*.parquet") if not f.stem.endswith(".partial"))
+    files = sorted(f for f in Path(folder).glob("????-??-??.parquet"))
     if not files:
         raise FileNotFoundError(f"No tick files in {folder}. Set TICKS_DIR in config.py.")
     df = pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
@@ -248,3 +252,56 @@ def tick_datasets(ticks):
     daily = bars.groupby(session_day).agg(agg).dropna(subset=["close"])
     daily.index.name = bars.index.name
     return {"tick": bars, "1-min": minute, "hourly": hourly}, daily
+
+
+def tick_manifest_status(folder):
+    """Which tick days are verified complete according to manifest.json.
+
+    Files without a manifest entry (e.g. downloaded before manifests existed)
+    are UNVERIFIED: a file name alone does not prove the day is complete.
+    """
+    import json
+    folder = Path(folder)
+    files = sorted(f.stem for f in folder.glob("????-??-??.parquet"))
+    mf = folder / "manifest.json"
+    man = json.loads(mf.read_text()) if mf.exists() else {}
+    days = man.get("days", {})
+    verified = [d for d in files if days.get(d, {}).get("status") in ("complete", "no_trades")]
+    return {"manifest": mf.exists(), "contract": man.get("contract"), "n_files": len(files),
+            "n_verified": len(verified), "unverified_days": [d for d in files if d not in verified]}
+
+
+# ---------------------------------------------------------------------------
+# Offline fixture (smoke runs and the positive-control test)
+# ---------------------------------------------------------------------------
+
+def fixture_minutes(n_sessions=40, seed=0, bounce=0.5, sigma=1.0, start="2022-01-03"):
+    """Synthetic CME-schedule 1-minute bars (UTC) with an optional known signal.
+
+    The efficient price is a random walk (sigma points per minute); every
+    observed price adds independent noise of +-`bounce` points, like a
+    bid-ask bounce. With bounce > 0 the next close-to-close return is
+    negatively correlated with the last one (a signal correct alignment must
+    recover); with bounce = 0 the series is a pure random walk (null).
+    Not market data: used only for tests and smoke runs.
+    """
+    import timeframes
+    rng = np.random.default_rng(seed)
+    days = pd.bdate_range(start, periods=n_sessions)
+    frames = []
+    for d in days:
+        open_ct = (d - pd.Timedelta(days=1) + pd.Timedelta(hours=17)).tz_localize(timeframes.CHICAGO)
+        close_ct = (d + pd.Timedelta(hours=16)).tz_localize(timeframes.CHICAGO)
+        st = pd.date_range(open_ct, close_ct, freq="1min", inclusive="left").tz_convert("UTC")
+        frames.append(st)
+    st = frames[0].append(frames[1:])
+    n = len(st)
+    eff = 15000 + np.cumsum(rng.normal(0, sigma, n))
+    noise = lambda: rng.choice([-bounce, bounce], n) if bounce > 0 else np.zeros(n)
+    close = eff + noise()
+    open_ = np.r_[close[0], eff[:-1]] + noise()
+    hi = np.maximum(open_, close) + np.abs(rng.normal(0, sigma / 2, n))
+    lo = np.minimum(open_, close) - np.abs(rng.normal(0, sigma / 2, n))
+    return pd.DataFrame({"bar_start": st, "bar_end": st + pd.Timedelta(minutes=1),
+                         "available_at": st + pd.Timedelta(minutes=1), "open": open_, "high": hi,
+                         "low": lo, "close": close, "volume": rng.poisson(50, n) + 1})

@@ -189,3 +189,32 @@ def plot_multi_seed(results_all, focus_models, out_dir):
     fig.tight_layout()
     fig.savefig(os.path.join(out_dir, "07_multi_seed_accuracy.png"), dpi=150)
     plt.close(fig)
+
+
+def plot_paired_differences(paired, backtest_df, out_dir):
+    """Time-frame comparison: accuracy minus majority (95% block bootstrap,
+    20-session blocks) and net P&L under the base cost assumption."""
+    freqs = list(dict.fromkeys(paired["frequency"]))
+    models = list(dict.fromkeys(paired["model"]))
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4.8))
+    w = 0.8 / max(len(models), 1)
+    x = np.arange(len(freqs))
+    for i, m in enumerate(models):
+        d = paired[paired["model"] == m].set_index("frequency").reindex(freqs)
+        lo, hi = d["diff_pp"] - d["ci_lo_pp_b20"], d["ci_hi_pp_b20"] - d["diff_pp"]
+        axes[0].errorbar(x + (i - (len(models) - 1) / 2) * w, d["diff_pp"], yerr=[lo, hi], fmt="o",
+                         capsize=3, label=m)
+        b = backtest_df[(backtest_df["model"] == m) & (backtest_df["costs"] == "base")].set_index("frequency").reindex(freqs)
+        axes[1].bar(x + (i - (len(models) - 1) / 2) * w, b["net_usd"] / 1e3, w, label=m)
+    axes[0].axhline(0, color="grey", lw=1)
+    axes[0].set_xticks(x, freqs)
+    axes[0].set_ylabel("accuracy minus majority (pp)")
+    axes[0].set_title("Paired accuracy difference, 95% block-bootstrap CI")
+    axes[1].axhline(0, color="grey", lw=1)
+    axes[1].set_xticks(x, freqs)
+    axes[1].set_ylabel("net P&L, thousand USD (1 contract/signal)")
+    axes[1].set_title("Backtest, base cost assumption")
+    axes[0].legend(fontsize=8, ncol=2)
+    fig.tight_layout()
+    fig.savefig(os.path.join(out_dir, "timeframe_comparison.png"), dpi=150)
+    plt.close(fig)
