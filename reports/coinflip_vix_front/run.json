@@ -1,0 +1,142 @@
+{
+  "created_utc": "2026-11-02T06:56:52.864989+00:00",
+  "git": {
+    "commit": "bac8ceee231cfead0268212e214d6d527c249398",
+    "dirty": true
+  },
+  "versions": {
+    "python": "3.12.3",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "numpy": "2.5.4",
+    "pandas": "3.0.6",
+    "scikit-learn": "1.9.1",
+    "xgboost": "3.4.1",
+    "pyarrow": "26.0.0",
+    "matplotlib": "3.11.2",
+    "torch": "2.15.0",
+    "timestral": "1.0.0",
+    "ib_async": "2.1.0"
+  },
+  "source_sha256_16": {
+    "backtest.py": "9c68aa622bc7a0a3",
+    "config.py": "0f83e7845d73099f",
+    "data.py": "14e9f1134fa59f34",
+    "evaluation.py": "ca228391d8f04c24",
+    "experiment.py": "c8a5e3e4111d2991",
+    "features.py": "0266e0fab3b1ce74",
+    "main.py": "daae760bb0e87fca",
+    "models.py": "71b641b2f914d668",
+    "plots.py": "cb09c6dfb9056d83",
+    "quality.py": "f2423f2d75e87a9c",
+    "regimes.py": "79a70e2ab1d2582f",
+    "runlog.py": "28ae400122c8501b",
+    "timeframes.py": "cc4f43c164ed7a42",
+    "tools\\check_ticks.py": "dc66347bbc025d7b",
+    "tools\\coinflip_vix.py": "23dda8a896ee0c70",
+    "tools\\download_bars_ibkr.py": "7c37eed709bf03d7",
+    "tools\\download_ticks_databento.py": "033e724cc399849b",
+    "tools\\download_ticks_ibkr.py": "49188098d800531b",
+    "tools\\ib_common.py": "e5787518e13878ba",
+    "tools\\timestral_direction.py": "4855d91157b2a852"
+  },
+  "args": {
+    "spot": "C:\\Users\\aless\\Desktop\\Scuola\\BSAMC\\VIX\\Codice\\data\\spot_LSEG_VIX.csv",
+    "futures": "C:\\Users\\aless\\Desktop\\Scuola\\BSAMC\\VIX\\Codice\\data\\futures_LSEG_VIX.csv",
+    "nq_runs": [
+      "C:\\Users\\aless\\Desktop\\py\\AI_ML_BD\\Project_ai_ML_bigdata\\results\\nq\\runs\\20261102T060506Z_892e22_A_holdout_close",
+      "C:\\Users\\aless\\Desktop\\py\\AI_ML_BD\\Project_ai_ML_bigdata\\results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body",
+      "C:\\Users\\aless\\Desktop\\py\\AI_ML_BD\\Project_ai_ML_bigdata\\results\\nq\\runs\\20261102T061204Z_cdd340_C_walkforward"
+    ],
+    "simulations": 10000,
+    "context": 64,
+    "batch": 32,
+    "seed": 42,
+    "val_start": "2017-08-25",
+    "test_start": "2021-07-15",
+    "end_date": "2025-05-30",
+    "timestral_models": [
+      "5M",
+      "28M",
+      "123M",
+      "209M"
+    ],
+    "allow_download": true,
+    "reuse_nq_monte_carlo": "results\\extensions\\runs\\20261102T063428Z_b281c1_coinflip_vix_front"
+  },
+  "data_reports": {
+    "spot": {
+      "path": "C:\\Users\\aless\\Desktop\\Scuola\\BSAMC\\VIX\\Codice\\data\\spot_LSEG_VIX.csv",
+      "raw_rows": 5650,
+      "unique_rows": 5485,
+      "exact_duplicates_removed": 165,
+      "first": "2004-03-26",
+      "last": "2025-11-19",
+      "sha256": "25f2d4e69d0b2e5167459b8a84d22595b5e02128c6b1ecdf54178ea9a45216a6"
+    },
+    "futures": {
+      "path": "C:\\Users\\aless\\Desktop\\Scuola\\BSAMC\\VIX\\Codice\\data\\futures_LSEG_VIX.csv",
+      "raw_rows": 5650,
+      "unique_rows": 5451,
+      "exact_duplicates_removed": 199,
+      "first": "2004-03-26",
+      "last": "2025-11-20",
+      "sha256": "c9b2adca1668a26c2bc92961b406b7036574c7347c6cba8aad63efb1eb1bb139"
+    },
+    "front_dataset": {
+      "raw_unique_dates": 5330,
+      "usable_origins": 5000,
+      "context": 64,
+      "front_switch_or_missing_next": 255,
+      "first_origin": "2004-06-28",
+      "last_origin": "2025-05-29",
+      "history": "same expiry across historical column positions; no maturity-curve predictors",
+      "expiry_convention": "vendor expiry fields used as identity; actual exchange calendar not verified"
+    },
+    "splits": {
+      "train": {
+        "n": 3140,
+        "first": "2004-06-28",
+        "last": "2017-08-23"
+      },
+      "validation": {
+        "n": 931,
+        "first": "2017-08-25",
+        "last": "2021-07-13"
+      },
+      "test": {
+        "n": 928,
+        "first": "2021-07-15",
+        "last": "2025-05-29"
+      }
+    }
+  },
+  "timestral": [
+    {
+      "model": "mistralai/Timestral-5M",
+      "status": "completed",
+      "seconds": 1.17,
+      "resolved_config": "C:\\Users\\aless\\.cache\\huggingface\\hub\\models--mistralai--Timestral-5M\\snapshots\\bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f\\config.json"
+    },
+    {
+      "model": "mistralai/Timestral-28M",
+      "status": "completed",
+      "seconds": 3.62,
+      "resolved_config": "C:\\Users\\aless\\Desktop\\py\\AI_ML_BD\\Project_ai_ML_bigdata\\data_raw\\model_cache\\models--mistralai--Timestral-28M\\snapshots\\49b26409ac87b5935539a5d8ffe7f397b720db47\\config.json"
+    },
+    {
+      "model": "mistralai/Timestral-123M",
+      "status": "completed",
+      "seconds": 34.06,
+      "resolved_config": "C:\\Users\\aless\\Desktop\\py\\AI_ML_BD\\Project_ai_ML_bigdata\\data_raw\\model_cache\\models--mistralai--Timestral-123M\\snapshots\\5a147287addda85f6acd8da3fb8858fe9af7e8f7\\config.json"
+    },
+    {
+      "model": "mistralai/Timestral-209M",
+      "status": "completed",
+      "seconds": 58.69,
+      "resolved_config": "C:\\Users\\aless\\Desktop\\py\\AI_ML_BD\\Project_ai_ML_bigdata\\data_raw\\model_cache\\models--mistralai--Timestral-209M\\snapshots\\9874d252ab0aae16f7f7c999f98f98d6ad7d8365\\config.json"
+    }
+  ],
+  "target": "same nearest-expiry futures next observed daily quoted price direction; roll changes excluded",
+  "status": "complete",
+  "coin_null": "conditional independent decisions on fixed historical outcomes, not future-market inference"
+}
