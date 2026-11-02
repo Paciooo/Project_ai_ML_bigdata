@@ -67,6 +67,7 @@ US_SESSION = (dtime(9, 25), dtime(16, 20))  # stocks 9:30-16:00, index options t
 INFO_CODES = {2104, 2106, 2107, 2108, 2119, 2158}  # IB "data farm OK" messages
 
 log = logging.getLogger("ticks")
+REQUEST_ERRORS = []              # (reqId, code, message) of errors tied to a request
 
 
 def setup_logging(log_file):
@@ -83,6 +84,8 @@ def on_ib_error(reqId, errorCode, errorString, contract=None):
     if errorCode in INFO_CODES:
         return
     log.warning(f"IB error {errorCode} (req {reqId}): {errorString}")
+    if reqId is not None and reqId > 0:
+        REQUEST_ERRORS.append((reqId, errorCode, errorString))
 
 
 def us_markets_open(now=None):
@@ -112,10 +115,12 @@ def request(ib, name, **kwargs):
 
     Waits while the US markets are open, reconnects if needed, spaces
     requests by PACING_SECONDS and gives up on an answer after
-    REQUEST_TIMEOUT seconds. A timeout or a lost connection never looks like
-    "no data": the same request is retried.
+    REQUEST_TIMEOUT seconds. A timeout, a lost connection or an IB error on
+    the request (e.g. 10187, another session logged in) never looks like
+    "no data": the same request is retried (errors: up to 3 times, then the
+    empty answer is accepted, since IB also reports some empty ranges as errors).
     """
-    timeouts = 0
+    timeouts, errors = 0, 0
     while True:
         if PAUSE_DURING_US_HOURS and us_markets_open():
             log.info(f"US markets open: paused until 16:20 New York time "
@@ -133,6 +138,7 @@ def request(ib, name, **kwargs):
 
         t0 = time.time()
         out = None
+        n_err = len(REQUEST_ERRORS)
         try:
             coro = getattr(ib, name + "Async")(**kwargs)
             out = ib.run(asyncio.wait_for(coro, REQUEST_TIMEOUT))
@@ -147,6 +153,13 @@ def request(ib, name, **kwargs):
         except (ConnectionError, OSError) as e:
             log.warning(f"{name}: connection error ({e}); retrying")
         wait(ib, PACING_SECONDS - (time.time() - t0))
+        failed = out is not None and len(out) == 0 and len(REQUEST_ERRORS) > n_err
+        if failed and errors < 3:
+            errors += 1
+            log.warning(f"{name}: IB answered with an error, not with data "
+                        f"(attempt {errors}/3); retrying in 60 s")
+            wait(ib, 60)
+            continue
         if out is not None and ib.isConnected():
             return out
         if out is not None:

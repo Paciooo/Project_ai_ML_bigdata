@@ -28,6 +28,27 @@ for f in files:
     print(f"{f.stem:10s} {len(df):>10,}  {df.ts.min():%H:%M:%S}  {df.ts.max():%H:%M:%S}  "
           f"{df.price.min():>10.2f}  {df.price.max():>10.2f}")
 print(f"\n{len(files)} days, {total:,} trades in total")
+
+# Gaps: more than 3 minutes without trades, outside the daily CME break
+# (about 20:55-22:05 UTC) and the session open/close. NQ trades every few
+# seconds, so a long gap inside the session usually means missing data.
+print("\ngaps > 3 min inside the session (possible missing data):")
+n_gaps = 0
+for f in files:
+    ts = pd.read_parquet(f, columns=["ts"])["ts"]
+    if len(ts) < 2:
+        continue
+    gap = ts.diff()
+    start = ts.shift()
+    big = gap > pd.Timedelta(minutes=3)
+    for t0, g in zip(start[big], gap[big]):
+        t1 = t0 + g
+        in_break = t0.hour >= 20 and t1.hour <= 22 and t1.date() == t0.date()
+        if not in_break:
+            n_gaps += 1
+            print(f"  {f.stem}: {t0:%H:%M:%S} -> {t1:%H:%M:%S} UTC ({g.total_seconds() / 60:.0f} min)")
+if n_gaps == 0:
+    print("  none")
 for f in partials:
     df = pd.read_parquet(f)
     last = f"up to {df.ts.max():%H:%M:%S} UTC" if len(df) else "just started"
