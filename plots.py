@@ -209,12 +209,18 @@ def plot_paired_differences(paired, backtest_df, out_dir):
     axes[0].axhline(0, color="grey", lw=1)
     axes[0].set_xticks(x, freqs)
     axes[0].set_ylabel("accuracy minus majority (pp)")
-    axes[0].set_title("Paired accuracy difference, 95% block-bootstrap CI")
+    axes[0].set_title("Paired accuracy difference, 95% block-bootstrap CI", fontsize=11)
     axes[1].axhline(0, color="grey", lw=1)
     axes[1].set_xticks(x, freqs)
     axes[1].set_ylabel("net P&L, thousand USD (1 contract/signal)")
-    axes[1].set_title("Backtest, base cost assumption")
+    axes[1].set_title("Observed post-decision minute-entry proxy\nBase cost assumption", fontsize=11)
+    axes[1].set_xlim(-0.6, len(freqs) - 0.4)
+    if "economic_status" in backtest_df:
+        for k, freq in enumerate(freqs):
+            sub = backtest_df[(backtest_df["frequency"] == freq) & (backtest_df["costs"] == "base")]
+            if len(sub) and sub["net_usd"].isna().all():
+                axes[1].text(k, .03, "N/A", transform=axes[1].get_xaxis_transform(), ha="center", fontsize=9)
     axes[0].legend(fontsize=8, ncol=2)
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
     fig.savefig(os.path.join(out_dir, "timeframe_comparison.png"), dpi=150)
     plt.close(fig)

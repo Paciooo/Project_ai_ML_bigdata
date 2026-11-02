@@ -1,0 +1,1085 @@
+{
+  "repair_id": "20261102T074046Z",
+  "classifier_retraining": false,
+  "timestral_nq": [
+    {
+      "frequency": "1min",
+      "model_inference_reproduced": true,
+      "metrics": [
+        {
+          "model": "mistralai/Timestral-5M",
+          "n": 2000,
+          "acc_all": 0.48
+        },
+        {
+          "model": "majority",
+          "n": 2000,
+          "acc_all": 0.48
+        },
+        {
+          "model": "persistence",
+          "n": 2000,
+          "acc_all": 0.467
+        },
+        {
+          "model": "reversal",
+          "n": 2000,
+          "acc_all": 0.496
+        },
+        {
+          "model": "logreg",
+          "n": 2000,
+          "acc_all": 0.4795
+        },
+        {
+          "model": "xgboost",
+          "n": 2000,
+          "acc_all": 0.4865
+        }
+      ],
+      "predictions_sha256": "1f6a2831636d6f5551108eaa0e5c621115641dcde6d9eaffcb686031210784d2"
+    },
+    {
+      "frequency": "1h",
+      "model_inference_reproduced": true,
+      "metrics": [
+        {
+          "model": "mistralai/Timestral-5M",
+          "n": 2000,
+          "acc_all": 0.519
+        },
+        {
+          "model": "majority",
+          "n": 2000,
+          "acc_all": 0.5185
+        },
+        {
+          "model": "persistence",
+          "n": 2000,
+          "acc_all": 0.477
+        },
+        {
+          "model": "reversal",
+          "n": 2000,
+          "acc_all": 0.5165
+        },
+        {
+          "model": "logreg",
+          "n": 2000,
+          "acc_all": 0.5265
+        },
+        {
+          "model": "xgboost",
+          "n": 2000,
+          "acc_all": 0.5285
+        }
+      ],
+      "predictions_sha256": "b87f4f0e6784126ad23d2d0843901632d9391c9f02e0c17c39e63473f338fb18"
+    },
+    {
+      "frequency": "session",
+      "model_inference_reproduced": true,
+      "metrics": [
+        {
+          "model": "mistralai/Timestral-5M",
+          "n": 855,
+          "acc_all": 0.5169590643274854
+        },
+        {
+          "model": "majority",
+          "n": 855,
+          "acc_all": 0.5274853801169591
+        },
+        {
+          "model": "persistence",
+          "n": 855,
+          "acc_all": 0.504093567251462
+        },
+        {
+          "model": "reversal",
+          "n": 855,
+          "acc_all": 0.495906432748538
+        },
+        {
+          "model": "logreg",
+          "n": 855,
+          "acc_all": 0.5146198830409356
+        },
+        {
+          "model": "xgboost",
+          "n": 855,
+          "acc_all": 0.5005847953216375
+        }
+      ],
+      "predictions_sha256": "3ab722018f36485d3e6a868a534c56fd1e043ce59c3bd579e9b26ae20c1b3fee"
+    }
+  ],
+  "nq": [
+    {
+      "name": "local_run_A_holdout_close",
+      "local_folder": "C:\\Users\\aless\\Desktop\\py\\AI_ML_BD\\Project_ai_ML_bigdata\\results\\nq\\runs\\20261102T060506Z_892e22_A_holdout_close",
+      "github_report": "reports\\local_run_A_holdout_close",
+      "repair_id": "20261102T074046Z",
+      "corrected_at": "2026-11-02T07:42:18.605983+00:00",
+      "original_run_json_unchanged": true,
+      "original_run_json_sha256": "f1acecb0a19f0e4d8edb97c9311cfdb44fe58681a640db901c7ded617c56b774",
+      "original_model_fit_preserved": true,
+      "classifier_predictions_unchanged": true,
+      "validation_thresholds_reselected_using_saved_models": true,
+      "economic_policy": "first clean observed minute open >= decision, inside target interval",
+      "label": "exploratory corrected execution simulation; bar-price proxies, assumed costs",
+      "checks": [
+        {
+          "frequency": "1min",
+          "n": 1371004,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "2c4d6045e1d07c909c81666425759c2702bd5073a8968271c9433981ce3d961e",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "ad6e898b5de7d118c57594a3c4df3bda23a8dc77140341e81289658cfca6b4fa",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 0
+        },
+        {
+          "frequency": "5min",
+          "n": 273651,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "3ba6c9f3a798a6e524c167905ad9afc5fe1c7526a9aa74756f1969de424051f6",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "3275894ec34a1e13d67fab149a37d839d22fedf470ddaa076814f854a8fd07a2",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 273644
+        },
+        {
+          "frequency": "15min",
+          "n": 90497,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "ec21f22f25189df837852cb2ee7043e1fa657d204e4bcc087ead2efec84d99d1",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "eb6496b64cf5849b4997c73aff8ce90c32da65caa0660362bf0d3a013566de42",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 90496
+        },
+        {
+          "frequency": "1h",
+          "n": 21806,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "f468187855bea6e72100f77381a959e917b6a528a5f844a4906bf7a99fd10afb",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "109ad726c0b9c73987db4905d7455c713bd5afc46578155d1563ee86f7b69c6b",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 21806
+        },
+        {
+          "frequency": "4h",
+          "n": 3907,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "7f6482efc0ca859370699713eb2db8d1a05d464f934f82d7e3591ec24b199174",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "1e2d9dee4288fbb3a99cea54666357f8ebc16d0d76f6d37c613cbe2d2e8d96ea",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 3907
+        },
+        {
+          "frequency": "session",
+          "n": 855,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "bf18dadbf693b22f5d31b48b59f7ad71f13f0ced9ef6fc8f7651b3d7d2ff83f3",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "9219f9589baaa94e53c47fd7742f2f66805016d3d548f58c02605b01f1557c8f",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 855
+        }
+      ],
+      "artifacts": {
+        "folds.csv": {
+          "before_sha256": "74708e20837888615d583897f1314159e27bb6ae13d83a1d9308b1fef5200355",
+          "backup": "results\\nq\\runs\\20261102T060506Z_892e22_A_holdout_close\\audit_backups\\20261102T074046Z\\folds.csv"
+        },
+        "backtest.csv": {
+          "before_sha256": "51f6cfe48a661bad476f61eeddcac7de79a03d498578f041d1c2f77c4f0fe526",
+          "backup": "results\\nq\\runs\\20261102T060506Z_892e22_A_holdout_close\\audit_backups\\20261102T074046Z\\backtest.csv"
+        },
+        "metrics.csv": {
+          "before_sha256": "40014dad9c95dac51aae18e8370ffa1257f9a8f8447f410fcbce429abcdcb706",
+          "backup": "results\\nq\\runs\\20261102T060506Z_892e22_A_holdout_close\\audit_backups\\20261102T074046Z\\metrics.csv"
+        },
+        "paired_vs_majority.csv": {
+          "before_sha256": "97e5a9ca3124d98ecabb58d740d916d88c2af537b68aab81a1250c92676be27b",
+          "backup": "results\\nq\\runs\\20261102T060506Z_892e22_A_holdout_close\\audit_backups\\20261102T074046Z\\paired_vs_majority.csv"
+        },
+        "by_year.csv": {
+          "before_sha256": "b84bf4ec735f8be5f9cbdf3e66c04ed2270d45facf621fc93d52fae5f7ff9987",
+          "backup": "results\\nq\\runs\\20261102T060506Z_892e22_A_holdout_close\\audit_backups\\20261102T074046Z\\by_year.csv"
+        },
+        "timeframe_comparison.png": {
+          "before_sha256": "177e9d2189bb19290a5e8359699de4cd46d3a44cbddb483e5f514ce3465908e2",
+          "backup": "results\\nq\\runs\\20261102T060506Z_892e22_A_holdout_close\\audit_backups\\20261102T074046Z\\timeframe_comparison.png"
+        },
+        "predictions_1min.parquet": {
+          "before_sha256": "529d75e2518a0c71a99df67be333753e679ff17be6c92777aa5eef0cd759fd5a",
+          "backup": "results\\nq\\runs\\20261102T060506Z_892e22_A_holdout_close\\audit_backups\\20261102T074046Z\\predictions_1min.parquet",
+          "after_sha256": "6fedf25b5febdf6d5b5c806a1dc278dab760ccf25149e165316bb02ff75b2ee9"
+        },
+        "predictions_5min.parquet": {
+          "before_sha256": "44cc62a619d90b1b3dcdf12b5fb119c240a997efccba0cb69e21853f28ac1540",
+          "backup": "results\\nq\\runs\\20261102T060506Z_892e22_A_holdout_close\\audit_backups\\20261102T074046Z\\predictions_5min.parquet",
+          "after_sha256": "6325d67581fb7091ff16cee29f8ce3f760c96fe90d15bfbba9aee0a424c14566"
+        },
+        "predictions_15min.parquet": {
+          "before_sha256": "72aba6ffaadd7f5e5b061c7ead953d1e67bfb49b76380ad835c0f053f27062be",
+          "backup": "results\\nq\\runs\\20261102T060506Z_892e22_A_holdout_close\\audit_backups\\20261102T074046Z\\predictions_15min.parquet",
+          "after_sha256": "22e10876de2ae7e57322bd65d5025d34d6fcb4b2f714d8dd2dce6351122a73e7"
+        },
+        "predictions_1h.parquet": {
+          "before_sha256": "884e7262cdb36c529fcab75d761013474f8a6025d163d227ab3e69a9848f764f",
+          "backup": "results\\nq\\runs\\20261102T060506Z_892e22_A_holdout_close\\audit_backups\\20261102T074046Z\\predictions_1h.parquet",
+          "after_sha256": "fa4a37e749245d7d94ec7c3f6703258c3670af9ca0796ad70d7e813ed8e86328"
+        },
+        "predictions_4h.parquet": {
+          "before_sha256": "899c37b7fa8f550a003d649d532e3684eaee3239bb2cdeeceea4affbcb5600b2",
+          "backup": "results\\nq\\runs\\20261102T060506Z_892e22_A_holdout_close\\audit_backups\\20261102T074046Z\\predictions_4h.parquet",
+          "after_sha256": "f420304f22168fa99cc4dcde4ec7b52de6344f6b0c87cee153af7a1d577c1ee2"
+        },
+        "predictions_session.parquet": {
+          "before_sha256": "615a813454ad0dc8c261d0e385297e62bccd4d4cddca7db434347e22cacdd4f5",
+          "backup": "results\\nq\\runs\\20261102T060506Z_892e22_A_holdout_close\\audit_backups\\20261102T074046Z\\predictions_session.parquet",
+          "after_sha256": "911ef3d5d06b615b9f66792b38790bec683229408daac7b3d77fb7aeabe88ba4"
+        }
+      },
+      "repair_source_hashes": {
+        "backtest.py": "5bb96c6704732d70",
+        "config.py": "0f83e7845d73099f",
+        "data.py": "14e9f1134fa59f34",
+        "evaluation.py": "ca228391d8f04c24",
+        "experiment.py": "930933dca3ec95cf",
+        "features.py": "7cef3e233a91b3c1",
+        "main.py": "daae760bb0e87fca",
+        "models.py": "71b641b2f914d668",
+        "plots.py": "ca2d64cb432704f5",
+        "quality.py": "f2423f2d75e87a9c",
+        "regimes.py": "79a70e2ab1d2582f",
+        "runlog.py": "28ae400122c8501b",
+        "timeframes.py": "cc4f43c164ed7a42",
+        "tools\\check_ticks.py": "dc66347bbc025d7b",
+        "tools\\coinflip_vix.py": "e203e5d0d1f99d18",
+        "tools\\download_bars_ibkr.py": "7c37eed709bf03d7",
+        "tools\\download_ticks_databento.py": "033e724cc399849b",
+        "tools\\download_ticks_ibkr.py": "49188098d800531b",
+        "tools\\ib_common.py": "e5787518e13878ba",
+        "tools\\repair_results.py": "f637ebe99b9d5b05",
+        "tools\\timestral_direction.py": "4855d91157b2a852"
+      }
+    },
+    {
+      "name": "local_run_B_holdout_body",
+      "local_folder": "C:\\Users\\aless\\Desktop\\py\\AI_ML_BD\\Project_ai_ML_bigdata\\results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body",
+      "github_report": "reports\\local_run_B_holdout_body",
+      "repair_id": "20261102T074046Z",
+      "corrected_at": "2026-11-02T07:43:43.580603+00:00",
+      "original_run_json_unchanged": true,
+      "original_run_json_sha256": "732d12d3eab497a792630cbc9ad4621016406924171a1a5f0ffd371a09aa583d",
+      "original_model_fit_preserved": true,
+      "classifier_predictions_unchanged": true,
+      "validation_thresholds_reselected_using_saved_models": true,
+      "economic_policy": "first clean observed minute open >= decision, inside target interval",
+      "label": "exploratory corrected execution simulation; bar-price proxies, assumed costs",
+      "checks": [
+        {
+          "frequency": "1min",
+          "n": 1371004,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "72d762624b613938eb66e03ff9d2a0aecd000044c7f72c2decf1c6149f48c7dd",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "245dccf4c8270538857736284d8842f00d9c7cd4fa6361dd156d93a17e6034da",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 0
+        },
+        {
+          "frequency": "5min",
+          "n": 273651,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "3fc4edaba2e0f237dd3d5e9dbd7c70b995013b48bd9549476926537a3d6051a0",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "c1cc0ea3c433b1592eb50a9c6e2f7f39a3b97b14e607acd497598a3537e2c0d3",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 273644
+        },
+        {
+          "frequency": "15min",
+          "n": 90497,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "db53fd54203031b976b9c9dfcebe6059e6724ba2846c3a5a253586fd161da216",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "76bf90a810b3c35812d95fe8e0b7a25d683e5a8a3b229565f37fe2aa3f98bb9d",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 90496
+        },
+        {
+          "frequency": "1h",
+          "n": 21806,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "1a841b2a4e7ed3dfbe12df1e89f5f8de5ed8c973371212858fac09af93d99b9d",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "a0edff6e7285caabcbc07bf3e2ff2cf4c0850295d32acb4affc843580552b191",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 21806
+        },
+        {
+          "frequency": "4h",
+          "n": 3907,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "765135d10f86f8d0c1cd74aea40a019b6e37c3a7c5200380582fd4100ee57784",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "5bcc8fe0b999cddd3926e83b3cd3c683163537c139d62fa1b1756653d925b489",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 3907
+        },
+        {
+          "frequency": "session",
+          "n": 855,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "9a0db6b322912dc98d4d18d013ac8542274626632593d64a4186de10789efdba",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "71cac9b74e94a06e022ea21360a1155d257c402073c8392a281ac335b30f80d6",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 855
+        }
+      ],
+      "artifacts": {
+        "folds.csv": {
+          "before_sha256": "00912a70cab38d80f21d97bdfef30ab10f33193205b857261071a31234c4317e",
+          "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\folds.csv"
+        },
+        "backtest.csv": {
+          "before_sha256": "b98a8d347612aeaa37028c756d3e9a8dc1d23b0a8c2327573c62f08012b9576e",
+          "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\backtest.csv"
+        },
+        "metrics.csv": {
+          "before_sha256": "2160c0da5e592275daf802595837468c3d91c2837b4b6da4846a60039dc885cd",
+          "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\metrics.csv"
+        },
+        "paired_vs_majority.csv": {
+          "before_sha256": "bd4decfbf82df069cc4325db634bcd0eaf55e2c58366b79a77a00d3b924b0668",
+          "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\paired_vs_majority.csv"
+        },
+        "by_year.csv": {
+          "before_sha256": "e767f8b779b4cc13186499c3e782f57c5bf5b7dcb0e1bf827d6e06d51ed37679",
+          "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\by_year.csv"
+        },
+        "timeframe_comparison.png": {
+          "before_sha256": "91aca0a99b20862089a0fe39d0ac385b9ca2405bb9d4910a59a53469847201bc",
+          "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\timeframe_comparison.png"
+        },
+        "predictions_1min.parquet": {
+          "before_sha256": "7d5909e94d49bcc5c095831e561d2b747e8d51c8a5beb812ffc7137bb443b5c0",
+          "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\predictions_1min.parquet",
+          "after_sha256": "09aa28bad6400f7345069b57ccbc6b5cf3c8cfcaed7c309bb16ac99bbd8aa018"
+        },
+        "predictions_5min.parquet": {
+          "before_sha256": "dfe0fe4a84ee74154445a68067c4d11d55de81accccabc0663b0b9f0bad49965",
+          "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\predictions_5min.parquet",
+          "after_sha256": "df996024caa818a5b2d5c42b485e1dd52de49d9bf0b96837300ea7e8ca81e749"
+        },
+        "predictions_15min.parquet": {
+          "before_sha256": "a1bb01c98a3644324e89d8bfb88003167da1fc64664481f53420f943db5064b6",
+          "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\predictions_15min.parquet",
+          "after_sha256": "bf7d503626ad3bfc3e93822ab6e5106c8d8f345d189bdf30d21d39844bcc23e3"
+        },
+        "predictions_1h.parquet": {
+          "before_sha256": "29827819a062c2675f56f51cd488bca1b0c6e15a092f3aed96af49bdaabfd9a8",
+          "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\predictions_1h.parquet",
+          "after_sha256": "5bd87144c0528eac34ad86fe6d2e55f2a14b049cda0eb9a78be168ab3add747d"
+        },
+        "predictions_4h.parquet": {
+          "before_sha256": "df8444910f33d28d3f0cb809faeacab0dc11b4ef43fdfa87a823e7272cfbdca6",
+          "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\predictions_4h.parquet",
+          "after_sha256": "60b2f29cf61ab9d07dc3c1ce14c529f38acca0b80225859819fa08a2cba221b6"
+        },
+        "predictions_session.parquet": {
+          "before_sha256": "3f7dc57a95361366bfe8f012d26bf08111c0313899387f3526bca59c6498f7b4",
+          "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\predictions_session.parquet",
+          "after_sha256": "51d601bcea5934ef60713c34252615d1f37efb679540ecf2e8dd40ab9f437dfe"
+        }
+      },
+      "repair_source_hashes": {
+        "backtest.py": "5bb96c6704732d70",
+        "config.py": "0f83e7845d73099f",
+        "data.py": "14e9f1134fa59f34",
+        "evaluation.py": "ca228391d8f04c24",
+        "experiment.py": "930933dca3ec95cf",
+        "features.py": "7cef3e233a91b3c1",
+        "main.py": "daae760bb0e87fca",
+        "models.py": "71b641b2f914d668",
+        "plots.py": "ca2d64cb432704f5",
+        "quality.py": "f2423f2d75e87a9c",
+        "regimes.py": "79a70e2ab1d2582f",
+        "runlog.py": "28ae400122c8501b",
+        "timeframes.py": "cc4f43c164ed7a42",
+        "tools\\check_ticks.py": "dc66347bbc025d7b",
+        "tools\\coinflip_vix.py": "e203e5d0d1f99d18",
+        "tools\\download_bars_ibkr.py": "7c37eed709bf03d7",
+        "tools\\download_ticks_databento.py": "033e724cc399849b",
+        "tools\\download_ticks_ibkr.py": "49188098d800531b",
+        "tools\\ib_common.py": "e5787518e13878ba",
+        "tools\\repair_results.py": "f637ebe99b9d5b05",
+        "tools\\timestral_direction.py": "4855d91157b2a852"
+      }
+    },
+    {
+      "name": "local_run_C_walkforward",
+      "local_folder": "C:\\Users\\aless\\Desktop\\py\\AI_ML_BD\\Project_ai_ML_bigdata\\results\\nq\\runs\\20261102T061204Z_cdd340_C_walkforward",
+      "github_report": "reports\\local_run_C_walkforward",
+      "repair_id": "20261102T074046Z",
+      "corrected_at": "2026-11-02T07:44:37.644533+00:00",
+      "original_run_json_unchanged": true,
+      "original_run_json_sha256": "2b9df669c0b5cb0c5e399b170491dedb8f2c35e9207d1d515f3e60841f2101e0",
+      "original_model_fit_preserved": true,
+      "classifier_predictions_unchanged": true,
+      "validation_thresholds_reselected_using_saved_models": true,
+      "economic_policy": "first clean observed minute open >= decision, inside target interval",
+      "label": "exploratory corrected execution simulation; bar-price proxies, assumed costs",
+      "checks": [
+        {
+          "frequency": "1min",
+          "n": 1371004,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "6891a9572518ba1b12ff1e5b7122e25a4f9e42ae1ec99f021f5d64b1d2a6ffe3",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "3394ab606934e228876c730c916a39da661f85b5b8d89deec0619a5b745749fa",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 1,
+              "model": "logreg",
+              "model_sha256": "7e5fc8a4574af6f617fa6c09eb8cc898015e926d0d40a919942dd48faefa74d0",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 1,
+              "model": "xgboost",
+              "model_sha256": "afba3761e74898a2161eaff626febcd42bb8b06621e15abfd9e629020953d477",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 2,
+              "model": "logreg",
+              "model_sha256": "06c79f42f973d60ccefaf1c523ccc507eb8d14fc7486872d8349ae2df65c4d0b",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 2,
+              "model": "xgboost",
+              "model_sha256": "b319063254fb2ae23a7d2ce632c6cddac725a20eb92eab61ed7281cd53e9dcf7",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 3,
+              "model": "logreg",
+              "model_sha256": "0694eb1a10132ec8174422853bd162b17924f7725eb93c72b82a3c44c16d23f6",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 3,
+              "model": "xgboost",
+              "model_sha256": "55c9c95cd97a1c0df8ba1c3c12e16333174e10bb9ee58e0db397d69af9ea2199",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 0
+        },
+        {
+          "frequency": "15min",
+          "n": 90497,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "579bceb1805680f3a8772c451169fd696bc5472830f8b55a52275d69f0919851",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "1bc2d3e878ab127db75437b62cc2aa28931110fa3f7c7339a52055c773e47409",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 1,
+              "model": "logreg",
+              "model_sha256": "23121f562fb0047eebedb1ec0cb1f1875ffbaba982e8ad9e7d7db9dc99946e3d",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 1,
+              "model": "xgboost",
+              "model_sha256": "5e2a9461812f96a9cac26ed29b4622fd40ccf5f2fc76bfb9b10cc4f1c0e5f692",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 2,
+              "model": "logreg",
+              "model_sha256": "b4de935edd1ae14084bc0e6b8bf67d8de2552b09cd0cc1343a997e203614f829",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 2,
+              "model": "xgboost",
+              "model_sha256": "5bb6862f0e9c67d18ca5c139b6d8a39f39550b3b96c5669fd14635216c484629",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 3,
+              "model": "logreg",
+              "model_sha256": "4dfb85e0f9429af8fd4863e4dcf67c77d368cf3cf7617bea0e208cf6c097aee0",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 3,
+              "model": "xgboost",
+              "model_sha256": "ef57f0156af05f4dd2f3e5333afc177e5f08728d23bcf5598cbf21eb08691a6b",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 90496
+        },
+        {
+          "frequency": "1h",
+          "n": 21806,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "19479776c602b13247adb69fb63cdd38131ba9d6db5ab6d51c9da04546d3639e",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "7a534c325e59d2544762a4b97d3448b170ac72a11bd42573c577438fe9f076ff",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 1,
+              "model": "logreg",
+              "model_sha256": "9fb649db939ca7391274c171c8d25e61a8e06f648b10ab9788e8db588984603e",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 1,
+              "model": "xgboost",
+              "model_sha256": "9159009df0afaf23abedb11cd0bca76a2983fb6bf6601f91a307b79c83fd3910",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 2,
+              "model": "logreg",
+              "model_sha256": "83baf35d6ac805237be83eefccf4f313abd935b4b6d99d6337278af70714af41",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 2,
+              "model": "xgboost",
+              "model_sha256": "8835a1c79562ad1d2da7093b63d41e010ad683620d065c25c294107576fb0213",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 3,
+              "model": "logreg",
+              "model_sha256": "2252e19a37c4d257b065f90a918831d46a02bb553d146ae6035b62e9a7cf1049",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 3,
+              "model": "xgboost",
+              "model_sha256": "7e7d333e5e8b0dc98ab49b92a5372eae27a69085bd78a1d124d450016eb9f868",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 21806
+        },
+        {
+          "frequency": "session",
+          "n": 855,
+          "predictions_unchanged": true,
+          "source_labels_rebuilt": true,
+          "models": [
+            {
+              "fold": 0,
+              "model": "logreg",
+              "model_sha256": "55fe73059614f04f7b4358f5cc7c4f0c2de30a70f14b0faac41a88f789742510",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 0,
+              "model": "xgboost",
+              "model_sha256": "336507d1b7a04188f80c10250d0fc3a3be05cae49d85be790539317b42296d09",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 1,
+              "model": "logreg",
+              "model_sha256": "d1e59f5b68c124c1ec6e92622c5459a6f1779d05a728a90689d7dac0fe9ecb9c",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 1,
+              "model": "xgboost",
+              "model_sha256": "55670078eba88538594c372faac56cbaf0dc4357d9b955a669c48afdafb8984f",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 2,
+              "model": "logreg",
+              "model_sha256": "68f548d830379e237f4ac36b04cc02382e58be0b44987c652a41150aee36cab1",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 2,
+              "model": "xgboost",
+              "model_sha256": "b85f8abe2f94e2e9c0c53c1c2363909854f94ab936650f8639cc16eac3961848",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 3,
+              "model": "logreg",
+              "model_sha256": "a04abf6ea48dfa4e02a17f997d80b3e08f7311133a6a102d7f9c9295d96cf827",
+              "test_probabilities_reproduced": true
+            },
+            {
+              "fold": 3,
+              "model": "xgboost",
+              "model_sha256": "c98dc01dbe3e95e1f9868ce88f6115ef138a6669dffa7a750b30f86094f9f96d",
+              "test_probabilities_reproduced": true
+            }
+          ],
+          "n_execution_eligible": 855
+        }
+      ],
+      "artifacts": {
+        "folds.csv": {
+          "before_sha256": "d7e9684845f2099fcc2e98867cff34cd55c4c3dd0ec2493bae8d3edf892a27c0",
+          "backup": "results\\nq\\runs\\20261102T061204Z_cdd340_C_walkforward\\audit_backups\\20261102T074046Z\\folds.csv"
+        },
+        "backtest.csv": {
+          "before_sha256": "d158abacebd02ee6fd5773e251800acd0b3ca840e5f1eff2196c7ddb037b289d",
+          "backup": "results\\nq\\runs\\20261102T061204Z_cdd340_C_walkforward\\audit_backups\\20261102T074046Z\\backtest.csv"
+        },
+        "metrics.csv": {
+          "before_sha256": "cc17a792dbca23ff24a945ec2a502ac5a2c0722f9d3ab8a3d0c1f0f5b16d31cf",
+          "backup": "results\\nq\\runs\\20261102T061204Z_cdd340_C_walkforward\\audit_backups\\20261102T074046Z\\metrics.csv"
+        },
+        "paired_vs_majority.csv": {
+          "before_sha256": "8fea3dc87cd62f54a121fbfbfabad37b0fd279b1fcf4654c570488b98b21008f",
+          "backup": "results\\nq\\runs\\20261102T061204Z_cdd340_C_walkforward\\audit_backups\\20261102T074046Z\\paired_vs_majority.csv"
+        },
+        "by_year.csv": {
+          "before_sha256": "50cff9b003d6968311fb855fcb8bc64b06e3897f4cc0944966d92aadd5d9cd3b",
+          "backup": "results\\nq\\runs\\20261102T061204Z_cdd340_C_walkforward\\audit_backups\\20261102T074046Z\\by_year.csv"
+        },
+        "timeframe_comparison.png": {
+          "before_sha256": "5a51407b5bbaefed39ebd97e35c2e68e6a96a152e939242acc279013c362a4f0",
+          "backup": "results\\nq\\runs\\20261102T061204Z_cdd340_C_walkforward\\audit_backups\\20261102T074046Z\\timeframe_comparison.png"
+        },
+        "predictions_1min.parquet": {
+          "before_sha256": "c22aed73b77596a543a018270e2c8023f2ab8ff196ebd33803ba07f972d46196",
+          "backup": "results\\nq\\runs\\20261102T061204Z_cdd340_C_walkforward\\audit_backups\\20261102T074046Z\\predictions_1min.parquet",
+          "after_sha256": "8c1bfbef9df598b334e88783dd95b6ae6cd46cf17e52e2d1f06febedaea494fc"
+        },
+        "predictions_15min.parquet": {
+          "before_sha256": "103d1d346e5a88c2faba309724d9955db7fe7d1ba7e6f0a3f01b49d4d3b46ed2",
+          "backup": "results\\nq\\runs\\20261102T061204Z_cdd340_C_walkforward\\audit_backups\\20261102T074046Z\\predictions_15min.parquet",
+          "after_sha256": "97c2df39b089f4bd9bc54e1e41f9cb1832737970b26a7d1844de129e85d91127"
+        },
+        "predictions_1h.parquet": {
+          "before_sha256": "0604b4d4903b88360a8a02c98058c692d7fc43dd7ca5a0793e013f23e76fbf7b",
+          "backup": "results\\nq\\runs\\20261102T061204Z_cdd340_C_walkforward\\audit_backups\\20261102T074046Z\\predictions_1h.parquet",
+          "after_sha256": "7de6a26d4405482f088601668f26feffbbe9aa4aabddb790986bf853b9c6f9fd"
+        },
+        "predictions_session.parquet": {
+          "before_sha256": "363638d80e61471abe172a5a234d1ad2340811e193f742b11e7d25ec393c2dd0",
+          "backup": "results\\nq\\runs\\20261102T061204Z_cdd340_C_walkforward\\audit_backups\\20261102T074046Z\\predictions_session.parquet",
+          "after_sha256": "b2d4043a1cb00300079ff7d0536128feb3aaa32ee3282f9c308737d64a6d39d9"
+        }
+      },
+      "repair_source_hashes": {
+        "backtest.py": "5bb96c6704732d70",
+        "config.py": "0f83e7845d73099f",
+        "data.py": "14e9f1134fa59f34",
+        "evaluation.py": "ca228391d8f04c24",
+        "experiment.py": "930933dca3ec95cf",
+        "features.py": "7cef3e233a91b3c1",
+        "main.py": "daae760bb0e87fca",
+        "models.py": "71b641b2f914d668",
+        "plots.py": "ca2d64cb432704f5",
+        "quality.py": "f2423f2d75e87a9c",
+        "regimes.py": "79a70e2ab1d2582f",
+        "runlog.py": "28ae400122c8501b",
+        "timeframes.py": "cc4f43c164ed7a42",
+        "tools\\check_ticks.py": "dc66347bbc025d7b",
+        "tools\\coinflip_vix.py": "e203e5d0d1f99d18",
+        "tools\\download_bars_ibkr.py": "7c37eed709bf03d7",
+        "tools\\download_ticks_databento.py": "033e724cc399849b",
+        "tools\\download_ticks_ibkr.py": "49188098d800531b",
+        "tools\\ib_common.py": "e5787518e13878ba",
+        "tools\\repair_results.py": "f637ebe99b9d5b05",
+        "tools\\timestral_direction.py": "4855d91157b2a852"
+      }
+    }
+  ],
+  "nq_source": {
+    "folder": "C:\\Users\\aless\\Desktop\\py\\futures-data",
+    "source": "nq",
+    "spike_policy": "quarantine",
+    "dst_invalid_timestamps_dropped": 0,
+    "futures_data_dir": "C:\\Users\\aless\\Desktop\\py\\futures-data",
+    "years": [
+      2006,
+      2025
+    ],
+    "n_suspect_minutes": 21,
+    "validation": {
+      "n_bars": 6193869,
+      "first": "2006-01-02 23:00:00+00:00",
+      "last": "2025-05-30 20:59:00+00:00",
+      "n_missing_ranges_over_1day": 20,
+      "missing_ranges_sample": [
+        "2006-12-22 21:14:00+00:00 -> 2006-12-26 11:00:00+00:00",
+        "2006-12-29 21:14:00+00:00 -> 2007-01-02 11:00:00+00:00",
+        "2007-12-24 18:14:00+00:00 -> 2007-12-26 11:00:00+00:00",
+        "2007-12-31 21:14:00+00:00 -> 2008-01-02 11:00:00+00:00",
+        "2008-12-24 18:14:00+00:00 -> 2008-12-26 11:00:00+00:00",
+        "2008-12-31 21:14:00+00:00 -> 2009-01-02 10:59:00+00:00",
+        "2011-12-23 21:14:00+00:00 -> 2011-12-27 11:00:00+00:00",
+        "2011-12-29 22:26:00+00:00 -> 2012-01-03 11:00:00+00:00",
+        "2012-12-24 18:14:00+00:00 -> 2012-12-26 11:00:00+00:00",
+        "2012-12-31 22:14:00+00:00 -> 2013-01-02 11:00:00+00:00"
+      ]
+    },
+    "bars_outside_schedule_dropped": 13706,
+    "year_files": [
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2006.parquet",
+        "rows": 214849,
+        "sha256": "1a82b407f523372fcc9f55f3f767e17f37466673686a1a04e98794a49d9decdf"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2007.parquet",
+        "rows": 237661,
+        "sha256": "9dda7149c6b32f04efab9b08e8aa0380575d9c67f08b91a5dcaeb6929715f56f"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2008.parquet",
+        "rows": 268748,
+        "sha256": "db4ff362caaf52298b3d7533a934ea32d3a54cd63b59e261baa8a5209ad30ce9"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2009.parquet",
+        "rows": 288768,
+        "sha256": "f0ebfa46d2aa6f60e2b8a5ccfbcd7e7aa323bf1a74c24f4c5aeea19572fa822e"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2010.parquet",
+        "rows": 304630,
+        "sha256": "85f21490bd4d5e0742042913b0262ff29e884fc640b007efbf01ba0ec07e2baa"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2011.parquet",
+        "rows": 317518,
+        "sha256": "3bd328b8f63a169532857d8646088bdb19dc967d78af66c7d51d7cce0fc242da"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2012.parquet",
+        "rows": 317599,
+        "sha256": "ddf830add1905a1ef5644aa32a48d5842ca0a9858c35748cd0e6ed3d8ca746fc"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2013.parquet",
+        "rows": 314954,
+        "sha256": "f42ce864bd56ee31e7a9b3b06777808f5816215d21305cf13327d61e0d7a0c1f"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2014.parquet",
+        "rows": 320215,
+        "sha256": "11055c2a7e5f2844afad2adf38b9c233b557bf213489ef9949d67b94b7651444"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2015.parquet",
+        "rows": 328559,
+        "sha256": "62fd688caf349143920f0d55485e06844931eb52e12711d83126465273ff3f00"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2016.parquet",
+        "rows": 334706,
+        "sha256": "d971ac20aea6b85d20e64966cded0b28f47ee05c6dc117554bf49c258a6d46dc"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2017.parquet",
+        "rows": 339400,
+        "sha256": "a4299c37ea2cd72ecc757e07bf8bece13d501b14fcddd675c8df0e8be4034e06"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2018.parquet",
+        "rows": 348142,
+        "sha256": "a0fe4346067e5b5becac3c703566178dec3af5cd9a31463e7e8a20b03558b764"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2019.parquet",
+        "rows": 348868,
+        "sha256": "e10611bc0e062c909635e3aeed3130b6c13d5bc78c12b46b03a5f1ea77c5c121"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2020.parquet",
+        "rows": 349439,
+        "sha256": "44263922df64b1276f9c5b5f59cdf8a1f86dfe5f9d24ab960f400171f472c815"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2021.parquet",
+        "rows": 353003,
+        "sha256": "afd271f2cbcc1050894dec75a60d5b15d76ddff5a461c455fba19844641ec485"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2022.parquet",
+        "rows": 353454,
+        "sha256": "2b94000849da5e3b1ad1abb1a6301d2afcb9232382015c1455996ff86ce1683b"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2023.parquet",
+        "rows": 353395,
+        "sha256": "cf0c06e3055cd4694e0248deffe3d72f05fd8b73a94d0f23959b6664eeac3461"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2024.parquet",
+        "rows": 354865,
+        "sha256": "c4d902f34e3f05805d13488ab2fdac77dab68e8173b6ee1d6302d9aef7174f52"
+      },
+      {
+        "file": "C:\\Users\\aless\\Desktop\\py\\futures-data\\data\\minute\\NQ\\2025.parquet",
+        "rows": 145096,
+        "sha256": "de832e1f4e039fda628f8e5328a59e606d966b7568cec24d73e6ed289ae84a76"
+      }
+    ]
+  },
+  "vix": {
+    "spot": {
+      "path": "C:\\Users\\aless\\Desktop\\Scuola\\BSAMC\\VIX\\Codice\\data\\spot_LSEG_VIX.csv",
+      "raw_rows": 5650,
+      "unique_rows": 5485,
+      "exact_duplicates_removed": 165,
+      "first": "2004-03-26",
+      "last": "2025-11-19",
+      "sha256": "25f2d4e69d0b2e5167459b8a84d22595b5e02128c6b1ecdf54178ea9a45216a6"
+    },
+    "futures": {
+      "path": "C:\\Users\\aless\\Desktop\\Scuola\\BSAMC\\VIX\\Codice\\data\\futures_LSEG_VIX.csv",
+      "raw_rows": 5650,
+      "unique_rows": 5451,
+      "exact_duplicates_removed": 199,
+      "first": "2004-03-26",
+      "last": "2025-11-20",
+      "sha256": "c9b2adca1668a26c2bc92961b406b7036574c7347c6cba8aad63efb1eb1bb139"
+    },
+    "front_dataset": {
+      "raw_unique_dates": 5330,
+      "usable_origins": 5000,
+      "context": 64,
+      "front_switch_or_missing_next": 255,
+      "first_origin": "2004-06-28",
+      "last_origin": "2025-05-29",
+      "history": "same expiry across historical column positions; no maturity-curve predictors",
+      "expiry_convention": "vendor expiry fields used as identity; actual exchange calendar not verified"
+    },
+    "n_test": 928,
+    "source_labels_rebuilt": true,
+    "models": [
+      {
+        "model": "logreg",
+        "model_sha256": "48db86fc23c880b3b6fd4d88efa92afa65553d6099b12a8599655a5c1175f372",
+        "predictions_reproduced": true
+      },
+      {
+        "model": "xgboost",
+        "model_sha256": "1cf64b6b2e459c5d22816c136224f2d50cf088b9f17c0e49289c449efae770cf",
+        "predictions_reproduced": true
+      },
+      {
+        "model": "mistralai/Timestral-5M",
+        "weights_bytes": 20843960,
+        "weights_sha256": "7ace108c4987e7f2a99a75a445240019d1d31c2117139d1bd05ffdfd25aca738",
+        "config_sha256": "b5f27f61513f8fd1a3aa996f3720d3679cb40bce5bcb08eb3dc320ce726e7c2f",
+        "predictions_reproduced": true
+      },
+      {
+        "model": "mistralai/Timestral-28M",
+        "weights_bytes": 111296464,
+        "weights_sha256": "dfc83c6220937ce5fc6687b35a4df94cd25e28a2cfe6fb92a23dad6301b2015d",
+        "config_sha256": "0cdf44b8ea981191de53078e0a5ecbbd437046bd939a546d5dbe17868f71281f",
+        "predictions_reproduced": true
+      },
+      {
+        "model": "mistralai/Timestral-123M",
+        "weights_bytes": 490445904,
+        "weights_sha256": "599fafa73cadbbc800b5a346ca900fa741ee3e5fd22e3b4a4430e151e74f4bc2",
+        "config_sha256": "7bb4c042fb2d2ed6469b6758ba380dfeda3ab32df47690a87aec1527bdae79bf",
+        "predictions_reproduced": true
+      },
+      {
+        "model": "mistralai/Timestral-209M",
+        "weights_bytes": 837271648,
+        "weights_sha256": "1456effb9927e3daa8c7234f10497e3424233869245a9c72b8ecebaf7ad2b7fa",
+        "config_sha256": "1764139bb6d37ee5ff543f470495c086cfa6c373f7134fc61c7e3d844538bfd8",
+        "predictions_reproduced": true
+      }
+    ],
+    "predictions_sha256": "6b014ce56eebab95d5b72bf95aac22f5394b4ee8a2e30d03ad8745b3099a1482"
+  },
+  "tests": {
+    "command": "python -m pytest tests -q",
+    "passed": 70,
+    "seconds": 6.42
+  }
+}

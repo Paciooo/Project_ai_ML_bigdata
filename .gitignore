@@ -5,3 +5,7 @@ __pycache__/
 results/
 data_raw/
 .pytest_cache/
+
+/tmp/
+
+/logs/

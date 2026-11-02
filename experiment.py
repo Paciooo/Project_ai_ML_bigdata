@@ -178,6 +178,7 @@ def run_frequency(minutes, ticks, freq, args, folds, session_open_of, holdout_st
     X, y3, meta, info = features.build_timed_dataset(
         bars, freq, target, lags, config.MOMENTUM_WINDOWS, config.VOLATILITY_WINDOWS,
         extra_groups=args.extra_features, decision_latency=args.latency, label_eligible=elig)
+    meta = backtest.attach_execution(meta, minutes)
     if args.context_features and freq not in ("session", "tick"):
         sess = timeframes.aggregate(minutes, "session")
         X = features.add_context_features(meta, X, sess, "sess")
@@ -225,7 +226,8 @@ def run_frequency(minutes, ticks, freq, args, folds, session_open_of, holdout_st
         if args.regimes:
             regime_models(out, X, y3, meta, sessions, tr_nf, va, te, idx_tr, cols, val_start,
                           args, costs, thresholds, freq, k, log, fold_log)
-        out.attrs["thresholds"] = thresholds
+        for name, threshold in thresholds.items():
+            out[f"threshold_{name}"] = threshold
         fold_log.append({"frequency": freq, "fold": k, "train_first": first, "val_start": val_start,
                          "test_start": test_start, "test_end": end, "n_train_fit": len(Xtr),
                          "n_val": int(va.sum()), "n_test": int(te.sum()), "majority": majority,
@@ -316,13 +318,19 @@ def score(preds, freq, models, args):
                             "acc_all": g["c"].mean(), "acc_all_majority": g["b"].mean(),
                             "acc_nonflat": g.loc[g["nf"], "c"].mean()})
         for scen, costs in backtest.COST_SCENARIOS.items():
-            th = preds.attrs.get("thresholds", {}).get(name, 0.0) if proba is not None else 0.0
-            pos = backtest.positions(proba, th) if proba is not None else pred
+            th = preds[f"threshold_{name}"].to_numpy() if proba is not None else np.zeros(len(preds))
+            pos = backtest.frame_positions(preds, name)
             trades = backtest.run_backtest(preds, pos, costs, exclude=exclude)
             s = backtest.summarize(trades, capital_usd=config.CAPITAL_USD)
             est, lo, hi = evaluation.block_bootstrap(trades["net_usd"], trades["session_id"],
                                                      block_len=5, stat="sum_per_group")
-            bt.append({"frequency": freq, "model": name, "costs": scen, "threshold": th, **s,
+            if not s["n_execution_eligible"]:
+                lo = hi = np.nan
+            bt.append({"frequency": freq, "model": name, "costs": scen,
+                       "threshold": float(th[0]) if len(th) and np.all(th == th[0]) else np.nan,
+                       "threshold_min": float(th.min()) if len(th) else np.nan,
+                       "threshold_max": float(th.max()) if len(th) else np.nan,
+                       "threshold_scope": "per_row_fold", **s,
                        "mean_daily_net_ci_lo_b5": lo, "mean_daily_net_ci_hi_b5": hi})
     bt.append({"frequency": freq, "model": "no_trade", "costs": "any", "n_trades": 0, "net_usd": 0.0})
     return (pd.DataFrame(metrics), pd.DataFrame(paired), pd.DataFrame(by_year), pd.DataFrame(bt))
@@ -356,6 +364,7 @@ def run(args, log=print):
             "daily": "last-trade session close, not settlement",
             "flat_policy": "flats kept; 'nonflat' = legacy conditional benchmark; 'all' counts flats as misses",
             "decision_latency": args.latency,
+            "execution": "first observed minute open >= decision and inside label; no entry means not evaluable",
             "exploratory": not args.confirmatory,
             "retraining": "every model refitted from scratch on each fold's training rows; "
                           "thresholds and regime settings chosen on that fold's validation rows",

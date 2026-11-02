@@ -188,9 +188,10 @@ def build_timed_dataset(bars, freq, target, return_lags, momentum_windows, volat
 
     meta columns: bar_start, bar_end, available_at, decision_at (available_at +
     decision_latency, for inference), label_start/label_end (the next bar's
-    interval), session_id, entry_price (first price that can be traded after
-    the decision: the next bar's open, a proxy with bar data) and exit_price
-    (the next bar's close).
+    interval), signal/label session ids and exit_price. Execution stays
+    unavailable until backtest.attach_execution supplies an observed minute
+    open after the decision. Body direction is an outcome definition, not
+    a claim that the decision occurs before the next candle opens.
     """
     b = bars.reset_index(drop=True)
     X = make_features(b, return_lags, momentum_windows, volatility_windows)
@@ -203,13 +204,18 @@ def build_timed_dataset(bars, freq, target, return_lags, momentum_windows, volat
     susp = b["suspect"].astype(bool) if "suspect" in b else pd.Series(False, index=b.index)
     window_clean = ~susp.rolling(lookback, min_periods=1).max().astype(bool)
     window_clean &= ~susp.shift(-1, fill_value=False).astype(bool)   # label bar suspect
+    latency = pd.Timedelta(decision_latency)
+    if pd.isna(latency) or latency < pd.Timedelta(0):
+        raise ValueError("decision latency must be nonnegative")
     meta = pd.DataFrame({
         "bar_start": b["bar_start"], "bar_end": b["bar_end"], "available_at": b["available_at"],
-        "decision_at": b["available_at"] + pd.Timedelta(decision_latency),
+        "decision_at": b["available_at"] + latency,
         "label_start": b["bar_start"].shift(-1), "label_end": b["bar_end"].shift(-1),
-        "session_id": b["session_id"], "close": b["close"],
-        "entry_price": b["open"].shift(-1), "exit_price": b["close"].shift(-1)})
-    keep = X.notna().all(axis=1) & y3.notna() & pd.Series(elig, index=b.index) & window_clean
+        "session_id": b["session_id"], "label_session_id": b["session_id"].shift(-1), "close": b["close"],
+        "entry_price": np.nan, "exit_price": b["close"].shift(-1),
+        "entry_at": pd.NaT, "exit_at": b["bar_end"].shift(-1), "execution_eligible": False})
+    keep = (X.notna().all(axis=1) & y3.notna() & pd.Series(elig, index=b.index) & window_clean
+            & (meta["label_end"] > meta["decision_at"]))
     info = {"frequency": freq, "target": target, "n_bars": len(b),
             "n_label_ineligible": int((~pd.Series(elig, index=b.index)).sum()),
             "n_quarantine_window": int((~window_clean).sum()),

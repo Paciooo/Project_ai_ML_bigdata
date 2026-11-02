@@ -1,0 +1,7 @@
+frequency,target,n_bars,n_label_ineligible,n_quarantine_window,n_rows,n_flat,lookback_bars
+1min,next_candle_body_direction,6180163,295114,192,5884884,1059575,11
+5min,next_candle_body_direction,1338256,24680,192,1313410,132625,11
+15min,next_candle_body_direction,453129,9689,192,443270,27033,11
+1h,next_candle_body_direction,116395,7577,192,108653,3167,11
+4h,next_candle_body_direction,29849,10042,192,19691,259,11
+session,next_candle_body_direction,5011,1020,161,3865,12,11

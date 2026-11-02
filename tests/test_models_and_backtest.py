@@ -78,10 +78,21 @@ def test_block_bootstrap_interval_and_verdict():
     assert few["verdict"].startswith("inconclusive")
 
 
+def execution_fixture(meta):
+    meta = meta.copy()
+    start = pd.date_range("2024-01-02 14:00", periods=len(meta), freq="min", tz="UTC")
+    meta["decision_at"] = start
+    meta["entry_at"] = start + pd.Timedelta(seconds=1)
+    meta["exit_at"] = start + pd.Timedelta(minutes=1)
+    meta["execution_eligible"] = True
+    return meta
+
+
 def test_backtest_fills_and_costs():
     meta = pd.DataFrame({"session_id": pd.to_datetime(["2024-01-02"] * 3),
                          "close": [100.0, 101.0, 102.0], "entry_price": [100.5, 101.25, 101.0],
                          "exit_price": [101.0, 102.0, 100.0]})
+    meta = execution_fixture(meta)
     pos = np.array([1, -1, 0])
     t = backtest.run_backtest(meta, pos, backtest.COST_SCENARIOS["zero_cost"])
     # long from the NEXT open 100.5 to 101.0 (+0.5 pt), short 101.25 -> 102.0 (-0.75 pt), never the signal close
@@ -97,7 +108,7 @@ def test_backtest_fills_and_costs():
 def test_flat_outcome_is_traded_not_filtered():
     meta = pd.DataFrame({"session_id": pd.to_datetime(["2024-01-02"]), "entry_price": [100.0],
                          "exit_price": [100.0]})
-    t = backtest.run_backtest(meta, np.array([1]), backtest.COST_SCENARIOS["base"])
+    t = backtest.run_backtest(execution_fixture(meta), np.array([1]), backtest.COST_SCENARIOS["base"])
     assert t["gross_usd"][0] == 0 and t["net_usd"][0] < 0
 
 

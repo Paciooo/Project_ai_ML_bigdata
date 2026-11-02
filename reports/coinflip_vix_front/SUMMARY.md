@@ -42,7 +42,7 @@ without verified price publication times, executable quotes, or account costs. S
 is a different target from spot VIX direction, S&P 500 direction, or realized S&P 500 volatility.
 
 NQ random-sign profit diagnostics are restricted to saved rows whose assumed entry is no earlier than
-the recorded decision. Intraday entries failing that check are explicitly skipped. Daily/session checks
+the recorded decision. Economic Monte Carlo is restricted to session frequency; corrected intraday backtests are in the canonical NQ reports. One-minute economics is not evaluable. Daily/session checks
 use exactly each model's active timestamps, recorded per-fold thresholds, roll exclusions and the same
 zero/base cost assumptions. They remain illustrative bar-price simulations, not verified fills.
 
@@ -73,3 +73,6 @@ Use one slide for the coin-versus-model chart and one for nearest-expiry VIX res
 Replace two detailed NQ result slides rather than exceeding ten slides.
 
 Sources: https://www.cboe.com/tradable_products/vix/faqs and supplied local files.
+
+
+Post-review verification and economic repair: see reports/verification/local_verification.json and rescore.json. Classification results unchanged.

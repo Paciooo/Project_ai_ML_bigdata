@@ -236,10 +236,15 @@ def nq_comparisons(paths, args):
                 rows.extend(monte_carlo_rows(y, p[col], dataset, freq, model,
                                              args.simulations, args.seed))
                 # Do not reuse the known invalid intraday entry assumption for a profit test.
-                timing_ok = (p.label_start >= p.decision_at).to_numpy()
-                if not timing_ok.all():
+                timing_ok = (p.execution_eligible.to_numpy(bool) &
+                             (p.entry_at >= p.decision_at).to_numpy()) if 'execution_eligible' in p else (p.label_start >= p.decision_at).to_numpy()
+                if not timing_ok.any():
                     pnl_rows.append(dict(dataset=dataset, frequency=freq, model=model,
-                                         status='skipped: assumed entry precedes configured decision'))
+                                         status='not_evaluable: no observed entry before label end'))
+                    continue
+                if freq != 'session':
+                    pnl_rows.append(dict(dataset=dataset, frequency=freq, model=model,
+                                         status='not_simulated: economic Monte Carlo restricted to session scope'))
                     continue
                 if f'proba_{model}' in p:
                     key = f'threshold_{model}'
@@ -252,6 +257,7 @@ def nq_comparisons(paths, args):
                     active = np.abs(p[f'proba_{model}'].to_numpy() - .5) >= th
                 else:
                     active = np.ones(len(p), bool)
+                active &= timing_ok
                 if freq == 'session':
                     active &= ~p.session_id.isin(backtest.approx_roll_sessions(p.session_id)).to_numpy()
                 if not active.any():
@@ -458,7 +464,8 @@ def write_summary(out, mc, metrics, paired, status, reports, args):
               '30-day implied-volatility index and cannot itself be bought. Nearest-expiry VIX futures price direction',
               'is a different target from spot VIX direction, S&P 500 direction, or realized S&P 500 volatility.', '',
               'NQ random-sign profit diagnostics are restricted to saved rows whose assumed entry is no earlier than',
-              'the recorded decision. Intraday entries failing that check are explicitly skipped. Daily/session checks',
+              'the recorded decision. Economic Monte Carlo is restricted to session frequency; corrected intraday',
+              'backtests are reported separately and one-minute economics is not evaluable. Daily/session checks',
               'use exactly each model\'s active timestamps, recorded per-fold thresholds, roll exclusions and the same',
               'zero/base cost assumptions. They remain illustrative bar-price simulations, not verified fills.', '',
               '## Data and availability limits', '']

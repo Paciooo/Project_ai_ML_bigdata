@@ -1,0 +1,218 @@
+{
+  "repair_id": "20261102T074046Z",
+  "corrected_at": "2026-11-02T07:43:43.580603+00:00",
+  "original_run_json_unchanged": true,
+  "original_run_json_sha256": "732d12d3eab497a792630cbc9ad4621016406924171a1a5f0ffd371a09aa583d",
+  "original_model_fit_preserved": true,
+  "classifier_predictions_unchanged": true,
+  "validation_thresholds_reselected_using_saved_models": true,
+  "economic_policy": "first clean observed minute open >= decision, inside target interval",
+  "label": "exploratory corrected execution simulation; bar-price proxies, assumed costs",
+  "checks": [
+    {
+      "frequency": "1min",
+      "n": 1371004,
+      "predictions_unchanged": true,
+      "source_labels_rebuilt": true,
+      "models": [
+        {
+          "fold": 0,
+          "model": "logreg",
+          "model_sha256": "72d762624b613938eb66e03ff9d2a0aecd000044c7f72c2decf1c6149f48c7dd",
+          "test_probabilities_reproduced": true
+        },
+        {
+          "fold": 0,
+          "model": "xgboost",
+          "model_sha256": "245dccf4c8270538857736284d8842f00d9c7cd4fa6361dd156d93a17e6034da",
+          "test_probabilities_reproduced": true
+        }
+      ],
+      "n_execution_eligible": 0
+    },
+    {
+      "frequency": "5min",
+      "n": 273651,
+      "predictions_unchanged": true,
+      "source_labels_rebuilt": true,
+      "models": [
+        {
+          "fold": 0,
+          "model": "logreg",
+          "model_sha256": "3fc4edaba2e0f237dd3d5e9dbd7c70b995013b48bd9549476926537a3d6051a0",
+          "test_probabilities_reproduced": true
+        },
+        {
+          "fold": 0,
+          "model": "xgboost",
+          "model_sha256": "c1cc0ea3c433b1592eb50a9c6e2f7f39a3b97b14e607acd497598a3537e2c0d3",
+          "test_probabilities_reproduced": true
+        }
+      ],
+      "n_execution_eligible": 273644
+    },
+    {
+      "frequency": "15min",
+      "n": 90497,
+      "predictions_unchanged": true,
+      "source_labels_rebuilt": true,
+      "models": [
+        {
+          "fold": 0,
+          "model": "logreg",
+          "model_sha256": "db53fd54203031b976b9c9dfcebe6059e6724ba2846c3a5a253586fd161da216",
+          "test_probabilities_reproduced": true
+        },
+        {
+          "fold": 0,
+          "model": "xgboost",
+          "model_sha256": "76bf90a810b3c35812d95fe8e0b7a25d683e5a8a3b229565f37fe2aa3f98bb9d",
+          "test_probabilities_reproduced": true
+        }
+      ],
+      "n_execution_eligible": 90496
+    },
+    {
+      "frequency": "1h",
+      "n": 21806,
+      "predictions_unchanged": true,
+      "source_labels_rebuilt": true,
+      "models": [
+        {
+          "fold": 0,
+          "model": "logreg",
+          "model_sha256": "1a841b2a4e7ed3dfbe12df1e89f5f8de5ed8c973371212858fac09af93d99b9d",
+          "test_probabilities_reproduced": true
+        },
+        {
+          "fold": 0,
+          "model": "xgboost",
+          "model_sha256": "a0edff6e7285caabcbc07bf3e2ff2cf4c0850295d32acb4affc843580552b191",
+          "test_probabilities_reproduced": true
+        }
+      ],
+      "n_execution_eligible": 21806
+    },
+    {
+      "frequency": "4h",
+      "n": 3907,
+      "predictions_unchanged": true,
+      "source_labels_rebuilt": true,
+      "models": [
+        {
+          "fold": 0,
+          "model": "logreg",
+          "model_sha256": "765135d10f86f8d0c1cd74aea40a019b6e37c3a7c5200380582fd4100ee57784",
+          "test_probabilities_reproduced": true
+        },
+        {
+          "fold": 0,
+          "model": "xgboost",
+          "model_sha256": "5bcc8fe0b999cddd3926e83b3cd3c683163537c139d62fa1b1756653d925b489",
+          "test_probabilities_reproduced": true
+        }
+      ],
+      "n_execution_eligible": 3907
+    },
+    {
+      "frequency": "session",
+      "n": 855,
+      "predictions_unchanged": true,
+      "source_labels_rebuilt": true,
+      "models": [
+        {
+          "fold": 0,
+          "model": "logreg",
+          "model_sha256": "9a0db6b322912dc98d4d18d013ac8542274626632593d64a4186de10789efdba",
+          "test_probabilities_reproduced": true
+        },
+        {
+          "fold": 0,
+          "model": "xgboost",
+          "model_sha256": "71cac9b74e94a06e022ea21360a1155d257c402073c8392a281ac335b30f80d6",
+          "test_probabilities_reproduced": true
+        }
+      ],
+      "n_execution_eligible": 855
+    }
+  ],
+  "artifacts": {
+    "folds.csv": {
+      "before_sha256": "00912a70cab38d80f21d97bdfef30ab10f33193205b857261071a31234c4317e",
+      "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\folds.csv"
+    },
+    "backtest.csv": {
+      "before_sha256": "b98a8d347612aeaa37028c756d3e9a8dc1d23b0a8c2327573c62f08012b9576e",
+      "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\backtest.csv"
+    },
+    "metrics.csv": {
+      "before_sha256": "2160c0da5e592275daf802595837468c3d91c2837b4b6da4846a60039dc885cd",
+      "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\metrics.csv"
+    },
+    "paired_vs_majority.csv": {
+      "before_sha256": "bd4decfbf82df069cc4325db634bcd0eaf55e2c58366b79a77a00d3b924b0668",
+      "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\paired_vs_majority.csv"
+    },
+    "by_year.csv": {
+      "before_sha256": "e767f8b779b4cc13186499c3e782f57c5bf5b7dcb0e1bf827d6e06d51ed37679",
+      "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\by_year.csv"
+    },
+    "timeframe_comparison.png": {
+      "before_sha256": "91aca0a99b20862089a0fe39d0ac385b9ca2405bb9d4910a59a53469847201bc",
+      "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\timeframe_comparison.png"
+    },
+    "predictions_1min.parquet": {
+      "before_sha256": "7d5909e94d49bcc5c095831e561d2b747e8d51c8a5beb812ffc7137bb443b5c0",
+      "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\predictions_1min.parquet",
+      "after_sha256": "09aa28bad6400f7345069b57ccbc6b5cf3c8cfcaed7c309bb16ac99bbd8aa018"
+    },
+    "predictions_5min.parquet": {
+      "before_sha256": "dfe0fe4a84ee74154445a68067c4d11d55de81accccabc0663b0b9f0bad49965",
+      "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\predictions_5min.parquet",
+      "after_sha256": "df996024caa818a5b2d5c42b485e1dd52de49d9bf0b96837300ea7e8ca81e749"
+    },
+    "predictions_15min.parquet": {
+      "before_sha256": "a1bb01c98a3644324e89d8bfb88003167da1fc64664481f53420f943db5064b6",
+      "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\predictions_15min.parquet",
+      "after_sha256": "bf7d503626ad3bfc3e93822ab6e5106c8d8f345d189bdf30d21d39844bcc23e3"
+    },
+    "predictions_1h.parquet": {
+      "before_sha256": "29827819a062c2675f56f51cd488bca1b0c6e15a092f3aed96af49bdaabfd9a8",
+      "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\predictions_1h.parquet",
+      "after_sha256": "5bd87144c0528eac34ad86fe6d2e55f2a14b049cda0eb9a78be168ab3add747d"
+    },
+    "predictions_4h.parquet": {
+      "before_sha256": "df8444910f33d28d3f0cb809faeacab0dc11b4ef43fdfa87a823e7272cfbdca6",
+      "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\predictions_4h.parquet",
+      "after_sha256": "60b2f29cf61ab9d07dc3c1ce14c529f38acca0b80225859819fa08a2cba221b6"
+    },
+    "predictions_session.parquet": {
+      "before_sha256": "3f7dc57a95361366bfe8f012d26bf08111c0313899387f3526bca59c6498f7b4",
+      "backup": "results\\nq\\runs\\20261102T060756Z_a695aa_B_holdout_body\\audit_backups\\20261102T074046Z\\predictions_session.parquet",
+      "after_sha256": "51d601bcea5934ef60713c34252615d1f37efb679540ecf2e8dd40ab9f437dfe"
+    }
+  },
+  "repair_source_hashes": {
+    "backtest.py": "5bb96c6704732d70",
+    "config.py": "0f83e7845d73099f",
+    "data.py": "14e9f1134fa59f34",
+    "evaluation.py": "ca228391d8f04c24",
+    "experiment.py": "930933dca3ec95cf",
+    "features.py": "7cef3e233a91b3c1",
+    "main.py": "daae760bb0e87fca",
+    "models.py": "71b641b2f914d668",
+    "plots.py": "ca2d64cb432704f5",
+    "quality.py": "f2423f2d75e87a9c",
+    "regimes.py": "79a70e2ab1d2582f",
+    "runlog.py": "28ae400122c8501b",
+    "timeframes.py": "cc4f43c164ed7a42",
+    "tools\\check_ticks.py": "dc66347bbc025d7b",
+    "tools\\coinflip_vix.py": "e203e5d0d1f99d18",
+    "tools\\download_bars_ibkr.py": "7c37eed709bf03d7",
+    "tools\\download_ticks_databento.py": "033e724cc399849b",
+    "tools\\download_ticks_ibkr.py": "49188098d800531b",
+    "tools\\ib_common.py": "e5787518e13878ba",
+    "tools\\repair_results.py": "f637ebe99b9d5b05",
+    "tools\\timestral_direction.py": "4855d91157b2a852"
+  }
+}
