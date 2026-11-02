@@ -12,6 +12,7 @@ import os
 # ---------------------------------------------------------------------------
 # "synthetic": simulated GBM ticks (pipeline check, 5 seeds)
 # "nq":        real NQ futures 1-minute bars from the futures-data repository
+# "nq_ticks":  real NQ trades (one month) downloaded with tools/download_ticks_ibkr.py
 DATA_SOURCE = "nq"
 
 # ---------------------------------------------------------------------------
@@ -24,6 +25,9 @@ FUTURES_DATA_DIR = os.environ.get("FUTURES_DATA_DIR", "../futures-data")
 FUTURES_SYMBOL = "NQ"
 FUTURES_YEARS = (2006, 2025)    # first and last year of 1-minute bars to load
 SPIKE_THRESHOLD = 0.02          # 1-minute moves above 2% that revert at once = bad prints
+
+# Real tick data (DATA_SOURCE = "nq_ticks"): folder of the daily tick files
+TICKS_DIR = os.environ.get("TICKS_DIR", "data_raw/ticks_ibkr/NQZ6")
 
 # ---------------------------------------------------------------------------
 # Synthetic GBM simulation (DATA_SOURCE = "synthetic")

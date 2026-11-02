@@ -212,3 +212,39 @@ def minute_datasets(minutes):
     daily = daily[daily.index.dayofweek != 5]  # stray bars after the Friday close
     daily.index.name = minutes.index.name
     return {"1-min": minutes, "hourly": hourly, "daily": daily}
+
+
+# ---------------------------------------------------------------------------
+# Real tick data (trades downloaded with tools/download_ticks_ibkr.py)
+# ---------------------------------------------------------------------------
+
+def load_tick_files(folder):
+    """Load the daily tick files <folder>/<YYYY-MM-DD>.parquet (columns ts, price, size).
+
+    Unfinished days (*.partial.parquet) are ignored. Trades keep their
+    original order, also within the same timestamp.
+    """
+    files = sorted(f for f in Path(folder).glob("*.parquet") if not f.stem.endswith(".partial"))
+    if not files:
+        raise FileNotFoundError(f"No tick files in {folder}. Set TICKS_DIR in config.py.")
+    df = pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
+    return df.sort_values("ts", kind="stable").set_index("ts")
+
+
+def tick_datasets(ticks):
+    """Every trade, plus 1-minute and hourly candles built from the same trades.
+
+    Also returns daily candles by CME session (used for the split dates and
+    the figures, not as a frequency: one month has only ~22 sessions). A
+    session opens at 22:00 UTC (23:00 in winter) and closes at 21:00 UTC
+    (22:00), so shifting by 2 hours puts Sunday evening into Monday.
+    """
+    bars = pd.DataFrame({"open": ticks["price"], "high": ticks["price"], "low": ticks["price"],
+                         "close": ticks["price"], "volume": ticks["size"]}, index=ticks.index)
+    agg = {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
+    minute = bars.resample("1min").agg(agg).dropna(subset=["close"])
+    hourly = bars.resample("1h").agg(agg).dropna(subset=["close"])
+    session_day = (bars.index + pd.Timedelta(hours=2)).floor("D")
+    daily = bars.groupby(session_day).agg(agg).dropna(subset=["close"])
+    daily.index.name = bars.index.name
+    return {"tick": bars, "1-min": minute, "hourly": hourly}, daily

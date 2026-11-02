@@ -93,10 +93,13 @@ def run_seed(seed):
     return results, summary, importances, ticks, datasets
 
 
-def run_frequencies(datasets, seed):
-    """Calendar split on common dates, then train/evaluate every frequency."""
-    val_start, test_start = features.calendar_boundaries(
-        datasets["daily"].index, config.TRAIN_FRAC, config.VAL_FRAC)
+def run_frequencies(datasets, seed, split_days=None):
+    """Calendar split on common dates, then train/evaluate every frequency.
+
+    The split dates come from `split_days` (default: the daily candles).
+    """
+    days = split_days if split_days is not None else datasets["daily"].index
+    val_start, test_start = features.calendar_boundaries(days, config.TRAIN_FRAC, config.VAL_FRAC)
     print(f"  split dates: train < {val_start.date()} <= validation < {test_start.date()} <= test")
 
     all_results, summaries, importances = [], [], {}
@@ -110,13 +113,14 @@ def run_frequencies(datasets, seed):
 
 
 def save_detailed_outputs(out, results, summary, importances, prices, price_label, price_title,
-                          datasets, subtitle, last_candles):
+                          datasets, subtitle, last_candles, daily=None):
     """Tables and figures 01-06 for one dataset."""
+    daily = daily if daily is not None else datasets["daily"]
     results.to_csv(os.path.join(out, "results_table.csv"), index=False, float_format="%.4f")
     summary.to_csv(os.path.join(out, "dataset_summary.csv"), index=False, float_format="%.4f")
     pd.DataFrame(importances).to_csv(os.path.join(out, "rf_feature_importance.csv"), float_format="%.4f")
-    plots.plot_price_path(prices, datasets["daily"], out, price_label, price_title)
-    plots.plot_candlesticks(datasets["daily"], datasets["hourly"], out, last=last_candles)
+    plots.plot_price_path(prices, daily, out, price_label, price_title)
+    plots.plot_candlesticks(daily, datasets["hourly"], out, last=last_candles)
     plots.plot_accuracy_bars(results, out, subtitle)
     plots.plot_results_table(results, out, subtitle)
     plots.plot_feature_importance(importances, out)
@@ -154,9 +158,33 @@ def main_nq():
     print(f"\nAll tables and figures saved to '{out}/'.")
 
 
+def main_nq_ticks():
+    """Real NQ trades (one month): every trade, 1-minute and hourly candles."""
+    out = os.path.join(config.RESULTS_DIR, "nq_ticks")
+    os.makedirs(out, exist_ok=True)
+    print(f"Loading tick files from {config.TICKS_DIR} ...")
+    ticks = data.load_tick_files(config.TICKS_DIR)
+    datasets, daily = data.tick_datasets(ticks)
+    print(f"  {len(ticks):,} trades, {ticks.index.min()} -> {ticks.index.max()}, {len(daily)} sessions: "
+          + ", ".join(f"{k} {len(v):,}" for k, v in datasets.items()))
+
+    seed = config.SEEDS[0]
+    results, summary, importances = run_frequencies(datasets, seed, split_days=daily.index)
+    save_detailed_outputs(out, results, summary, importances, datasets["1-min"]["close"],
+                          f"1-minute close ({len(ticks):,} trades in total)",
+                          f"{config.FUTURES_SYMBOL} trades (CME via IBKR), "
+                          f"{daily.index.min():%Y-%m-%d} to {daily.index.max():%Y-%m-%d}",
+                          datasets, f"{config.FUTURES_SYMBOL} trades, one month",
+                          last_candles=False, daily=daily)
+    print_results(results, f"Out-of-sample (test) results, {config.FUTURES_SYMBOL} trades")
+    print(f"\nAll tables and figures saved to '{out}/'.")
+
+
 def main():
     if config.DATA_SOURCE == "nq":
         return main_nq()
+    if config.DATA_SOURCE == "nq_ticks":
+        return main_nq_ticks()
     out = os.path.join(config.RESULTS_DIR, "synthetic")
     os.makedirs(out, exist_ok=True)
     main_seed = config.SEEDS[0]

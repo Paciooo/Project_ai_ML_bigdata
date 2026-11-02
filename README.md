@@ -58,7 +58,7 @@ faster while experimenting, use a single seed: `SEEDS = [42]`.
 | `models.py` | Majority baseline, Logistic Regression, Decision Tree, Random Forest, two small neural networks, XGBoost (optional) |
 | `evaluation.py` | Accuracy, balanced accuracy, F1, confusion matrix, improvement over baseline |
 | `plots.py` | All figures |
-| `main.py` | Runs the synthetic (all seeds) or the real NQ experiment |
+| `main.py` | Runs the synthetic (all seeds), the NQ 1-minute or the NQ tick experiment |
 | `tools/timestral_direction.py` | Zero-shot UP/DOWN test with Mistral's Timestral on the NQ test period |
 | `tools/download_ticks_ibkr.py` | Downloads recent NQ tick data (CME trades) from Interactive Brokers |
 | `tools/download_ticks_databento.py` | Cost estimate / download of CME tick data from Databento (paid) |
@@ -413,6 +413,31 @@ the multi-seed ones; Timestral results go to `results/nq/timestral_results.csv`)
 | `rf_feature_importance.csv` | Feature importance values (seed 42) |
 
 ---
+
+## Real tick data: NQ trades, one month
+
+`DATA_SOURCE = "nq_ticks"` runs the same pipeline on one month of real NQ
+trades (CME Globex, December 2026 contract NQZ6, 21 September to
+19 October 2026), downloaded from Interactive Brokers with
+`tools/download_ticks_ibkr.py` (folder set by `TICKS_DIR`, default
+`data_raw/ticks_ibkr/NQZ6`). Results go to `results/nq_ticks/`.
+
+* **Frequencies:** every trade (`tick`), plus 1-minute and hourly candles
+  built from the same trades, so all three are compared on exactly the same
+  month. Daily data is not a frequency here (one month has only about 22
+  sessions); daily candles by CME session are used only for the split dates
+  and the figures.
+* **Sessions:** a CME session opens at 22:00 UTC (23:00 in winter) and closes
+  at 21:00 UTC (22:00); Sunday evening belongs to Monday's session.
+* **Split:** 60/20/20 of the sessions (about 13 / 4-5 / 4), same dates for
+  all frequencies.
+* **Unchanged prices:** many consecutive trades print at the same price
+  (NQ moves in 0.25-point ticks). Those rows have no UP/DOWN label and are
+  dropped; the count is in `dataset_summary.csv`.
+* **What to expect:** the bid-ask bounce found at 1 minute should be
+  strongest trade by trade. The hourly test set is small (a few dozen
+  hours), so hourly results on this month are not informative; the
+  2006-2025 experiment answers the hourly and daily questions.
 
 ## Timestral (Mistral's pretrained forecasting model)
 
