@@ -95,8 +95,8 @@ function usd(v) {
 }
 const usd0 = (v) => (v < 0 ? "−$" : "$") + Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 });
 const FAM = { logreg: "Logistic regression", xgboost: "XGBoost", random_forest: "Random forest", mlp: "Neural network (MLP)" };
-const FREQ = { "1min": "1 min", "5min": "5 min", "15min": "15 min", "1h": "1 hour" };
-const FREQS = ["1min", "5min", "15min", "1h"];
+const FREQ = { "1min": "1 min", "5min": "5 min", "15min": "15 min", "1h": "1 hour", session: "1 day" };
+const FREQS = ["1min", "5min", "15min", "1h", "session"].filter((f) => D.info[f]);
 const STRAT = { long_short: "Long & Short", long_only: "Long only", short_only: "Short only" };
 function mname(m) {
   const map = {
@@ -159,7 +159,7 @@ const chAcc = acc(C.frequency, C.model);
   const s = content("Executive Summary",
     deployable.length ? "A robust strategy passed every pre-specified test" : "Models predict slightly better than chance, but no strategy survives costs and robustness tests", "Report");
   const sx = [L, L + 3.1, L + 6.2, L + 9.3];
-  stat(s, sx[0], 1.55, 2.9, "6.2M", "one-minute NQ bars (2006–2025), tested on 1, 5, 15 and 60-minute candles");
+  stat(s, sx[0], 1.55, 2.9, "6.2M", "one-minute NQ bars (2006–2025), tested on 1, 5, 15, 60-minute and daily candles");
   stat(s, sx[1], 1.55, 2.9, pp(bestPred.opt_vs_majority_pp), `best accuracy gain over “always up” (${mname(bestPred.optimised)}, ${FREQ[bestPred.frequency]}, 95% CI ${bestPred.opt_vs_majority_ci[0].toFixed(2)} to ${bestPred.opt_vs_majority_ci[1].toFixed(2)})`);
   stat(s, sx[2], 1.55, 2.9, String(D.n_val_configurations), "model × direction × filter strategies compared on validation data");
   stat(s, sx[3], 1.55, 2.9, String(deployable.length), "strategies passing all tests: profitable out of sample, after costs, and robust", GOLD);
@@ -228,7 +228,8 @@ const chAcc = acc(C.frequency, C.model);
     }
     rows.push(r);
   }
-  s.addTable(rows, tableOpts(L, 2.05, 7.35, [1.95, 1.35, 1.35, 1.35, 1.35], { rowH: [0.34, 0.62, 0.62, 0.62, 0.62], fontSize: 10.5 }));
+  const cw4 = (7.35 - 1.6) / FREQS.length;
+  s.addTable(rows, tableOpts(L, 2.05, 7.35, [1.6, ...FREQS.map(() => cw4)], { rowH: [0.34, 0.62, 0.62, 0.62, 0.62], fontSize: 9.5 }));
   T(s, `Highlighted: best predictive model, ${mname(bestPred.optimised)} on ${FREQ[bestPred.frequency]} candles: ${pct(bestPredAcc.acc_nonflat)} correct on non-doji candles, ${pp(bestPred.opt_vs_majority_pp)} vs always-up (95% CI ${bestPred.opt_vs_majority_ci[0].toFixed(2)} to ${bestPred.opt_vs_majority_ci[1].toFixed(2)}). Dojis count as misses, so all-candle accuracy at 1 min is below 50%.`,
     { x: L, y: 4.95, w: 7.35, h: 0.8, fontSize: 10.5, color: MID });
   callout(s, L, 5.95, 7.35, 0.8, "Accuracy beats “always up” only at 1 and 5 minutes; from 15 minutes on, no model is reliably better");
@@ -242,7 +243,7 @@ const chAcc = acc(C.frequency, C.model);
     return { name: FREQ[f], labels: lbl, values: archs.map((a) => +(100 * (D.nn.find((r) => r.frequency === f && r.model === a).acc_all - base)).toFixed(2)) };
   });
   s.addChart(pres.charts.BAR, series, Object.assign({ x: x2, y: 2.0, w: R - x2, h: 3.75, barDir: "bar", barGrouping: "clustered",
-    chartColors: ["D9A3AC", "C8707D", RED, RED_DARK], barGapWidthPct: 40, valAxisLabelFormatCode: "+0.0;-0.0;0",
+    chartColors: ["E8C5CB", "D9A3AC", "C8707D", RED, RED_DARK].slice(-FREQS.length), barGapWidthPct: 40, valAxisLabelFormatCode: "+0.0;-0.0;0",
     valGridLine: { color: "E6E6E6", size: 0.5 }, catGridLine: { style: "none" }, showLegend: true, legendPos: "t",
     catAxisOrientation: "maxMin", catAxisLabelPos: "low" }, chartText));
   T(s, "Early stopping halted every network after 5–17 epochs: validation loss stops improving almost immediately, a sign of a very weak signal. More neurons or layers gave no consistent gain; dropout/batch norm did not help.",
@@ -274,10 +275,10 @@ const chAcc = acc(C.frequency, C.model);
       num(usd(g.net_usd), { bold: true, color: RED_DARK }), num(c.test_n_trades.toLocaleString("en-US")),
       num(usd(c.test_net_usd), { bold: true, color: c.test_net_usd >= 0 ? GREEN : RED_DARK })]);
   }
-  s.addTable(rows, tableOpts(x2, 2.05, R - x2, [0.68, 1.78, 0.85, 0.8, 0.78, 0.8, 0.8, 0.79], { rowH: [0.5, 0.5, 0.5, 0.5, 0.5], fontSize: 10.5 }));
+  s.addTable(rows, tableOpts(x2, 2.05, R - x2, [0.68, 1.78, 0.85, 0.8, 0.78, 0.8, 0.8, 0.79], { rowH: [0.5, ...CAND.map(() => 0.44)], fontSize: 10.5 }));
   const cut = CAND.map((c) => 100 * (1 - c.test_n_trades / grid(c.frequency, c.model, "long_short").n_trades));
   T(s, `Filter thresholds (validation): ${CAND.map((c) => `${FREQ[c.frequency]} ${c.threshold}`).join(" · ")}. The filter cuts the number of trades by ${Math.min(...cut).toFixed(0)}% to ${Math.max(...cut).toFixed(1)}% and costs with it; what remains is close to zero and unreliable.`,
-    { x: x2, y: 4.75, w: R - x2, h: 0.65, fontSize: 10.5, color: MID });
+    { x: x2, y: 2.05 + 0.5 + 0.44 * CAND.length + 0.08, w: R - x2, h: 0.65, fontSize: 10.5, color: MID });
   const e5 = grid("5min", "reversal", "long_short");
   callout(s, x2, 5.6, R - x2, 1.15, `Example, 5-minute reversal rule: ${usd(e5.gross_usd)} gross over ${e5.n_trades.toLocaleString("en-US")} trades becomes ${usd(e5.net_usd)} after commissions: $${(e5.gross_usd / e5.n_trades).toFixed(2)} gross edge per trade vs $5.00 cost`);
   s.addNotes("High-frequency signals trade hundreds of thousands of times, so even a positive gross edge is overwhelmed by the fixed five-dollar cost per round trip. The confidence filter is the only lever that reduces costs.");
@@ -348,7 +349,7 @@ const chAcc = acc(C.frequency, C.model);
   const costs = [0, 2.5, 5, 12.5, 23];
   const ser = CAND.map((c) => ({ name: `${FREQ[c.frequency]} ${mname(c.model)}`, labels: costs.map((x) => "$" + x),
     values: costs.map((x) => +(c["test_net_at_" + (x === 2.5 ? "2.5" : x === 12.5 ? "12.5" : String(x))] / 1000).toFixed(1)) }));
-  s.addChart(pres.charts.LINE, ser, Object.assign({ x: L, y: 2.0, w: hw, h: 3.0, chartColors: [RED, GOLD, MID, "C8707D"], lineSize: 2,
+  s.addChart(pres.charts.LINE, ser, Object.assign({ x: L, y: 2.0, w: hw, h: 3.0, chartColors: [RED, GOLD, MID, "C8707D", GREEN], lineSize: 2,
     lineDataSymbol: "circle", lineDataSymbolSize: 6, valAxisLabelFormatCode: "0", valGridLine: { color: "E6E6E6", size: 0.5 },
     catGridLine: { style: "none" }, showLegend: true, legendPos: "b", legendFontSize: 9 }, chartText));
   T(s, "$12.50 and $23 add one tick of spread plus ¼ or 1 tick of slippage per side: realistic market-order execution.",
@@ -362,9 +363,9 @@ const chAcc = acc(C.frequency, C.model);
       num(usd(c.test_net_usd), Object.assign({ bold: true, color: c.test_net_usd >= 0 ? GREEN : RED_DARK }, hl)),
       num(`${c.wf_years_positive} of ${c.wf_years}`, hl), num(usd(c.wf_net_usd), Object.assign({ color: c.wf_net_usd >= 0 ? GREEN : RED_DARK }, hl))]);
   }
-  s.addTable(rows, tableOpts(x2, 2.05, R - x2, [0.78, 0.92, 1.03, 0.98, 1.03, 0.99], { rowH: [0.55, 0.45, 0.45, 0.45, 0.45], fontSize: 10.5 }));
+  s.addTable(rows, tableOpts(x2, 2.05, R - x2, [0.78, 0.92, 1.03, 0.98, 1.03, 0.99], { rowH: [0.55, ...CAND.map(() => 0.4)], fontSize: 10.5 }));
   T(s, `Validation picks the best of ${D.n_val_configurations} configurations, so its profit is optimistic by construction (multiple comparisons). Walk-forward: model refitted each year on all prior data, threshold re-chosen on the preceding year.`,
-    { x: x2, y: 4.55, w: R - x2, h: 0.95, fontSize: 10.5, color: MID });
+    { x: x2, y: 2.05 + 0.55 + 0.4 * CAND.length + 0.08, w: R - x2, h: 0.95, fontSize: 10.5, color: MID });
   callout(s, L, 5.75, CW, 1.0, `No candidate has a 95% interval of daily net P&L above zero in the test period, and none is profitable in at least 3 of 4 walk-forward years`);
   s.addNotes("Robustness checks: cost sensitivity from zero to twenty-three dollars per round trip, in-sample versus validation versus test, yearly walk-forward refits, and the threshold grid in the appendix.");
 }
@@ -443,7 +444,7 @@ const chAcc = acc(C.frequency, C.model);
     "Instrument: CME E-mini Nasdaq-100 futures (NQ), $20 per index point, tick 0.25 = $5. Not MNQ ($2 per point), not QQQ, not the cash index.",
     "Candles are built from 1-minute bars inside CME sessions; a trade never spans a session close. Bad prints (|1-min return| > 2%) are quarantined causally.",
     `Training rows are non-doji candles; at 1 minute the most recent ${sp.train_fit_rows.toLocaleString("en-US")} are used. The test period was inspected with the original models in earlier project phases: results are exploratory.`,
-  ], { x: L + 0.1, y: 3.85, w: CW - 0.2, h: 3.0, fontSize: 12 });
+  ], { x: L + 0.1, y: 1.6 + 0.4 * rows.length + 0.2, w: CW - 0.2, h: 6.85 - (1.6 + 0.4 * rows.length + 0.2), fontSize: 12 });
 }
 {
   const s = content("A2  Features, Hyper-parameters and Selection Rules", "All choices made on training and validation data; the test set never informed them", "Appendix");
@@ -507,7 +508,7 @@ const chAcc = acc(C.frequency, C.model);
       ...["long_short", "long_only", "short_only"].map((st) => k(gv(f, m, st, "none"))),
       ...["long_short", "long_only", "short_only"].map((st) => k(gv(f, m, st, "validated")))]);
   }
-  s.addTable(rows, tableOpts(L, 1.6, CW, [1.0, 3.0, 1.3, 1.3, 1.3, 1.45, 1.45, 1.43], { rowH: 0.265, fontSize: 9.5 }));
+  s.addTable(rows, tableOpts(L, 1.6, CW, [1.0, 3.0, 1.3, 1.3, 1.3, 1.45, 1.45, 1.43], { rowH: FREQS.length > 4 ? 0.228 : 0.265, fontSize: FREQS.length > 4 ? 8.5 : 9.5 }));
   T(s, "“—”: the validation-chosen threshold was 0 (no filter) or produced fewer than 200 validation trades. Filtered results are spread around zero with no consistent sign across candle lengths or models.",
     { x: L, y: 6.5, w: CW, h: 0.4, fontSize: 10, color: MID });
 }

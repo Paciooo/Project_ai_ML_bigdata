@@ -20,7 +20,8 @@ inspected with the ORIGINAL models in earlier runs, so it is untouched by
 this study's choices but not historically untouched: findings stay exploratory.
 
 Usage:
-  python study.py                         # full study (1min 5min 15min 1h)
+  python study.py                         # full study (1min 5min 15min 1h, daily = "session")
+  python study.py --freqs session         # daily candles only (one CME session each)
   python study.py --freqs 15min --years 2016 2019 --quick   # fast check
 """
 
@@ -50,6 +51,7 @@ TARGET = "next_candle_body_direction"
 EXTRA_GROUPS = ("volume", "range", "rv", "time")
 THRESHOLDS = (0.0, 0.01, 0.02, 0.03, 0.05, 0.075, 0.10)
 COST_GRID = (0.0, 2.5, 5.0, 12.5, 23.0)   # $ per round trip; 12.5/23 add spread+slippage
+SMALL_SAMPLE_ROWS = 20_000                 # below this the MLP batch is capped at 128
 
 
 # ---------------------------------------------------------------------------
@@ -134,6 +136,9 @@ class TorchMLP:
         xv = torch.tensor(self.scaler.transform(Xv), dtype=torch.float32)
         yvt = torch.tensor(np.asarray(yv, np.float32))
         self.net = self._net(xt.shape[1])
+        # small samples (daily candles: ~3,000 training rows) need small batches, otherwise a
+        # 4096 batch gives one gradient step per epoch; intraday samples keep their batch size
+        batch = self.kw["batch"] if len(xt) >= SMALL_SAMPLE_ROWS else min(self.kw["batch"], 128)
         opt_cls = torch.optim.AdamW if self.kw["optimizer"] == "adamw" else torch.optim.Adam
         opt = opt_cls(self.net.parameters(), lr=self.kw["lr"], weight_decay=self.kw["weight_decay"])
         lossf = torch.nn.BCEWithLogitsLoss()
@@ -143,8 +148,8 @@ class TorchMLP:
         for epoch in range(self.kw["max_epochs"]):
             self.net.train()
             perm = torch.randperm(len(xt), generator=g)   # shuffling INSIDE the training set only
-            for i in range(0, len(xt), self.kw["batch"]):
-                idx = perm[i:i + self.kw["batch"]]
+            for i in range(0, len(xt), batch):
+                idx = perm[i:i + batch]
                 opt.zero_grad()
                 loss = lossf(self.net(xt[idx]).squeeze(1), yt[idx])
                 loss.backward()
@@ -442,7 +447,8 @@ def walk_forward(minutes, freq, res, model_name, strat_name, args, session_open_
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--freqs", nargs="+", default=["1min", "5min", "15min", "1h"])
+    p.add_argument("--freqs", nargs="+", default=["1min", "5min", "15min", "1h", "session"],
+                   help="'session' = daily candle (one CME session, 17:00-16:00 CT)")
     p.add_argument("--years", type=int, nargs=2, default=None)
     p.add_argument("--latency", default="0s", help="decision delay after the bar close (0s = idealised)")
     p.add_argument("--cost", type=float, default=strategy.DEFAULT_RT_COST, help="USD per round trip")
