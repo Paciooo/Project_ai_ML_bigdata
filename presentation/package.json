@@ -1,0 +1,7 @@
+{
+  "name": "nq-final-report-deck",
+  "private": true,
+  "description": "Builds the final report deck from deck_data.json",
+  "scripts": { "build": "node build_deck.js NQ_final_report.pptx" },
+  "dependencies": { "pptxgenjs": "3.12.0" }
+}
