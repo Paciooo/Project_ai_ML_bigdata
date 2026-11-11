@@ -94,7 +94,8 @@ def charts(r, choice, run):
     e = eq[(eq.frequency == f) & (eq.model == "always_long") & (eq.strategy == "long_only")]
     ax.plot(pd.to_datetime(e.session), e.cum_net_usd / 1e3, label="always long (benchmark)", color="#A6A6A6", lw=1.2, ls="--")
     ax.axhline(0, color="black", lw=0.8)
-    ax.set(title=f"NQ {f}, {m}: net equity after $5 round-trip costs (test 2021-07 to 2025-05)",
+    d = pd.to_datetime(e.session)
+    ax.set(title=f"NQ {f}, {m}: net equity after $5 round-trip costs (test {d.min():%Y-%m} to {d.max():%Y-%m})",
            ylabel="cumulative net P&L, thousand USD (1 contract)")
     ax.legend()
     fig.tight_layout()
@@ -145,6 +146,7 @@ def deck_data(r, mt, cand, choice):
                                         on=["frequency", "model"])
     return _clean({
         "run_id": r["run_id"], "run": r["run_json"].get("git", {}), "args": r["run_json"]["args"], "info": r["info"],
+        "merged_from": r["run_json"].get("merged_from", []),
         "primary_frequency": f,
         "models_primary": mt[mt.frequency == f].to_dict("records"),
         "models_all": mt.to_dict("records"),

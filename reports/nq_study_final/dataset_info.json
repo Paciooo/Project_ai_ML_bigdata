@@ -250,5 +250,68 @@
         "ma_gap_50"
       ]
     }
+  },
+  "session": {
+    "frequency": "session",
+    "target": "next_candle_body_direction",
+    "n_bars": 5011,
+    "n_label_ineligible": 1020,
+    "n_quarantine_window": 279,
+    "n_rows": 3748,
+    "n_flat": 12,
+    "lookback_bars": 21,
+    "n_rows_final": 3457,
+    "n_execution_eligible": 3457,
+    "target_vs_traded_sign_mismatch": 0,
+    "splits": {
+      "train": [
+        "2006-03-13",
+        "2017-08-23",
+        1991
+      ],
+      "train_fit_rows": 1983,
+      "validation": [
+        "2017-08-25",
+        "2021-07-13",
+        822
+      ],
+      "test": [
+        "2021-07-15",
+        "2025-01-30",
+        642
+      ],
+      "majority_train": 1,
+      "features_base": [
+        "ret_lag1",
+        "ret_lag2",
+        "ret_lag3",
+        "ret_lag5",
+        "mom_5",
+        "mom_10",
+        "vol_5",
+        "vol_10"
+      ],
+      "features_ext": [
+        "ret_lag1",
+        "ret_lag2",
+        "ret_lag3",
+        "ret_lag5",
+        "mom_5",
+        "mom_10",
+        "vol_5",
+        "vol_10",
+        "log_vol_rel20",
+        "range_rel",
+        "body_rel",
+        "rv_20",
+        "sess_sin",
+        "sess_cos",
+        "upper_wick_rel",
+        "lower_wick_rel",
+        "rsi14_c",
+        "ma_gap_20",
+        "ma_gap_50"
+      ]
+    }
   }
 }

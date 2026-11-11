@@ -93,6 +93,7 @@ function usd(v) {
   if (a >= 1e3) return `${sign}$${(a / 1e3).toFixed(1)}k`;
   return `${sign}$${a.toFixed(0)}`;
 }
+const perT = (v) => (v >= 0 ? "+$" : "−$") + Math.abs(v).toFixed(2);
 const usd0 = (v) => (v < 0 ? "−$" : "$") + Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 });
 const FAM = { logreg: "Logistic regression", xgboost: "XGBoost", random_forest: "Random forest", mlp: "Neural network (MLP)" };
 const FREQ = { "1min": "1 min", "5min": "5 min", "15min": "15 min", "1h": "1 hour", session: "1 day" };
@@ -168,7 +169,7 @@ const chAcc = acc(C.frequency, C.model);
     ["Problem", "Can a model predict whether the next Nasdaq futures candle closes above its open, and trade that signal profitably after $5 round-trip commissions?"],
     ["Approach", "Original vs optimised logistic regression, XGBoost, random forest and neural networks (up to 4 hidden layers), new causal features, strict chronological splits, long/short, long-only and short-only backtests."],
     ["Verdict", deployable.length ? "See final slide." :
-      `Optimisation adds at most a few tenths of a point of accuracy. Unfiltered strategies lose heavily after costs; filtered ones hover around zero. No deployable strategy was found.`],
+      `Optimisation adds less than one point of accuracy. Intraday strategies lose after costs; daily profits mostly track the Nasdaq's upward drift. No deployable strategy was found.`],
   ];
   cols.forEach(([h, b], i) => {
     const x = L + i * (cw + 0.19);
@@ -197,6 +198,7 @@ const chAcc = acc(C.frequency, C.model);
   bullets(s, [
     [{ text: "Target: ", o: { bold: true } }, { text: "bullish if close(t+1) > open(t+1), bearish if lower; doji = miss" }],
     [{ text: "Data: ", o: { bold: true } }, { text: "NQ futures (CME E-mini Nasdaq-100, $20 per point), TradeStation 1-min bars 2006–2025" }],
+    [{ text: "Candles: ", o: { bold: true } }, { text: "1, 5, 15, 60 min and daily (one CME session, 17:00–16:00 CT)" }],
     [{ text: "Splits: ", o: { bold: true } }, { text: "train 2006–Aug 2017 · validation → Jul 2021 · test Jul 2021–May 2025, purged at boundaries" }],
   ], { x: L + 0.1, y: 4.25, w: 5.9, h: 2.5, fontSize: 12 });
   header(s, 6.95, 1.55, R - 6.95, "Model families: original and optimised versions");
@@ -254,7 +256,7 @@ const chAcc = acc(C.frequency, C.model);
 // ================================================================ 5. From signals to trades
 {
   const s = content("From Signals to Trades",
-    "Every unfiltered strategy loses money once each round trip pays $5; costs are larger than the gross edge", "Trading");
+    "Unfiltered, every candidate loses after $5 per round trip: intraday the gross edge is below $5 a trade; daily there is no edge", "Trading");
   header(s, L, 1.55, 4.6, "Trading rules (one NQ contract)");
   const steps = [
     ["Signal", "model probability that candle t+1 is bullish"],
@@ -266,19 +268,21 @@ const chAcc = acc(C.frequency, C.model);
   steps.forEach(([t, b], i) => card(s, L, 2.05 + i * 0.94, 4.6, 0.82, i + 1, t, b, i === 4 ? GOLD : RED, 0.5));
   const x2 = 5.5;
   header(s, x2, 1.55, R - x2, "Validation-chosen model per candle length, Long & Short, test period");
-  const rows = [[hdrCell("Candle"), hdrCell("Model"), hdrCell("Trades"), hdrCell("Gross"), hdrCell("Costs"), hdrCell("Net"),
-                 hdrCell("Filtered trades"), hdrCell("Filtered net")]];
+  const rows = [[hdrCell("Candle"), hdrCell("Model"), hdrCell("Trades"), hdrCell("Gross / trade"), hdrCell("Net"),
+                 hdrCell("Filtered trades"), hdrCell("Filtered gross / trade"), hdrCell("Filtered net")]];
+  const gpt = (v) => (v >= 0 ? "+$" : "−$") + Math.abs(v).toFixed(2);
+  const sgn = (v) => ({ color: v >= 0 ? GREEN : RED_DARK });
   for (const c of CAND) {
     const g = grid(c.frequency, c.model, "long_short", "none");
     rows.push([cell(FREQ[c.frequency], { bold: true }), cell(mname(c.model)), num(g.n_trades.toLocaleString("en-US")),
-      num(usd(g.gross_usd), { color: g.gross_usd >= 0 ? GREEN : RED_DARK }), num(usd(-g.costs_usd)),
-      num(usd(g.net_usd), { bold: true, color: RED_DARK }), num(c.test_n_trades.toLocaleString("en-US")),
-      num(usd(c.test_net_usd), { bold: true, color: c.test_net_usd >= 0 ? GREEN : RED_DARK })]);
+      num(gpt(g.gross_usd / g.n_trades), sgn(g.gross_usd)), num(usd(g.net_usd), Object.assign({ bold: true }, sgn(g.net_usd))),
+      num(c.test_n_trades.toLocaleString("en-US")), num(gpt(c.test_gross_usd / c.test_n_trades), sgn(c.test_gross_usd)),
+      num(usd(c.test_net_usd), Object.assign({ bold: true }, sgn(c.test_net_usd)))]);
   }
-  s.addTable(rows, tableOpts(x2, 2.05, R - x2, [0.68, 1.78, 0.85, 0.8, 0.78, 0.8, 0.8, 0.79], { rowH: [0.5, ...CAND.map(() => 0.44)], fontSize: 10.5 }));
+  s.addTable(rows, tableOpts(x2, 2.05, R - x2, [0.68, 1.9, 0.85, 0.8, 0.8, 0.8, 0.75, 0.7], { rowH: [0.5, ...CAND.map(() => 0.44)], fontSize: 10 }));
   const cut = CAND.map((c) => 100 * (1 - c.test_n_trades / grid(c.frequency, c.model, "long_short").n_trades));
-  T(s, `Filter thresholds (validation): ${CAND.map((c) => `${FREQ[c.frequency]} ${c.threshold}`).join(" · ")}. The filter cuts the number of trades by ${Math.min(...cut).toFixed(0)}% to ${Math.max(...cut).toFixed(1)}% and costs with it; what remains is close to zero and unreliable.`,
-    { x: x2, y: 2.05 + 0.5 + 0.44 * CAND.length + 0.08, w: R - x2, h: 0.65, fontSize: 10.5, color: MID });
+  T(s, `Gross / trade = average P&L per trade before the $5 commission. The filter (threshold chosen on validation) cuts trades by ${Math.min(...cut).toFixed(0)}% to ${Math.max(...cut).toFixed(1)}%; what remains is close to zero and unreliable.`,
+    { x: x2, y: 2.05 + 0.5 + 0.44 * CAND.length + 0.2, w: R - x2, h: 0.65, fontSize: 10.5, color: MID });
   const e5 = grid("5min", "reversal", "long_short");
   callout(s, x2, 5.6, R - x2, 1.15, `Example, 5-minute reversal rule: ${usd(e5.gross_usd)} gross over ${e5.n_trades.toLocaleString("en-US")} trades becomes ${usd(e5.net_usd)} after commissions: $${(e5.gross_usd / e5.n_trades).toFixed(2)} gross edge per trade vs $5.00 cost`);
   s.addNotes("High-frequency signals trade hundreds of thousands of times, so even a positive gross edge is overwhelmed by the fixed five-dollar cost per round trip. The confidence filter is the only lever that reduces costs.");
@@ -286,34 +290,56 @@ const chAcc = acc(C.frequency, C.model);
 
 // ================================================================ 6. Model-by-model at the chosen candle length
 {
-  const s = content(`Backtest by Model: ${FREQ[F]} Candles`,
-    (() => { const pos = D.models_primary.map((r) => r.optimised).concat(["reversal"]).flatMap((m) => ["long_short", "long_only", "short_only"].map((st) => grid(F, m, st))).filter((g) => g && g.net_usd > 0); return pos.length ? `After costs ${pos.length === 1 ? "only one" : pos.length} of ${3 * (D.models_primary.length + 1)} model × direction combinations ${pos.length === 1 ? "is" : "are"} positive, and only marginally` : "Every model and direction is negative after costs in the test period"; })(), "Trading");
+  const s = content(`Backtest by Model: ${F === "session" ? "Daily" : FREQ[F]} Candles`,
+    (() => {
+      const ms = [...new Set(D.models_primary.map((r) => r.optimised).concat([C.model]))];
+      const all = ms.flatMap((m) => ["long_short", "long_only", "short_only"].map((st) => grid(F, m, st))).filter((g) => g && g.n_trades > 0);
+      const pos = all.filter((g) => g.net_usd > 0);
+      const alw = grid(F, "always_long", "long_only");
+      return pos.length ? `After costs ${pos.length} of ${all.length} model × direction combinations are positive` +
+        (alw.net_usd > 0 ? ", mostly by riding the Nasdaq's rise" : ", and only marginally") : "Every model and direction is negative after costs in the test period";
+    })(), "Trading");
   header(s, L, 1.55, CW, `Test period, no filter, one contract, $5 per round trip (${FREQ[F]} candles chosen on validation)`);
-  const fams = D.models_primary.map((r) => r.optimised).concat(["reversal", "always_long"]);
+  const fams = [...new Set(D.models_primary.map((r) => r.optimised).concat([C.model, "always_long"]))];
   const rows = [[hdrCell("Model"), hdrCell("Accuracy"), hdrCell("Net: Long & Short"), hdrCell("Net: Long only"), hdrCell("Net: Short only"),
-                 hdrCell("Win rate"), hdrCell("Trades"), hdrCell("Profit factor"), hdrCell("Max drawdown"), hdrCell("Net / trade")]];
+                 hdrCell("Trades"), hdrCell("Win rate"), hdrCell("Gross / trade"), hdrCell("Net / trade"), hdrCell("Max drawdown")]];
+  const per = (v) => (v >= 0 ? "+$" : "−$") + Math.abs(v).toFixed(2);
   for (const m of fams) {
     const ls = grid(F, m, m === "always_long" ? "long_only" : "long_short");
     const lo = grid(F, m, "long_only"), so = grid(F, m, "short_only");
     const a = acc(F, m);
     const hl = m === C.model ? { fill: { color: TINT } } : {};
-    const n = (v) => (v === undefined ? num("—", hl) : num(usd(v.net_usd), Object.assign({ color: v.net_usd >= 0 ? GREEN : RED_DARK }, hl)));
+    const n = (v) => (v === undefined ? num("—", hl) : v.n_trades === 0 ? num("no trades", Object.assign({ color: MID }, hl))
+      : num(usd(v.net_usd), Object.assign({ color: v.net_usd >= 0 ? GREEN : RED_DARK }, hl)));
     rows.push([cell(mname(m), Object.assign({ bold: true }, hl)), num(pct(a.acc_all), hl), m === "always_long" ? num("—", hl) : n(ls), n(lo),
-      m === "always_long" ? num("—", hl) : n(so), num(pct(ls.win_rate, 1), hl), num(ls.n_trades.toLocaleString("en-US"), hl),
-      num(ls.profit_factor.toFixed(2), hl), num(usd(ls.max_drawdown_usd), hl), num(usd(ls.avg_net_per_trade_usd), hl)]);
+      m === "always_long" ? num("—", hl) : n(so), num(ls.n_trades.toLocaleString("en-US"), hl), num(pct(ls.win_rate, 1), hl),
+      num(per(ls.gross_usd / ls.n_trades), hl), num(per(ls.avg_net_per_trade_usd), hl), num(usd(ls.max_drawdown_usd), hl)]);
   }
-  s.addTable(rows, tableOpts(L, 2.05, CW, [2.55, 1.0, 1.2, 1.15, 1.15, 0.9, 0.95, 1.0, 1.15, 1.18], { rowH: 0.42, fontSize: 11 }));
-  T(s, "Win rate, trades, profit factor, drawdown and net per trade refer to the Long & Short version (Long only for “always long”). Highlighted row: the model of the pre-specified best strategy.",
-    { x: L, y: 5.25, w: CW, h: 0.45, fontSize: 10.5, color: MID });
-  callout(s, L, 5.9, CW, 0.8, "Higher accuracy does not mean profit: the most accurate models are still down after costs, because wins and losses are of similar size and every trade pays $5");
-  s.addNotes("The 1-hour candle length is where the pre-specified selection rule landed: it produced the highest validation profit. In the test period the same models lose after costs in every direction.");
+  s.addTable(rows, tableOpts(L, 2.05, CW, [2.55, 1.0, 1.2, 1.15, 1.15, 0.95, 0.9, 1.05, 1.05, 1.23], { rowH: 0.42, fontSize: 11 }));
+  const yN = 2.05 + 0.42 * rows.length + 0.1;
+  T(s, "Trades, win rate, per-trade P&L and drawdown: Long & Short version (Long only for “always long”). Gross / trade is before the $5 commission. Highlighted: model of the pre-specified best strategy.",
+    { x: L, y: yN, w: CW, h: 0.45, fontSize: 10.5, color: MID });
+  const alw = grid(F, "always_long", "long_only");
+  const models = fams.filter((m) => m !== "always_long");
+  const beat = models.filter((m) => grid(F, m, "long_short").net_usd > alw.net_usd);
+  const ciPos = models.filter((m) => grid(F, m, "long_short").daily_net_ci_lo > 0).length;
+  callout(s, L, 5.9, CW, 0.8, alw.net_usd > 0
+    ? `Staying long on every candle earned ${usd(alw.net_usd)} with no model at all; ${beat.length} of ${models.length} models beat it with Long & Short` +
+      (ciPos === 0 ? ", and none has a daily-P&L 95% interval above zero" : "")
+    : "Higher accuracy does not mean profit: the most accurate models are still down after costs, because wins and losses are of similar size and every trade pays $5");
+  s.addNotes(`The ${FREQ[F]} candle length is where the pre-specified selection rule landed: it produced the highest validation profit. The table shows the test period, one contract, after five dollars per round trip.`);
 }
 
 // ================================================================ 7. Equity curves and long vs short
 {
+  const ls = grid(F, C.model, "long_short"), lo = grid(F, C.model, "long_only"), so = grid(F, C.model, "short_only");
+  const alw = grid(F, "always_long", "long_only");
+  const longBetter = lo.net_usd >= so.net_usd;
   const s = content("Equity Curves: Long vs Short",
-    "Long trades dominate the losses; short-only loses least but is still negative after costs", "Trading");
-  header(s, L, 1.55, 8.0, `Cumulative net P&L, ${mname(C.model)} on ${FREQ[F]} candles, test period (thousand USD)`);
+    `${longBetter ? "Long" : "Short"}-only beats ${longBetter ? "short" : "long"}-only` +
+    (alw.net_usd > Math.max(lo.net_usd, so.net_usd, ls.net_usd) ? `, but no direction beats simply staying long (${usd(alw.net_usd)})`
+      : Math.max(lo.net_usd, so.net_usd) < 0 ? ", but both are negative after costs" : ""), "Trading");
+  header(s, L, 1.55, 8.0, `Cumulative net P&L, test period, $k: ${mname(C.model)}, ${FREQ[F]} candles`);
   const ew = D.equity_weekly, labels = ew.dates;
   const ser = [["Long & Short", "long_short"], ["Long only", "long_only"], ["Short only", "short_only"],
                [`Filtered L&S (|p−0.5| ≥ ${C.threshold})`, "chosen"], ["Always long", "always_long"]]
@@ -323,27 +349,29 @@ const chAcc = acc(C.frequency, C.model);
     catGridLine: { style: "none" }, showLegend: true, legendPos: "t", catAxisLabelFrequency: 26, catAxisLabelFontSize: 9 }, chartText));
   const x2 = 8.95;
   header(s, x2, 1.55, R - x2, "Long vs short contribution (no filter)");
-  const ls = grid(F, C.model, "long_short"), lo = grid(F, C.model, "long_only"), so = grid(F, C.model, "short_only");
+  const per = (v) => (v >= 0 ? "+$" : "−$") + Math.abs(v).toFixed(2);
+  const sg = (v) => ({ color: v >= 0 ? GREEN : RED_DARK });
   s.addTable([
     [hdrCell(""), hdrCell("Long only"), hdrCell("Short only")],
     [cell("Trades", { bold: true }), num(lo.n_trades.toLocaleString("en-US")), num(so.n_trades.toLocaleString("en-US"))],
-    [cell("Net P&L", { bold: true }), num(usd(lo.net_usd), { color: RED_DARK }), num(usd(so.net_usd), { color: so.net_usd >= 0 ? GREEN : RED_DARK })],
+    [cell("Net P&L", { bold: true }), num(usd(lo.net_usd), sg(lo.net_usd)), num(usd(so.net_usd), sg(so.net_usd))],
     [cell("Win rate", { bold: true }), num(pct(lo.win_rate, 1)), num(pct(so.win_rate, 1))],
-    [cell("Profit factor", { bold: true }), num(lo.profit_factor.toFixed(2)), num(so.profit_factor.toFixed(2))],
+    [cell("Gross / trade", { bold: true }), num(per(lo.gross_usd / lo.n_trades)), num(per(so.gross_usd / so.n_trades))],
     [cell("Max drawdown", { bold: true }), num(usd(lo.max_drawdown_usd)), num(usd(so.max_drawdown_usd))],
   ], tableOpts(x2, 2.05, R - x2, [1.35, 1.2, 1.28], { rowH: 0.36, fontSize: 11 }));
+  const costShare = ls.gross_usd > 0 ? ` (${Math.round(100 * ls.costs_usd / ls.gross_usd)}% of gross)` : "";
   bullets(s, [
-    `The model calls “up” ${Math.round(100 * ls.n_long / ls.n_trades)}% of the time, so Long & Short is mostly long and inherits its losses`,
-    "Short-only trades far less, so it pays far less in commissions and has the smallest drawdown",
-    `Gross P&L is positive (${usd(ls.gross_usd)}) but costs (${usd(-ls.costs_usd)}) exceed it; the filter cuts costs, yet the curve ends near zero`,
+    `The model calls “up” ${Math.round(100 * ls.n_long / ls.n_trades)}% of the time, so Long & Short is mostly a long position`,
+    `${longBetter ? "Short" : "Long"} trades ${(longBetter ? so : lo).net_usd < 0 ? "destroy value" : "add little"}: ${usd((longBetter ? so : lo).net_usd)} net`,
+    `Long & Short: gross ${usd(ls.gross_usd)}, commissions ${usd(-ls.costs_usd)}${costShare}, net ${usd(ls.net_usd)}`,
   ], { x: x2 + 0.05, y: 4.4, w: R - x2 - 0.05, h: 2.45, fontSize: 11.5 });
-  s.addNotes("All curves are net of five dollars per round trip and plotted against calendar time (weekly). Restricting to one direction mainly changes how many trades pay costs; it does not reveal a profitable side.");
+  s.addNotes("All curves are net of five dollars per round trip and plotted against calendar time (weekly). Gross per trade is the average result before commission.");
 }
 
 // ================================================================ 8. Robustness
 {
   const s = content("Robustness: Costs, Walk-Forward, In vs Out of Sample",
-    "Validation profits shrink or reverse on unseen data, and walk-forward retraining confirms the instability", "Trading");
+    "Every candidate profitable on validation loses or shrinks on the test period", "Trading");
   const hw = 6.1;
   header(s, L, 1.55, hw, "Test net P&L vs cost per round trip, filtered candidates (thousand USD)");
   const costs = [0, 2.5, 5, 12.5, 23];
@@ -366,7 +394,10 @@ const chAcc = acc(C.frequency, C.model);
   s.addTable(rows, tableOpts(x2, 2.05, R - x2, [0.78, 0.92, 1.03, 0.98, 1.03, 0.99], { rowH: [0.55, ...CAND.map(() => 0.4)], fontSize: 10.5 }));
   T(s, `Validation picks the best of ${D.n_val_configurations} configurations, so its profit is optimistic by construction (multiple comparisons). Walk-forward: model refitted each year on all prior data, threshold re-chosen on the preceding year.`,
     { x: x2, y: 2.05 + 0.55 + 0.4 * CAND.length + 0.08, w: R - x2, h: 0.95, fontSize: 10.5, color: MID });
-  callout(s, L, 5.75, CW, 1.0, `No candidate has a 95% interval of daily net P&L above zero in the test period, and none is profitable in at least 3 of 4 walk-forward years`);
+  const wfOk = CAND.filter((c) => c.wf_years_positive >= 3);
+  callout(s, L, 5.75, CW, 1.0, `No candidate has a 95% interval of daily net P&L above zero in the test period. ` +
+    (wfOk.length ? `Only ${wfOk.map((c) => FREQ[c.frequency]).join(", ")} is profitable in ≥ 3 walk-forward years, with yearly-refitted models that are mostly long in a rising market; the fixed model loses on the test`
+      : "None is profitable in at least 3 of 4 walk-forward years"));
   s.addNotes("Robustness checks: cost sensitivity from zero to twenty-three dollars per round trip, in-sample versus validation versus test, yearly walk-forward refits, and the threshold grid in the appendix.");
 }
 
@@ -377,12 +408,12 @@ const chAcc = acc(C.frequency, C.model);
   const ch = chSplit("test");
   const hw = (CW - 0.4) / 2;
   const box = (x, title, sub, rowsKV, color) => {
-    s.addShape(pres.shapes.RECTANGLE, { x, y: 1.6, w: hw, h: 4.0, fill: { color: "FFFFFF" }, line: { color, width: 1.5 } });
+    s.addShape(pres.shapes.RECTANGLE, { x, y: 1.6, w: hw, h: 3.98, fill: { color: "FFFFFF" }, line: { color, width: 1.5 } });
     s.addShape(pres.shapes.RECTANGLE, { x, y: 1.6, w: hw, h: 0.75, fill: { color }, line: { color, width: 1.5 } });
     T(s, [{ text: title, options: { bold: true, breakLine: true, fontSize: 14 } }, { text: sub, options: { fontSize: 11 } }],
       { x: x + 0.2, y: 1.6, w: hw - 0.4, h: 0.75, color: "FFFFFF", valign: "middle" });
     s.addTable(rowsKV.map(([k, v, o]) => [cell(k, { bold: true, color: MID }), cell(v, Object.assign({ align: "right" }, o || {}))]),
-      tableOpts(x + 0.2, 2.45, hw - 0.4, [2.3, hw - 2.7], { rowH: 0.31, fontSize: 11, border: { type: "none" } }));
+      tableOpts(x + 0.2, 2.42, hw - 0.4, [2.3, hw - 2.7], { rowH: 0.28, fontSize: 11, border: { type: "none" } }));
   };
   box(L, "Selected by the pre-specified rule", `highest validation profit across all ${D.n_val_configurations} configurations`, [
     ["Model", mname(C.model)],
@@ -391,7 +422,8 @@ const chAcc = acc(C.frequency, C.model);
     ["Test accuracy", pct(chAcc.acc_all)],
     ["Net P&L (test)", usd(ch.net_usd), { bold: true, color: ch.net_usd >= 0 ? GREEN : RED_DARK }],
     ["Trades · win rate", `${ch.n_trades.toLocaleString("en-US")} · ${pct(ch.win_rate, 1)}`],
-    ["Profit factor", ch.profit_factor.toFixed(2)],
+    ["Avg trade: gross · net", `${perT(ch.gross_usd / ch.n_trades)} · ${perT(ch.avg_net_per_trade_usd)}`],
+    ["Profit factor*", ch.profit_factor.toFixed(2)],
     ["Max drawdown", usd(ch.max_drawdown_usd)],
     ["Daily net 95% CI", `${usd0(ch.daily_net_ci_lo)} to ${usd0(ch.daily_net_ci_hi)}`],
     ["Walk-forward", `${C.wf_years_positive} of ${C.wf_years} years positive, ${usd(C.wf_net_usd)}`],
@@ -404,13 +436,17 @@ const chAcc = acc(C.frequency, C.model);
     ["Test accuracy", pct(btAcc.acc_all)],
     ["Net P&L (test)", usd(bt.test_net_usd), { bold: true, color: bt.test_net_usd >= 0 ? GREEN : RED_DARK }],
     ["Trades · win rate", `${bt.test_n_trades.toLocaleString("en-US")} · ${pct(bt.test_win_rate, 1)}`],
-    ["Profit factor", bt.test_profit_factor.toFixed(2)],
+    ["Avg trade: gross · net", `${perT(bt.test_gross_usd / bt.test_n_trades)} · ${perT(bt.test_avg_net_per_trade_usd)}`],
+    ["Profit factor*", bt.test_profit_factor.toFixed(2)],
     ["Max drawdown", usd(bt.test_max_drawdown_usd)],
     ["Daily net 95% CI", `${usd0(bt.test_daily_net_ci_lo)} to ${usd0(bt.test_daily_net_ci_hi)}`],
     ["Walk-forward", `${bt.wf_years_positive} of ${bt.wf_years} years positive, ${usd(bt.wf_net_usd)}`],
   ], GOLD);
-  callout(s, L, 5.8, CW, 1.0, deployable.length ? "See criteria above." :
-    `Verdict: neither strategy passes the pre-set bar (test profit at $5 and $12.50, daily-P&L interval above zero, 3 of 4 profitable walk-forward years). The ${FREQ[bt.frequency]} result also assumes filling at the next open with zero delay. Trading either would be a bet, not an edge.`);
+  T(s, "* Profit factor = sum of winning trades ÷ |sum of losing trades|, both after commissions; 1.00 = winners exactly pay for losers. Avg trade gross = before the $5 commission.",
+    { x: L, y: 5.6, w: CW, h: 0.32, fontSize: 9.5, color: MID });
+  callout(s, L, 5.97, CW, 0.88, deployable.length ? "See criteria above." :
+    `Verdict: neither passes the pre-set bar (test profit at $5 and $12.50, daily-P&L interval above zero, 3 of 4 profitable walk-forward years). Trading either would be a bet, not an edge.` +
+    (C.wf_years_positive >= 3 ? ` The ${FREQ[C.frequency]} walk-forward profit reflects being mostly long in a rising market.` : ""));
   s.addNotes("The final slide applies the rule fixed before the results were read. Left: the strategy the rule selects. Right: the best test outcome, shown for transparency; it was picked by looking at the test period and depends on idealised one-minute fills, so it is not evidence of a deployable edge.");
 }
 
@@ -436,15 +472,15 @@ const chAcc = acc(C.frequency, C.model);
       num(sp.train_fit_rows.toLocaleString("en-US")), num(sp.validation[2].toLocaleString("en-US")), num(sp.test[2].toLocaleString("en-US")),
       num(a.n_doji.toLocaleString("en-US")), num(pct(a.n_bullish / (a.n_bullish + a.n_bearish), 1))]);
   }
-  s.addTable(rows, tableOpts(L, 1.6, CW, [1.2, 1.55, 1.5, 1.45, 1.55, 1.5, 1.4, 2.08], { rowH: 0.4, fontSize: 11 }));
+  s.addTable(rows, tableOpts(L, 1.6, CW, [1.2, 1.55, 1.5, 1.45, 1.55, 1.5, 1.4, 2.08], { rowH: 0.36, fontSize: 11 }));
   const sp = D.info[FREQS[0]].splits;
   bullets(s, [
-    `Train ${sp.train[0]} → ${sp.train[1]}, validation ${sp.validation[0]} → ${sp.validation[1]}, test ${sp.test[0]} → ${sp.test[1]} (session dates). Labels crossing a boundary are purged.`,
-    "Source: TradeStation continuous NQ, 1-minute bars, Europe/Rome clock, end-stamped; additively back-adjusted, so within-session point moves equal the traded contract’s.",
-    "Instrument: CME E-mini Nasdaq-100 futures (NQ), $20 per index point, tick 0.25 = $5. Not MNQ ($2 per point), not QQQ, not the cash index.",
-    "Candles are built from 1-minute bars inside CME sessions; a trade never spans a session close. Bad prints (|1-min return| > 2%) are quarantined causally.",
-    `Training rows are non-doji candles; at 1 minute the most recent ${sp.train_fit_rows.toLocaleString("en-US")} are used. The test period was inspected with the original models in earlier project phases: results are exploratory.`,
-  ], { x: L + 0.1, y: 1.6 + 0.4 * rows.length + 0.2, w: CW - 0.2, h: 6.85 - (1.6 + 0.4 * rows.length + 0.2), fontSize: 12 });
+    `Train ${sp.train[0]} → ${sp.train[1]}, validation → ${sp.validation[1]}, test ${sp.test[0]} → ${sp.test[1]}; labels crossing a boundary are purged. Test seen in earlier phases: exploratory.`,
+    "Data: TradeStation continuous NQ 1-minute bars, additively back-adjusted (point moves equal the traded contract’s).",
+    "NQ = $20 × Nasdaq-100 index, tick 0.25 = $5; notional ≈ $210k–$445k per contract in 2021–2025. P&L = points moved × $20.",
+    "Candles stay inside one CME session (daily = 17:00–16:00 CT). Bad prints (|1-min return| > 2%) quarantine the next 50 candles.",
+    ...(D.info.session ? [`Daily: early-close sessions are not targets; the quarantine after 3 Feb 2025 ends the daily test on ${D.info.session.splits.test[1]}.`] : []),
+  ], { x: L + 0.1, y: 1.6 + 0.36 * rows.length + 0.15, w: CW - 0.2, h: 6.9 - (1.6 + 0.36 * rows.length + 0.15), fontSize: 11.5 });
 }
 {
   const s = content("A2  Features, Hyper-parameters and Selection Rules", "All choices made on training and validation data; the test set never informed them", "Appendix");
@@ -469,8 +505,9 @@ const chAcc = acc(C.frequency, C.model);
     "Optimised model per family = highest validation balanced accuracy (it may be the original).",
     "Confidence threshold per model and direction = highest validation net P&L on {0, 0.01, 0.02, 0.03, 0.05, 0.075, 0.10}, at least 200 trades.",
     "Overall strategy = highest validation net P&L; deployable only if test net > 0 at $5 and $12.50, daily-P&L 95% interval > 0 and ≥ 3 of 4 profitable walk-forward years.",
-    "Scaling fitted on training rows only; network training shuffles only inside the training set; seeds fixed (42).",
-  ], { x: L + 0.1, y: 4.8, w: CW - 0.2, h: 2.0, fontSize: 11.5 });
+    "Scaling fitted on training rows only; network training shuffles only inside the training set; seeds fixed (42). Daily networks use batches of 128 (≈2,000 training rows).",
+    "Profit factor = sum of winning trades ÷ |sum of losing trades|, after commissions. Gross / trade = average P&L per trade before the $5 commission.",
+  ], { x: L + 0.1, y: 4.75, w: CW - 0.2, h: 2.15, fontSize: 11 });
 }
 {
   const f = bestPred.frequency;
@@ -509,7 +546,7 @@ const chAcc = acc(C.frequency, C.model);
       ...["long_short", "long_only", "short_only"].map((st) => k(gv(f, m, st, "validated")))]);
   }
   s.addTable(rows, tableOpts(L, 1.6, CW, [1.0, 3.0, 1.3, 1.3, 1.3, 1.45, 1.45, 1.43], { rowH: FREQS.length > 4 ? 0.228 : 0.265, fontSize: FREQS.length > 4 ? 8.5 : 9.5 }));
-  T(s, "“—”: the validation-chosen threshold was 0 (no filter) or produced fewer than 200 validation trades. Filtered results are spread around zero with no consistent sign across candle lengths or models.",
+  T(s, "“—”: the validation-chosen threshold was 0 (no filter) or produced fewer than 200 validation trades. Intraday filtered results are spread around zero; daily results are positive mainly because the models stay long.",
     { x: L, y: 6.5, w: CW, h: 0.4, fontSize: 10, color: MID });
 }
 {
@@ -542,10 +579,13 @@ const chAcc = acc(C.frequency, C.model);
     { text: '$env:FUTURES_DATA_DIR="C:\\path\\to\\futures-data"', options: { fontFace: "Courier New", breakLine: true } },
     { text: "1. python study.py", options: { fontFace: "Courier New", breakLine: true } },
     { text: "    trains all models, backtests, walk-forward (about 15 min on 16 CPU cores, no GPU)", options: { color: MID, breakLine: true } },
+    ...(D.merged_from && D.merged_from.length ? [{ text: `    this deck: ${D.merged_from.map((m) => m.freqs.map((f) => FREQ[f]).join(", ")).join(" run + ")} run, joined by tools/merge_runs.py`, options: { color: MID, breakLine: true } }] : []),
     { text: "2. python report.py results/nq_study/runs/<run> presentation/deck_data.json", options: { fontFace: "Courier New", breakLine: true } },
     { text: "3. python verify.py results/nq_study/runs/<run>", options: { fontFace: "Courier New", breakLine: true } },
     { text: "4. cd presentation; npm install; node build_deck.js", options: { fontFace: "Courier New", breakLine: true } },
-    { text: `Run used here: ${D.run_id} (commit ${D.run.commit ? D.run.commit.slice(0, 7) : "local"}${D.run.dirty ? ", uncommitted changes" : ""}), seed ${D.args.seed}, latency ${D.args.latency}, $${D.args.cost} per round trip.`, options: { color: MID } },
+    { text: D.merged_from && D.merged_from.length
+        ? `Runs used here: ${D.merged_from.map((m) => `${m.run} (commit ${m.git.commit ? m.git.commit.slice(0, 7) : "local"})`).join(" + ")}; seed ${D.args.seed}, latency ${D.args.latency}, $${D.args.cost} per round trip.`
+        : `Run used here: ${D.run_id} (commit ${D.run.commit ? D.run.commit.slice(0, 7) : "local"}${D.run.dirty ? ", uncommitted changes" : ""}), seed ${D.args.seed}, latency ${D.args.latency}, $${D.args.cost} per round trip.`, options: { color: MID } },
   ], { x: L + 0.1, y: 2.05, w: 5.9, h: 3.2, fontSize: 11.5, paraSpaceAfter: 6 });
   header(s, 6.95, 1.55, R - 6.95, "Limitations");
   bullets(s, [

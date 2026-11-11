@@ -9,7 +9,9 @@ commissions.
 **Final answer: no deployable strategy was found.** The models predict
 slightly better than "always up" on 1 and 5-minute candles (best: +0.62
 percentage points), but no long/short, long-only or short-only strategy
-passes the out-of-sample, cost and walk-forward tests fixed in advance.
+passes the out-of-sample, cost and walk-forward tests fixed in advance. On
+daily candles the models mostly collapse to "always long"; the profits there
+come from the Nasdaq's upward drift, not from prediction.
 
 Final deck: [presentation/NQ_final_report.pptx](presentation/NQ_final_report.pptx)
 ([PDF](presentation/NQ_final_report.pdf)). Result tables:
@@ -21,7 +23,8 @@ Final deck: [presentation/NQ_final_report.pptx](presentation/NQ_final_report.ppt
 |---|---|
 | Instrument | CME E-mini Nasdaq-100 futures (**NQ**), $20 per index point, tick 0.25 = $5. Not MNQ ($2 per point), not QQQ, not the cash index |
 | Data | TradeStation continuous NQ, 1-minute OHLCV bars, Jan 2006 – May 2025 (6,193,869 bars), additively back-adjusted (within-session point moves equal the traded contract's) |
-| Candles studied | 1, 5, 15 and 60 minutes, built from the 1-minute bars inside CME sessions |
+| Candles studied | 1, 5, 15 and 60 minutes and daily (one CME session, 17:00–16:00 CT), built from the 1-minute bars inside CME sessions |
+| Notional | $20 × index level, about $210k–$445k per contract in 2021–2025; P&L = points moved × $20 |
 | Location | not in Git (licensed). Default `..\futures-data`, or set `FUTURES_DATA_DIR` |
 
 ## Prediction task and trades
@@ -75,17 +78,27 @@ Plus rules: always long, always short, reversal of the last move.
 * Caveat: the 2021–2025 test period was examined with the original models in
   earlier phases of the project, so the results are exploratory. Data after
   May 2025 was not available.
+* Daily candles: early-close sessions are not used as targets and the same
+  50-candle quarantine after bad prints applies (50 days), so the daily
+  sample has 3,457 sessions and its test ends on 2025-01-30 (642 sessions).
+  Networks use batches of 128 when fewer than 20,000 rows are available.
 
-## Results (run `20261111T070520Z_949daa_final`, commit `ff445f3`)
+## Results
+
+Intraday run `20261111T070520Z_949daa_final` (commit `ff445f3`) plus daily
+run `20261111T103357Z_02bd49_daily_final` (commit `0970132`, same settings),
+joined into one folder by `tools/merge_runs.py`.
 
 Test accuracy on all candles, original → optimised:
 
-| Model | 1 min | 5 min | 15 min | 1 hour |
-|---|---|---|---|---|
-| Logistic regression | 48.63 → 48.67% | 50.42 → 50.43% | 50.73 → 50.77% | 51.09 → 50.50% |
-| Random forest | 48.68 → 48.69% | 50.49 → 50.47% | 50.88 → 50.79% | 51.11 → 51.69% |
-| XGBoost | 48.63 → 48.63% | 50.50 → 50.46% | 50.67 → 50.96% | 50.77 → 51.76% |
-| Neural network | 48.66 → 48.71% | 50.33 → **50.52%** | 50.94 → 50.85% | 51.57 → 51.74% |
+| Model | 1 min | 5 min | 15 min | 1 hour | 1 day |
+|---|---|---|---|---|---|
+| Logistic regression | 48.63 → 48.67% | 50.42 → 50.43% | 50.73 → 50.77% | 51.09 → 50.50% | 51.71 → 51.71% |
+| Random forest | 48.68 → 48.69% | 50.49 → 50.47% | 50.88 → 50.79% | 51.11 → 51.69% | 54.21 → 54.21% |
+| XGBoost | 48.63 → 48.63% | 50.50 → 50.46% | 50.67 → 50.96% | 50.77 → 51.76% | 51.56 → 51.56% |
+| Neural network | 48.66 → 48.71% | 50.33 → **50.52%** | 50.94 → 50.85% | 51.57 → 51.74% | 54.21 → 54.21% |
+
+Daily 54.21% is the share of up days: those models call "up" every day.
 
 Best predictive model: MLP 128-64-32 on 5-minute candles, 51.45% on non-doji
 candles, +0.62 pp over "always up" (95% CI +0.32 to +0.92). From 15 minutes
@@ -94,16 +107,23 @@ consistent gain; early stopping halted every network after 5–17 epochs.
 
 Trading (test period, $5 per round trip):
 
-* Every unfiltered strategy loses: costs exceed the gross edge (5-minute
-  reversal rule: +$391k gross, −$975k net over 273,340 trades).
+* Every unfiltered intraday strategy loses: costs exceed the gross edge
+  (5-minute reversal rule: +$391k gross, −$975k net over 273,340 trades,
+  i.e. $1.43 gross per trade against $5 of commission).
 * Validation-chosen candidates (filtered Long & Short): 1 min +$30.7k,
-  5 min −$57.4k, 15 min −$2.4k, 1 hour −$7.6k. None has a daily-P&L interval
-  above zero; none is profitable in 3 of 4 walk-forward years.
-* Pre-specified choice: XGBoost depth 5, 1-hour candles, Long & Short,
-  |P(up) − 0.5| ≥ 0.01: +$133.8k on validation, **−$7.6k on test** (17,419
-  trades, win rate 51.7%, profit factor 1.00, max drawdown −$133k).
-* Long vs short (same model, no filter): long-only −$69.1k, short-only
-  −$5.8k, Long & Short −$74.9k. The model calls "up" 86% of the time.
+  5 min −$57.4k, 15 min −$2.4k, 1 hour −$7.6k, 1 day −$25.9k. None has a
+  daily-P&L interval above zero. Only the daily candidate is profitable in
+  3+ walk-forward years (4 of 4, +$201.5k), with yearly-refitted models that
+  are mostly long in a rising market.
+* Pre-specified choice: MLP 256-128-64-32 with dropout and batch norm, daily
+  candles, Long & Short, |P(up) − 0.5| ≥ 0.01: +$164.5k on validation,
+  **−$25.9k on test** (575 trades, win rate 50.6%, −$40.09 gross and
+  −$45.09 net per trade, profit factor 0.97, max drawdown −$102.4k).
+* Long vs short (same model, no filter): long-only +$16.1k, short-only
+  −$58.2k, Long & Short −$42.1k; the model calls "up" 81% of the days.
+  Simply staying long every day earned +$73.0k.
+* Profit factor = sum of winning trades ÷ |sum of losing trades|, both after
+  commissions. Gross per trade = average P&L per trade before commission.
 
 ## Reproduce (Windows PowerShell, from the project folder)
 
@@ -117,6 +137,9 @@ python -m pytest tests -q
 
 ```powershell
 python study.py                                        # all models, strategies, walk-forward (~15 min, 16 CPU cores, no GPU)
+# this deck: intraday run + daily-only run joined into one folder
+#   python study.py --freqs 1min 5min 15min 1h ; python study.py --freqs session
+#   python tools\merge_runs.py results\nq_study\runs\<new id> <intraday run> <daily run>
 python report.py results\nq_study\runs\<run id> presentation\deck_data.json
 python verify.py results\nq_study\runs\<run id> presentation\deck_data.json
 ```
@@ -145,7 +168,8 @@ experiment.py, features.py, timeframes.py, quality.py, backtest.py,
 evaluation.py, data.py, config.py, runlog.py
                 shared data pipeline: sessions, candles, causal cleaning,
                 purged splits, execution timing (main.py: earlier runs A-C)
-tools/          IBKR tick / bar downloaders (optional, not used in the study)
+tools/          merge_runs.py (joins runs over different candle lengths);
+                IBKR tick / bar downloaders (optional, not used in the study)
 tests/          regression tests (timing, splits, execution, strategies)
 ```
 

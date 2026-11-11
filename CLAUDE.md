@@ -5,11 +5,13 @@ only; VIX was removed from the project.
 
 ## State
 
-* Final study: `study.py` -> run `20261111T070520Z_949daa_final` (commit
-  `ff445f3`), summaries in `reports/nq_study_final/`, deck in
-  `presentation/` (built from `presentation/deck_data.json`).
-* `verify.py` recomputes every test metric independently: 445 checks, 0
-  problems on the final run.
+* Final study: `study.py` -> intraday run `20261111T070520Z_949daa_final`
+  (commit `ff445f3`) + daily run `20261111T103357Z_02bd49_daily_final`
+  (commit `0970132`), joined by `tools/merge_runs.py` into
+  `20261111T103500Z_final_with_daily`. Summaries in `reports/nq_study_final/`,
+  deck in `presentation/` (built from `presentation/deck_data.json`).
+* `verify.py` recomputes every test metric independently: 527 checks, 0
+  problems on the merged run.
 * Verdict: no deployable strategy. Do not describe any result as profitable
   or validated beyond what the selection rule in `report.py` states.
 
