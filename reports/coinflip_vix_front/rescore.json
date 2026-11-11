@@ -1,9 +1,0 @@
-{
-  "repair_id": "20261102T074046Z",
-  "only_economic_diagnostics_changed": true,
-  "classification_and_model_outputs_unchanged": true,
-  "old_economics_sha256": "9f9bbe11b8562b6af27f71d3ee99dd054d0d14b930a8713b971258a6e19a33b0",
-  "corrected_economics_sha256": "33d0c992743d89e49efe564fc1578020dfcee1985707e592430477582b98d89e",
-  "verification": "reports/verification/local_verification.json",
-  "scope": "session economic Monte Carlo only; other corrected backtests in canonical local NQ reports"
-}

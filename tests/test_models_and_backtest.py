@@ -170,21 +170,3 @@ def test_smoke_run_writes_new_folder(tmp_path, monkeypatch):
 def test_missing_futures_data_is_reported(tmp_path):
     with pytest.raises(FileNotFoundError, match="No replacement data"):
         data.load_futures_minutes(tmp_path / "absent", "NQ", 2020, 2021)
-
-
-def test_timestral_interface_offline(tmp_path):
-    pytest.importorskip("torch")
-    pytest.importorskip("timestral")
-    import timestral_direction as td
-    from timestral import TimestralForecaster
-    fc = TimestralForecaster.from_pretrained(td.tiny_random_checkpoint(tmp_path / "m"))
-    out = fc.forecast(np.cumsum(np.ones((2, 64)), axis=1) + 100, prediction_length=1)
-    assert tuple(out.median.shape) == (2, 1, 1) and 0.5 in out.quantile_levels
-
-
-def test_timestral_sample_independent_of_other_frequencies():
-    import timestral_direction as td
-    o = pd.DataFrame({"a": range(1000)})
-    s1 = td.sample_origins(o, 50, 42, "1h")
-    s2 = td.sample_origins(o, 50, 42, "1h")
-    assert s1.equals(s2) and not s1.equals(td.sample_origins(o, 50, 42, "1min"))

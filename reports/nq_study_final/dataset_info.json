@@ -1,0 +1,254 @@
+{
+  "1min": {
+    "frequency": "1min",
+    "target": "next_candle_body_direction",
+    "n_bars": 6180163,
+    "n_label_ineligible": 295114,
+    "n_quarantine_window": 352,
+    "n_rows": 5884735,
+    "n_flat": 1059554,
+    "lookback_bars": 21,
+    "n_rows_final": 5884299,
+    "n_execution_eligible": 5884299,
+    "target_vs_traded_sign_mismatch": 0,
+    "splits": {
+      "train": [
+        "2006-01-03",
+        "2017-08-24",
+        3167361
+      ],
+      "train_fit_rows": 2000000,
+      "validation": [
+        "2017-08-25",
+        "2021-07-14",
+        1346246
+      ],
+      "test": [
+        "2021-07-15",
+        "2025-05-30",
+        1370692
+      ],
+      "majority_train": 1,
+      "features_base": [
+        "ret_lag1",
+        "ret_lag2",
+        "ret_lag3",
+        "ret_lag5",
+        "mom_5",
+        "mom_10",
+        "vol_5",
+        "vol_10"
+      ],
+      "features_ext": [
+        "ret_lag1",
+        "ret_lag2",
+        "ret_lag3",
+        "ret_lag5",
+        "mom_5",
+        "mom_10",
+        "vol_5",
+        "vol_10",
+        "log_vol_rel20",
+        "range_rel",
+        "body_rel",
+        "rv_20",
+        "sess_sin",
+        "sess_cos",
+        "upper_wick_rel",
+        "lower_wick_rel",
+        "rsi14_c",
+        "ma_gap_20",
+        "ma_gap_50"
+      ]
+    }
+  },
+  "5min": {
+    "frequency": "5min",
+    "target": "next_candle_body_direction",
+    "n_bars": 1338256,
+    "n_label_ineligible": 24680,
+    "n_quarantine_window": 352,
+    "n_rows": 1313243,
+    "n_flat": 132601,
+    "lookback_bars": 21,
+    "n_rows_final": 1312758,
+    "n_execution_eligible": 1312758,
+    "target_vs_traded_sign_mismatch": 0,
+    "splits": {
+      "train": [
+        "2006-01-03",
+        "2017-08-24",
+        770236
+      ],
+      "train_fit_rows": 653403,
+      "validation": [
+        "2017-08-25",
+        "2021-07-14",
+        269182
+      ],
+      "test": [
+        "2021-07-15",
+        "2025-05-30",
+        273340
+      ],
+      "majority_train": 1,
+      "features_base": [
+        "ret_lag1",
+        "ret_lag2",
+        "ret_lag3",
+        "ret_lag5",
+        "mom_5",
+        "mom_10",
+        "vol_5",
+        "vol_10"
+      ],
+      "features_ext": [
+        "ret_lag1",
+        "ret_lag2",
+        "ret_lag3",
+        "ret_lag5",
+        "mom_5",
+        "mom_10",
+        "vol_5",
+        "vol_10",
+        "log_vol_rel20",
+        "range_rel",
+        "body_rel",
+        "rv_20",
+        "sess_sin",
+        "sess_cos",
+        "upper_wick_rel",
+        "lower_wick_rel",
+        "rsi14_c",
+        "ma_gap_20",
+        "ma_gap_50"
+      ]
+    }
+  },
+  "15min": {
+    "frequency": "15min",
+    "target": "next_candle_body_direction",
+    "n_bars": 453129,
+    "n_label_ineligible": 9689,
+    "n_quarantine_window": 352,
+    "n_rows": 443101,
+    "n_flat": 27013,
+    "lookback_bars": 21,
+    "n_rows_final": 442614,
+    "n_execution_eligible": 442614,
+    "target_vs_traded_sign_mismatch": 0,
+    "splits": {
+      "train": [
+        "2006-01-03",
+        "2017-08-24",
+        264084
+      ],
+      "train_fit_rows": 240005,
+      "validation": [
+        "2017-08-25",
+        "2021-07-14",
+        88341
+      ],
+      "test": [
+        "2021-07-15",
+        "2025-05-30",
+        90189
+      ],
+      "majority_train": 1,
+      "features_base": [
+        "ret_lag1",
+        "ret_lag2",
+        "ret_lag3",
+        "ret_lag5",
+        "mom_5",
+        "mom_10",
+        "vol_5",
+        "vol_10"
+      ],
+      "features_ext": [
+        "ret_lag1",
+        "ret_lag2",
+        "ret_lag3",
+        "ret_lag5",
+        "mom_5",
+        "mom_10",
+        "vol_5",
+        "vol_10",
+        "log_vol_rel20",
+        "range_rel",
+        "body_rel",
+        "rv_20",
+        "sess_sin",
+        "sess_cos",
+        "upper_wick_rel",
+        "lower_wick_rel",
+        "rsi14_c",
+        "ma_gap_20",
+        "ma_gap_50"
+      ]
+    }
+  },
+  "1h": {
+    "frequency": "1h",
+    "target": "next_candle_body_direction",
+    "n_bars": 116395,
+    "n_label_ineligible": 7577,
+    "n_quarantine_window": 352,
+    "n_rows": 108483,
+    "n_flat": 3156,
+    "lookback_bars": 21,
+    "n_rows_final": 108026,
+    "n_execution_eligible": 108026,
+    "target_vs_traded_sign_mismatch": 0,
+    "splits": {
+      "train": [
+        "2006-01-05",
+        "2017-08-24",
+        64877
+      ],
+      "train_fit_rows": 62096,
+      "validation": [
+        "2017-08-25",
+        "2021-07-14",
+        21642
+      ],
+      "test": [
+        "2021-07-15",
+        "2025-05-30",
+        21507
+      ],
+      "majority_train": 1,
+      "features_base": [
+        "ret_lag1",
+        "ret_lag2",
+        "ret_lag3",
+        "ret_lag5",
+        "mom_5",
+        "mom_10",
+        "vol_5",
+        "vol_10"
+      ],
+      "features_ext": [
+        "ret_lag1",
+        "ret_lag2",
+        "ret_lag3",
+        "ret_lag5",
+        "mom_5",
+        "mom_10",
+        "vol_5",
+        "vol_10",
+        "log_vol_rel20",
+        "range_rel",
+        "body_rel",
+        "rv_20",
+        "sess_sin",
+        "sess_cos",
+        "upper_wick_rel",
+        "lower_wick_rel",
+        "rsi14_c",
+        "ma_gap_20",
+        "ma_gap_50"
+      ]
+    }
+  }
+}

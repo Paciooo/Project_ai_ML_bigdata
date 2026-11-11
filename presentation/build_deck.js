@@ -275,7 +275,8 @@ const chAcc = acc(C.frequency, C.model);
       num(usd(c.test_net_usd), { bold: true, color: c.test_net_usd >= 0 ? GREEN : RED_DARK })]);
   }
   s.addTable(rows, tableOpts(x2, 2.05, R - x2, [0.68, 1.78, 0.85, 0.8, 0.78, 0.8, 0.8, 0.79], { rowH: [0.5, 0.5, 0.5, 0.5, 0.5], fontSize: 10.5 }));
-  T(s, `Filter thresholds (validation): ${CAND.map((c) => `${FREQ[c.frequency]} ${c.threshold}`).join(" · ")}. The filter cuts the number of trades by ${(100 * Math.min(...CAND.map((c) => 1 - c.test_n_trades / grid(c.frequency, c.model, "long_short").n_trades)).toFixed(0)}% to ${(100 * Math.max(...CAND.map((c) => 1 - c.test_n_trades / grid(c.frequency, c.model, "long_short").n_trades)).toFixed(1)}% and costs with it; what remains is close to zero and unreliable.`,
+  const cut = CAND.map((c) => 100 * (1 - c.test_n_trades / grid(c.frequency, c.model, "long_short").n_trades));
+  T(s, `Filter thresholds (validation): ${CAND.map((c) => `${FREQ[c.frequency]} ${c.threshold}`).join(" · ")}. The filter cuts the number of trades by ${Math.min(...cut).toFixed(0)}% to ${Math.max(...cut).toFixed(1)}% and costs with it; what remains is close to zero and unreliable.`,
     { x: x2, y: 4.75, w: R - x2, h: 0.65, fontSize: 10.5, color: MID });
   const e5 = grid("5min", "reversal", "long_short");
   callout(s, x2, 5.6, R - x2, 1.15, `Example, 5-minute reversal rule: ${usd(e5.gross_usd)} gross over ${e5.n_trades.toLocaleString("en-US")} trades becomes ${usd(e5.net_usd)} after commissions: $${(e5.gross_usd / e5.n_trades).toFixed(2)} gross edge per trade vs $5.00 cost`);

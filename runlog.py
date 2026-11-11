@@ -18,8 +18,7 @@ from importlib import metadata
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent
-PACKAGES = ["numpy", "pandas", "scikit-learn", "xgboost", "pyarrow", "matplotlib", "torch",
-            "timestral", "ib_async"]
+PACKAGES = ["numpy", "pandas", "scikit-learn", "xgboost", "pyarrow", "matplotlib", "torch", "ib_async"]
 
 
 def new_run_dir(results_dir, source, tag=""):

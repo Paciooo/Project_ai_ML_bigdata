@@ -1,7 +1,0 @@
-frequency,fold,train_first,val_start,test_start,test_end,n_train_fit,n_val,n_test,majority,features,threshold_logreg,threshold_xgboost
-1min,0,2006-01-03,2017-08-25,2021-07-15,2025-06-02,2000000,1346423,1371004,1,"ret_lag1,ret_lag2,ret_lag3,ret_lag5,mom_5,mom_10,vol_5,vol_10",0.0,0.0
-5min,0,2006-01-03,2017-08-25,2021-07-15,2025-06-02,653475,269377,273651,1,"ret_lag1,ret_lag2,ret_lag3,ret_lag5,mom_5,mom_10,vol_5,vol_10",0.1,0.1
-15min,0,2006-01-03,2017-08-25,2021-07-15,2025-06-02,240125,88534,90497,1,"ret_lag1,ret_lag2,ret_lag3,ret_lag5,mom_5,mom_10,vol_5,vol_10",0.1,0.1
-1h,0,2006-01-03,2017-08-25,2021-07-15,2025-06-02,62229,21828,21806,1,"ret_lag1,ret_lag2,ret_lag3,ret_lag5,mom_5,mom_10,vol_5,vol_10",0.05,0.1
-4h,0,2006-01-03,2017-08-25,2021-07-15,2025-06-02,11623,3930,3907,1,"ret_lag1,ret_lag2,ret_lag3,ret_lag5,mom_5,mom_10,vol_5,vol_10",0.0,0.01
-session,0,2006-01-03,2017-08-25,2021-07-15,2025-06-02,2102,898,855,1,"ret_lag1,ret_lag2,ret_lag3,ret_lag5,mom_5,mom_10,vol_5,vol_10",0.1,0.05

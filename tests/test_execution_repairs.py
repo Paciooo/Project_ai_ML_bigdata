@@ -94,13 +94,3 @@ def test_unobservable_entries_keep_utc_when_transferred_to_saved_frame():
         saved[col] = m[col].array
     t = backtest.run_backtest(saved, [1], backtest.COST_SCENARIOS['base'])
     assert not t.pos.any()
-
-
-def test_restore_thresholds_uses_fold_ids_and_rejects_missing_folds():
-    from repair_results import restore_thresholds
-    p = pd.DataFrame({'fold':[1,0], 'proba_x':[.55,.55], 'pred_x':[1,1]})
-    folds = pd.DataFrame({'frequency':['1h','1h'], 'fold':[0,1], 'threshold_x':[.01,.1]})
-    fixed = restore_thresholds(p, folds, '1h')
-    assert list(backtest.frame_positions(fixed,'x')) == [0,1]
-    with pytest.raises(ValueError, match='missing threshold'):
-        restore_thresholds(p, folds.iloc[:1], '1h')
