@@ -1,0 +1,7 @@
+# Optional: tools/timestral_direction.py (tested with torch 2.15.0, huggingface_hub 2.4.0,
+# safetensors 0.8.0 and timestral 1.0.0 at commit a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff)
+-r requirements.txt
+torch>=2.4
+huggingface_hub>=0.23
+safetensors>=0.4
+timestral @ git+https://github.com/mistralai/timestral.git@a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff

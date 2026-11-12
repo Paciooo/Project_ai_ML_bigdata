@@ -1,0 +1,430 @@
+{
+  "5min": {
+    "frequency": "5min",
+    "horizon": "one candle (t+1)",
+    "n_rows": 1311565,
+    "train": [
+      "2006-01-10",
+      "2017-08-24",
+      769058
+    ],
+    "train_fit_rows": 769058,
+    "validation": [
+      "2017-08-25",
+      "2021-07-14",
+      269167
+    ],
+    "test": [
+      "2021-07-15",
+      "2025-05-30",
+      273340
+    ],
+    "data_period": [
+      "2006-01-10",
+      "2025-05-30"
+    ],
+    "features": [
+      "ret_lag1",
+      "ret_lag2",
+      "ret_lag3",
+      "ret_lag5",
+      "mom_5",
+      "mom_10",
+      "vol_5",
+      "vol_10",
+      "log_vol_rel20",
+      "range_rel",
+      "body_rel",
+      "rv_20",
+      "sess_sin",
+      "sess_cos",
+      "upper_wick_rel",
+      "lower_wick_rel",
+      "rsi14_c",
+      "ma_gap_20",
+      "ma_gap_50",
+      "lrv_1",
+      "lrv_5",
+      "lrv_22",
+      "lrv_seas_next"
+    ],
+    "har_features": [
+      "lrv_1",
+      "lrv_5",
+      "lrv_22",
+      "lrv_seas_next"
+    ],
+    "consts": {
+      "majority_direction": 1,
+      "majority_vol_up": 0,
+      "train_mean_ret_bps": 0.01023945909154092,
+      "ret_winsor_bps": [
+        -24.23602463506791,
+        24.110054400009155
+      ],
+      "vol_level_factor": {
+        "vol__persistence": 3.257156016534221,
+        "vol__rolling_mean_22": 1.2521188730834687,
+        "vol__har_ols": 1.850257274791392,
+        "vol__ridge": 1.8176529238743184,
+        "vol__random_forest": 1.8063174419673729,
+        "vol__xgboost": 1.7468688637605767,
+        "vol__mlp_64-32-16": 1.758404692962186,
+        "vol__mlp_64-32": 1.711169157382919,
+        "vol__mlp_128-64-32": 1.8317345088833095,
+        "vol__mlp_256-128-64-32": 1.8023859410787186,
+        "vol__timestral": 1.8290463428439427
+      },
+      "timestral_vol_calibration": {
+        "intercept": -1.2694373772258971,
+        "slope": 0.9509173015200238,
+        "fitted_on": "validation sample"
+      },
+      "majority_direction_before_fix": -1,
+      "train_up_share_nonflat": 0.503992242243009
+    },
+    "seconds": 279
+  },
+  "15min": {
+    "frequency": "15min",
+    "horizon": "one candle (t+1)",
+    "n_rows": 442216,
+    "train": [
+      "2006-01-10",
+      "2017-08-24",
+      263691
+    ],
+    "train_fit_rows": 263691,
+    "validation": [
+      "2017-08-25",
+      "2021-07-14",
+      88336
+    ],
+    "test": [
+      "2021-07-15",
+      "2025-05-30",
+      90189
+    ],
+    "data_period": [
+      "2006-01-10",
+      "2025-05-30"
+    ],
+    "features": [
+      "ret_lag1",
+      "ret_lag2",
+      "ret_lag3",
+      "ret_lag5",
+      "mom_5",
+      "mom_10",
+      "vol_5",
+      "vol_10",
+      "log_vol_rel20",
+      "range_rel",
+      "body_rel",
+      "rv_20",
+      "sess_sin",
+      "sess_cos",
+      "upper_wick_rel",
+      "lower_wick_rel",
+      "rsi14_c",
+      "ma_gap_20",
+      "ma_gap_50",
+      "lrv_1",
+      "lrv_5",
+      "lrv_22",
+      "lrv_seas_next"
+    ],
+    "har_features": [
+      "lrv_1",
+      "lrv_5",
+      "lrv_22",
+      "lrv_seas_next"
+    ],
+    "consts": {
+      "majority_direction": 1,
+      "majority_vol_up": 0,
+      "train_mean_ret_bps": 0.0320448528034994,
+      "ret_winsor_bps": [
+        -41.656219985707345,
+        40.80997898066356
+      ],
+      "vol_level_factor": {
+        "vol__persistence": 3.612346305666595,
+        "vol__rolling_mean_22": 1.3335867838634305,
+        "vol__har_ols": 1.4852331087905772,
+        "vol__ridge": 1.45563010916265,
+        "vol__random_forest": 1.4432116179084704,
+        "vol__xgboost": 1.3969808441244753,
+        "vol__mlp_64-32-16": 1.4378239048191728,
+        "vol__mlp_64-32": 1.4467117152397448,
+        "vol__mlp_128-64-32": 1.5361993975258648,
+        "vol__mlp_256-128-64-32": 1.3723494729962937,
+        "vol__timestral": 1.6981435286862387
+      },
+      "timestral_vol_calibration": {
+        "intercept": -1.3425522892955029,
+        "slope": 0.9338022677150376,
+        "fitted_on": "validation sample"
+      },
+      "majority_direction_before_fix": -1,
+      "train_up_share_nonflat": 0.5103842961245031
+    },
+    "seconds": 136
+  },
+  "30min": {
+    "frequency": "30min",
+    "horizon": "one candle (t+1)",
+    "n_rows": 221514,
+    "train": [
+      "2006-01-10",
+      "2017-08-24",
+      132606
+    ],
+    "train_fit_rows": 132606,
+    "validation": [
+      "2017-08-25",
+      "2021-07-14",
+      44513
+    ],
+    "test": [
+      "2021-07-15",
+      "2025-05-30",
+      44395
+    ],
+    "data_period": [
+      "2006-01-10",
+      "2025-05-30"
+    ],
+    "features": [
+      "ret_lag1",
+      "ret_lag2",
+      "ret_lag3",
+      "ret_lag5",
+      "mom_5",
+      "mom_10",
+      "vol_5",
+      "vol_10",
+      "log_vol_rel20",
+      "range_rel",
+      "body_rel",
+      "rv_20",
+      "sess_sin",
+      "sess_cos",
+      "upper_wick_rel",
+      "lower_wick_rel",
+      "rsi14_c",
+      "ma_gap_20",
+      "ma_gap_50",
+      "lrv_1",
+      "lrv_5",
+      "lrv_22",
+      "lrv_seas_next"
+    ],
+    "har_features": [
+      "lrv_1",
+      "lrv_5",
+      "lrv_22",
+      "lrv_seas_next"
+    ],
+    "consts": {
+      "majority_direction": 1,
+      "majority_vol_up": 0,
+      "train_mean_ret_bps": 0.06480733907375634,
+      "ret_winsor_bps": [
+        -59.61760894260505,
+        57.23068285842116
+      ],
+      "vol_level_factor": {
+        "vol__persistence": 6.17441723117739,
+        "vol__rolling_mean_22": 1.511173388736898,
+        "vol__har_ols": 1.3784247764803081,
+        "vol__ridge": 1.3438738860757486,
+        "vol__random_forest": 1.3243466369418433,
+        "vol__xgboost": 1.2791652465361514,
+        "vol__mlp_64-32-16": 1.3272091987263235,
+        "vol__mlp_64-32": 1.3415386598721997,
+        "vol__mlp_128-64-32": 1.3531893869643947,
+        "vol__mlp_256-128-64-32": 1.2807521666780688,
+        "vol__timestral": 1.7289628386423392
+      },
+      "timestral_vol_calibration": {
+        "intercept": -1.3826866989677373,
+        "slope": 0.9246159603393876,
+        "fitted_on": "validation sample"
+      },
+      "majority_direction_before_fix": -1,
+      "train_up_share_nonflat": 0.5154330911195422
+    },
+    "seconds": 100
+  },
+  "1h": {
+    "frequency": "1h",
+    "horizon": "one candle (t+1)",
+    "n_rows": 107962,
+    "train": [
+      "2006-01-10",
+      "2017-08-24",
+      64813
+    ],
+    "train_fit_rows": 64813,
+    "validation": [
+      "2017-08-25",
+      "2021-07-14",
+      21642
+    ],
+    "test": [
+      "2021-07-15",
+      "2025-05-30",
+      21507
+    ],
+    "data_period": [
+      "2006-01-10",
+      "2025-05-30"
+    ],
+    "features": [
+      "ret_lag1",
+      "ret_lag2",
+      "ret_lag3",
+      "ret_lag5",
+      "mom_5",
+      "mom_10",
+      "vol_5",
+      "vol_10",
+      "log_vol_rel20",
+      "range_rel",
+      "body_rel",
+      "rv_20",
+      "sess_sin",
+      "sess_cos",
+      "upper_wick_rel",
+      "lower_wick_rel",
+      "rsi14_c",
+      "ma_gap_20",
+      "ma_gap_50",
+      "lrv_1",
+      "lrv_5",
+      "lrv_22",
+      "lrv_seas_next"
+    ],
+    "har_features": [
+      "lrv_1",
+      "lrv_5",
+      "lrv_22",
+      "lrv_seas_next"
+    ],
+    "consts": {
+      "majority_direction": 1,
+      "majority_vol_up": 1,
+      "train_mean_ret_bps": 0.12769970488382856,
+      "ret_winsor_bps": [
+        -82.04670213377484,
+        76.24718840145933
+      ],
+      "vol_level_factor": {
+        "vol__persistence": 1.6669538794276266,
+        "vol__rolling_mean_22": 1.2291655611241108,
+        "vol__har_ols": 1.2790049285428602,
+        "vol__ridge": 1.2563790364904173,
+        "vol__random_forest": 1.2671988295697743,
+        "vol__xgboost": 1.1983015379782735,
+        "vol__mlp_64-32-16": 1.2499599671073534,
+        "vol__mlp_64-32": 1.266796692037843,
+        "vol__mlp_128-64-32": 1.2517952575513702,
+        "vol__mlp_256-128-64-32": 1.2427916599762145,
+        "vol__timestral": 1.7025982177795755
+      },
+      "timestral_vol_calibration": {
+        "intercept": -1.190245756829905,
+        "slope": 0.9327627835155365,
+        "fitted_on": "validation sample"
+      },
+      "majority_direction_before_fix": 1,
+      "train_up_share_nonflat": 0.5233152270272884
+    },
+    "seconds": 81
+  },
+  "session": {
+    "frequency": "session",
+    "horizon": "one candle (t+1)",
+    "n_rows": 3457,
+    "train": [
+      "2006-03-13",
+      "2017-08-23",
+      1991
+    ],
+    "train_fit_rows": 1991,
+    "validation": [
+      "2017-08-25",
+      "2021-07-13",
+      822
+    ],
+    "test": [
+      "2021-07-15",
+      "2025-01-30",
+      642
+    ],
+    "data_period": [
+      "2006-03-13",
+      "2025-01-30"
+    ],
+    "features": [
+      "ret_lag1",
+      "ret_lag2",
+      "ret_lag3",
+      "ret_lag5",
+      "mom_5",
+      "mom_10",
+      "vol_5",
+      "vol_10",
+      "log_vol_rel20",
+      "range_rel",
+      "body_rel",
+      "rv_20",
+      "sess_sin",
+      "sess_cos",
+      "upper_wick_rel",
+      "lower_wick_rel",
+      "rsi14_c",
+      "ma_gap_20",
+      "ma_gap_50",
+      "lrv_1",
+      "lrv_5",
+      "lrv_22"
+    ],
+    "har_features": [
+      "lrv_1",
+      "lrv_5",
+      "lrv_22"
+    ],
+    "consts": {
+      "majority_direction": 1,
+      "majority_vol_up": 1,
+      "train_mean_ret_bps": 3.855457760738274,
+      "ret_winsor_bps": [
+        -296.5158028761972,
+        285.2585629089033
+      ],
+      "vol_level_factor": {
+        "vol__persistence": 1.1282721262070083,
+        "vol__rolling_mean_22": 1.103555313898474,
+        "vol__har_ols": 1.0917989313637197,
+        "vol__ridge": 1.0833346088363376,
+        "vol__random_forest": 1.081801225746858,
+        "vol__xgboost": 1.0324549260745874,
+        "vol__mlp_64-32-16": 1.0443446118508974,
+        "vol__mlp_64-32": 1.0693380306834643,
+        "vol__mlp_128-64-32": 1.0713307760618467,
+        "vol__mlp_256-128-64-32": 1.0568707622644535,
+        "vol__timestral": 1.2132804294619157
+      },
+      "timestral_vol_calibration": {
+        "intercept": -0.6642826996671934,
+        "slope": 0.9389134457608368,
+        "fitted_on": "validation sample"
+      },
+      "majority_direction_before_fix": 1,
+      "train_up_share_nonflat": 0.5668179525970751
+    },
+    "seconds": 7
+  }
+}

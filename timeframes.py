@@ -31,7 +31,7 @@ import numpy as np
 import pandas as pd
 
 CHICAGO = "America/Chicago"
-FREQUENCIES = {"1min": "1min", "5min": "5min", "15min": "15min", "1h": "1h", "4h": "4h",
+FREQUENCIES = {"1min": "1min", "5min": "5min", "15min": "15min", "30min": "30min", "1h": "1h", "4h": "4h",
                "session": None}
 OPEN_CT = pd.Timedelta(hours=17)                    # session opens 17:00 CT the day before
 SCHEDULE = [  # (first session date, close time CT, halt start, halt end)
