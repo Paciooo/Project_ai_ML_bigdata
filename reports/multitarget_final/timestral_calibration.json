@@ -1,0 +1,117 @@
+{
+ "5min": {
+  "validation_crossfit": [
+   {
+    "fold": 0,
+    "fit_rows": 10000,
+    "scored_rows": 10000,
+    "intercept": -1.0456835009275318,
+    "slope": 0.9668697545410792
+   },
+   {
+    "fold": 1,
+    "fit_rows": 10000,
+    "scored_rows": 10000,
+    "intercept": -1.4022577500464957,
+    "slope": 0.9414312930338348
+   }
+  ],
+  "test": {
+   "intercept": -1.2694373772258971,
+   "slope": 0.9509173015200238,
+   "fitted_on": "validation sample"
+  }
+ },
+ "15min": {
+  "validation_crossfit": [
+   {
+    "fold": 0,
+    "fit_rows": 10000,
+    "scored_rows": 10000,
+    "intercept": -1.2947957159820642,
+    "slope": 0.937670043668847
+   },
+   {
+    "fold": 1,
+    "fit_rows": 10000,
+    "scored_rows": 10000,
+    "intercept": -1.3532508886173118,
+    "slope": 0.9326334849063884
+   }
+  ],
+  "test": {
+   "intercept": -1.3425522892955029,
+   "slope": 0.9338022677150376,
+   "fitted_on": "validation sample"
+  }
+ },
+ "30min": {
+  "validation_crossfit": [
+   {
+    "fold": 0,
+    "fit_rows": 10000,
+    "scored_rows": 10000,
+    "intercept": -1.147234684169036,
+    "slope": 0.9426740890707848
+   },
+   {
+    "fold": 1,
+    "fit_rows": 10000,
+    "scored_rows": 10000,
+    "intercept": -1.6183249544148746,
+    "slope": 0.907531611782123
+   }
+  ],
+  "test": {
+   "intercept": -1.3826866989677373,
+   "slope": 0.9246159603393876,
+   "fitted_on": "validation sample"
+  }
+ },
+ "1h": {
+  "validation_crossfit": [
+   {
+    "fold": 0,
+    "fit_rows": 10000,
+    "scored_rows": 10000,
+    "intercept": -1.029853838365754,
+    "slope": 0.9464136877628908
+   },
+   {
+    "fold": 1,
+    "fit_rows": 10000,
+    "scored_rows": 10000,
+    "intercept": -1.2723232137505,
+    "slope": 0.925760371937648
+   }
+  ],
+  "test": {
+   "intercept": -1.190245756829905,
+   "slope": 0.9327627835155365,
+   "fitted_on": "validation sample"
+  }
+ },
+ "session": {
+  "validation_crossfit": [
+   {
+    "fold": 0,
+    "fit_rows": 411,
+    "scored_rows": 411,
+    "intercept": -0.3308347279572297,
+    "slope": 0.9802174071518925
+   },
+   {
+    "fold": 1,
+    "fit_rows": 411,
+    "scored_rows": 411,
+    "intercept": -0.3948349846454997,
+    "slope": 0.9610063764496455
+   }
+  ],
+  "test": {
+   "intercept": -0.6642826996671934,
+   "slope": 0.9389134457608368,
+   "fitted_on": "validation sample"
+  }
+ }
+}

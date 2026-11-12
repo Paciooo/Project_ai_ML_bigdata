@@ -11,3 +11,4 @@ data_raw/
 /logs/
 
 presentation/node_modules/
+presentation_multitarget/node_modules/

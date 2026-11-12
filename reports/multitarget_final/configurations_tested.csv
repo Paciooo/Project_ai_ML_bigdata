@@ -104,7 +104,7 @@ session,timestral,direction
 5min,mlp_64-32,volatility
 5min,mlp_128-64-32,volatility
 5min,mlp_256-128-64-32,volatility
-5min,timestral,volatility
+5min,timestral_calibrated,volatility
 15min,persistence,volatility
 15min,rolling_mean_22,volatility
 15min,har_ols,volatility
@@ -115,7 +115,7 @@ session,timestral,direction
 15min,mlp_64-32,volatility
 15min,mlp_128-64-32,volatility
 15min,mlp_256-128-64-32,volatility
-15min,timestral,volatility
+15min,timestral_calibrated,volatility
 30min,persistence,volatility
 30min,rolling_mean_22,volatility
 30min,har_ols,volatility
@@ -126,7 +126,7 @@ session,timestral,direction
 30min,mlp_64-32,volatility
 30min,mlp_128-64-32,volatility
 30min,mlp_256-128-64-32,volatility
-30min,timestral,volatility
+30min,timestral_calibrated,volatility
 1h,persistence,volatility
 1h,rolling_mean_22,volatility
 1h,har_ols,volatility
@@ -137,7 +137,7 @@ session,timestral,direction
 1h,mlp_64-32,volatility
 1h,mlp_128-64-32,volatility
 1h,mlp_256-128-64-32,volatility
-1h,timestral,volatility
+1h,timestral_calibrated,volatility
 session,persistence,volatility
 session,rolling_mean_22,volatility
 session,har_ols,volatility
@@ -148,4 +148,4 @@ session,mlp_64-32-16,volatility
 session,mlp_64-32,volatility
 session,mlp_128-64-32,volatility
 session,mlp_256-128-64-32,volatility
-session,timestral,volatility
+session,timestral_calibrated,volatility

@@ -1,7 +1,7 @@
-// Multi-target NASDAQ deck (8 slides). Every number comes from deck_data.json, written by
-//   python multitarget_report.py results/multitarget/runs/<run id> presentation_multitarget
-// Build: node build_deck.js NASDAQ_multitarget_report.pptx   (needs pptxgenjs; NODE_PATH may point
-//        to ../presentation/node_modules)
+// Multi-target NASDAQ deck (8 slides). Every number comes from deck_data.json, a copy of
+//   reports/multitarget_final/deck_data.json written by multitarget_report.py (charts copied too).
+// Build (Node.js 18+), from this folder: npm ci   (or npm install), then
+//        node build_deck.js NASDAQ_multitarget_report.pptx
 const fs = require("fs");
 const path = require("path");
 const pptxgen = require("pptxgenjs");
@@ -75,7 +75,8 @@ const FREQS = ["5min", "15min", "30min", "1h", "session"].filter((f) => D.datase
 const MODEL = { zero: "Zero return", train_mean: "Training mean", majority: "Majority class", persistence: "Persistence",
   rolling_mean_22: "Rolling mean (22)", har_ols: "HAR-OLS", ridge: "Ridge", logistic: "Logistic", random_forest: "Random forest",
   xgboost: "XGBoost", "mlp_64-32-16": "DNN 64-32-16", "mlp_64-32": "DNN 64-32", "mlp_128-64-32": "DNN 128-64-32",
-  "mlp_256-128-64-32": "DNN 256-128-64-32", timestral: "Timestral-5M (Mistral)" };
+  "mlp_256-128-64-32": "DNN 256-128-64-32", timestral: "Timestral-5M (frozen weights)",
+  timestral_calibrated: "Timestral-5M + supervised vol. calibration" };
 const TASK = { return: "Return", direction: "Direction", volatility: "Volatility" };
 const SEL = D.selected;
 const byTask = (t) => SEL.filter((r) => r.task === t);
@@ -94,9 +95,13 @@ const RET = byTask("return"), DIR = byTask("direction"), VOL = byTask("volatilit
 const bestDir = DIR[0], bestRet = RET[0], bestVol = VOL[0];
 const trBest = D.trading[String(bestDir.id)];
 const trade = (st) => trBest.find((t) => t.strategy === st);
-const TS = D.timestral_test;
+const TS = D.timestral_outcome;
 const volR2 = (r) => `${f2(r.t_r2_log_vs_persistence_pct, 0)}%`;
-const tsBeats = Object.entries(TS).filter(([f, v]) => v.vol_r2_log_pct > 0).map(([f]) => FREQ[f]);
+const volHar = (r) => `${f2(r.t_r2_log_vs_har_pct, 1)}%`;
+const tsBeats = Object.entries(TS).filter(([f, v]) => v.vol_beats_persistence).map(([f]) => FREQ[f]);
+const tsFrozenBeats = Object.values(TS).some((v) => v.return_beats_zero || v.direction_beats_majority);
+const testRange = (f) => `${D.dataset[f].test[0]} → ${D.dataset[f].test[1]}`;
+const ym = (d) => d.slice(0, 7);
 
 // ================================================================ 1. Title
 {
@@ -112,23 +117,23 @@ const tsBeats = Object.entries(TS).filter(([f, v]) => v.vol_r2_log_pct > 0).map(
 
 // ================================================================ 2. Executive summary
 {
-  const s = content("Executive Summary", "Volatility is clearly predictable one candle ahead; returns and candle direction are barely so");
+  const s = content("Executive Summary", "Exploratory results: next-candle volatility is clearly predictable; for returns and direction no useful improvement was shown");
   const retR = bestRet, dirR = bestDir;
   const volDirTxt = VOL.map((r) => `${pctv(r.t_voldir_acc)} vs ${pctv(r.t_voldir_majority_acc)} (${FREQ[r.frequency]})`).join("; ");
   const blocks = [
     ["Problem", "Market moves are hard to forecast, but not every characteristic of the market need be equally hard. Which one — the next return, the next candle's direction or the next candle's realized volatility — can machine learning actually predict?"],
-    ["Method", `Nasdaq-100 futures (NQ), 1-minute data 2006–2025, rebuilt into ${FREQS.length} candle lengths (5 min to 1 day). ${D.n_models_tested} models, from naive benchmarks to deep networks and Mistral's Timestral, trained on 2006–2017, tuned and selected on 2017–2021, tested once on 2021–2025.`],
+    ["Method", `Nasdaq-100 futures (NQ), 1-minute data 2006–2025, rebuilt into ${FREQS.length} candle lengths (5 min to 1 day). ${D.n_models_tested} models, from naive benchmarks to deep networks and Mistral's Timestral, trained on 2006–2017, tuned and selected on 2017–2021, tested on 2021–2025 (a period already examined in earlier phases of the project).`],
     ["Innovation", "One pipeline, one data set and one test period for three different targets: the same models are compared across tasks and timeframes, so the answer to \"what is predictable\" does not depend on a different set-up per task."],
-    ["Main findings", `Volatility: ML explains ${VOL.map((r) => `${volR2(r)} (${FREQ[r.frequency]})`).join(" and ")} of the error left by persistence; RV UP/DOWN accuracy ${volDirTxt}. Return: R² ${f2(retR.t_r2_oos_pct, 2)}% vs the zero forecast. Direction: ${pctv(dirR.t_accuracy, 2)} vs ${pctv(dirR.t_majority_acc, 2)} majority (${cfgName(dirR)}), but Long & Short ${usd(trade("long_short").net_usd)} after $2.50 costs. Mistral's Timestral (zero-shot) beat no benchmark${tsBeats.length ? ` except volatility at ${tsBeats.join(", ")}` : ""}.`],
+    ["Main findings (exploratory)", `Volatility: ML removes ${VOL.map((r) => `${volR2(r)} (${FREQ[r.frequency]})`).join(" and ")} of persistence's log-RV error and ${VOL.map((r) => volHar(r)).join(" / ")} of HAR-OLS's; RV UP/DOWN accuracy ${volDirTxt}. Return: no improvement over forecasting zero demonstrated (R² ${f2(retR.t_r2_oos_pct, 2)}%). Direction: ${pctv(dirR.t_accuracy, 2)} vs ${pctv(dirR.t_majority_acc, 2)} majority (${cfgName(dirR)}), but Long & Short ${usd(trade("long_short").net_usd)} after $2.50 costs. Timestral (Mistral): frozen weights ${tsFrozenBeats ? "beat a benchmark somewhere" : "beat no benchmark"}; with calibration, volatility beat persistence only at ${tsBeats.join(", ") || "no timeframe"}.`],
     ["Usefulness", "Volatility forecasts serve risk limits, position sizing, stop distances and volatility-sensitive decisions (e.g. whether to hold long or short straddles). Direction and return forecasts at this horizon are too weak to support trading after costs."],
-    ["Conclusion", "Realized volatility is by far the most predictable characteristic. The evidence for direction and returns is weak and fragile. The test period was already seen in earlier project phases, so all results are exploratory."],
+    ["Conclusion", "Realized volatility is the most predictable characteristic in this study. For returns and direction no useful improvement was demonstrated with the models, data and horizons tried. Exploratory: the test period had been examined before, and the volatility selection score was revised after first test results were seen."],
   ];
   const cw = (CW - 0.4) / 2, ch = 1.65;
   blocks.forEach(([h, b], i) => {
     const x = L + (i % 2) * (cw + 0.4), y = 1.6 + Math.floor(i / 2) * (ch + 0.13);
     s.addShape(pres.shapes.RECTANGLE, { x, y, w: 0.08, h: ch, fill: { color: i === 5 ? GOLD : RED }, line: { type: "none" } });
     T(s, [{ text: h, options: { bold: true, color: RED, fontSize: 13.5, breakLine: true } },
-          { text: b, options: { fontSize: 11.5, color: INK } }], { x: x + 0.2, y: y + 0.02, w: cw - 0.25, h: ch - 0.04, valign: "top" });
+          { text: b, options: { fontSize: 11, color: INK } }], { x: x + 0.2, y: y + 0.02, w: cw - 0.25, h: ch - 0.04, valign: "top" });
   });
 }
 
@@ -136,7 +141,7 @@ const tsBeats = Object.entries(TS).filter(([f, v]) => v.vol_r2_log_pct > 0).map(
 {
   const s = content("Data & Methodology", "One instrument, five candle lengths, three targets, one chronological split");
   // workflow
-  const steps = ["NASDAQ historical data\nNQ 1-min, 2006–2025", "Feature engineering\nlags, momentum, volatility, time of day", "Models\nbenchmarks · ML · DNN · Timestral", "Forecasts\nfor candle t+1", "Out-of-sample evaluation\ntest 2021-07 → 2025-05"];
+  const steps = ["NASDAQ historical data\nNQ 1-min, 2006–2025", "Feature engineering\nlags, momentum, volatility, time of day", "Models\nbenchmarks · ML · DNN · Timestral", "Forecasts\nfor candle t+1", `Out-of-sample evaluation\ntest from 2021-07 (exploratory)`];
   const bw = (CW - 4 * 0.3) / 5;
   steps.forEach((t, i) => {
     const x = L + i * (bw + 0.3);
@@ -158,18 +163,19 @@ const tsBeats = Object.entries(TS).filter(([f, v]) => v.vol_r2_log_pct > 0).map(
   bullets(s, [
     [{ text: "Instrument: ", o: { bold: true } }, { text: "E-mini Nasdaq-100 futures (NQ, CME), back-adjusted continuous series, $20 per point. No QQQ, MNQ, cash index or VIX." }],
     [{ text: "Leakage control: ", o: { bold: true } }, { text: "features use candles ≤ t only; scaling fitted on training data; labels never cross a session or a split boundary (purged)." }],
-    [{ text: "Selection: ", o: { bold: true } }, { text: "hyper-parameters, early stopping and the five configurations chosen on validation only; test scored once (volatility score revised once, slide 7)." }],
-  ], { x: L, y: 4.95, w: 6.1, h: 1.95, fontSize: 11 });
+    [{ text: "Selection: ", o: { bold: true } }, { text: "hyper-parameters, early stopping and the five configurations chosen with validation data. The volatility score was revised after first test numbers were seen, so the selection is not blind; the test period was also examined in earlier phases: results are exploratory." }],
+  ], { x: L, y: 5.12, w: 6.1, h: 1.8, fontSize: 11 });
   // timeframe table
   const x2 = L + 6.45, w2 = CW - 6.45;
   header(s, x2, 2.65, w2, "Candles per timeframe (rows with a valid next candle)");
+  const two = (a, sp) => cell([{ text: a[2].toLocaleString("en-US"), options: { bold: true, breakLine: true } },
+                                { text: `${a[0]} → ${a[1]}`, options: { fontSize: 8, color: MID } }], { align: "center" });
   const rows = FREQS.map((f) => { const d = D.dataset[f];
-    return [num(FREQ[f], { bold: true }), num(d.train[2].toLocaleString("en-US")), num(d.validation[2].toLocaleString("en-US")), num(d.test[2].toLocaleString("en-US"))]; });
-  const d0 = D.dataset[FREQS[0]];
-  s.addTable([[hdr("Candle"), hdr(`Train\n${d0.train[0].slice(0, 7)} → ${d0.train[1].slice(0, 7)}`), hdr(`Validation\n${d0.validation[0].slice(0, 7)} → ${d0.validation[1].slice(0, 7)}`), hdr(`Test\n${d0.test[0].slice(0, 7)} → ${d0.test[1].slice(0, 7)}`)], ...rows],
-    topts(x2, 3.12, w2, [1.15, (w2 - 1.15) / 3, (w2 - 1.15) / 3, (w2 - 1.15) / 3], { fontSize: 10.5, rowH: 0.34 }));
+    return [num(FREQ[f], { bold: true }), two(d.train), two(d.validation), two(d.test)]; });
+  s.addTable([[hdr("Candle"), hdr("Train: rows, sessions"), hdr("Validation"), hdr("Test")], ...rows],
+    topts(x2, 3.12, w2, [0.95, (w2 - 0.95) / 3, (w2 - 0.95) / 3, (w2 - 0.95) / 3], { fontSize: 10.5, rowH: 0.4 }));
   T(s, `Features (${D.dataset[FREQS[0]].features.length}): past returns and momentum, rolling volatility, range, body, wicks, RSI, moving-average gaps, relative volume, time of day, and log realized variance of the last 1, 5 and 22 candles plus the same time slot on the 5 previous sessions. Timestral sees only the last 512 closes. 1-minute candles excluded: their realized variance would be a single squared return.`,
-    { x: x2, y: 5.35, w: w2, h: 1.5, fontSize: 10.5, color: MID });
+    { x: x2, y: 5.75, w: w2, h: 1.15, fontSize: 9.5, color: MID });
 }
 
 // ================================================================ 4. All models tested
@@ -180,7 +186,8 @@ const tsBeats = Object.entries(TS).filter(([f, v]) => v.vol_r2_log_pct > 0).map(
     ["Statistical", [["HAR-OLS", "linear regression on past log RV (1, 5, 22 candles, same time slot)", "V"], ["Ridge regression", "L2-penalised linear, α chosen on validation", "R · V"], ["Logistic regression", "L2-penalised, C chosen on validation", "D"]]],
     ["Machine learning", [["Random forest", "200 trees, depth 8", "R · D · V"], ["XGBoost", "gradient boosting, depth 4, early stopping", "R · D · V"]]],
     ["Deep learning", [["DNN 64-32-16 (original)", "feed-forward, ReLU, AdamW, early stopping", "R · D · V"], ["DNN 64-32", "", "R · D · V"], ["DNN 128-64-32", "", "R · D · V"], ["DNN 256-128-64-32", "", "R · D · V"]]],
-    ["Mistral AI", [["Timestral-5M (pretrained, zero-shot)", "forecasts quantiles of the next close from 512 past closes; median → return & direction, q10–q90 spread → volatility (calibrated on validation)", "R · D · V"]]],
+    ["Mistral AI", [["Timestral-5M, frozen weights", "zero-shot quantiles of the next close from 512 past closes; median → return; direction = median vs last close (target: next candle's body)", "R · D"],
+                    ["Timestral-5M + supervised calibration", "q10–q90 spread → log RV via a linear map fitted on validation targets (cross-fitted when scored on validation)", "V"]]],
   ];
   const body = [[hdr("Family"), hdr("Model"), hdr("Method"), hdr("Tasks")]];
   fam.forEach(([f, ms]) => ms.forEach((m, i) => body.push([
@@ -192,16 +199,16 @@ const tsBeats = Object.entries(TS).filter(([f, v]) => v.vol_r2_log_pct > 0).map(
   bullets(s, [
     [{ text: "R", o: { bold: true } }, { text: " return · " }, { text: "D", o: { bold: true } }, { text: " direction · " }, { text: "V", o: { bold: true } }, { text: " volatility" }],
     [{ text: "Mistral's role: ", o: { bold: true } }, { text: "Timestral is a time-series foundation model (local weights, no API, no training here). It is not a language model and it does not read news. Scored on 20,000 random validation and 20,000 test origins per timeframe (all daily ones)." }],
-    [{ text: "Timestral outcome (test): ", o: { bold: true } }, { text: `return R² ${Object.values(TS).map((v) => f2(v.return_r2_pct, 1)).join(" / ")}% and direction ${Object.values(TS).map((v) => f2(v.direction_diff_pp, 1)).join(" / ")} pp vs majority (5 min → 1 day); volatility better than persistence only at ${tsBeats.join(", ") || "no timeframe"}. Not among the five.` }],
-    [{ text: "Considered, not run: ", o: { bold: true } }, { text: "LSTM (the feature networks already reach their early-stopping optimum within a few epochs), larger Timestral sizes (28M–209M need new downloads)." }],
+    [{ text: "Timestral outcome: ", o: { bold: true } }, { text: `frozen weights ${tsFrozenBeats ? "beat a benchmark on some timeframe" : "beat no benchmark on any timeframe (return, direction)"}; the calibrated volatility variant beat persistence only at ${tsBeats.join(", ") || "no timeframe"}. Neither is among the five; per-timeframe numbers in the report tables.` }],
+    [{ text: "Considered, not run: ", o: { bold: true } }, { text: "LSTM (the feature networks reach their early-stopping optimum within a few epochs). Timestral 28M / 123M / 209M: weights available locally, not tested in this study." }],
     [{ text: "Not used: ", o: { bold: true } }, { text: "Mistral chat / LLM API — no such integration exists in the repository." }],
   ], { x: x2, y: 1.98, w: w2, h: 4.9, fontSize: 10.5 });
 }
 
 // ================================================================ 5. Return forecasting
 {
-  const s = content("Price / Return Forecasting", RET.every((r) => r.ci_lo <= 0) ? "Can ML beat the zero-return forecast? Out of sample, no: its error equals that of forecasting zero"
-    : "Can ML beat the zero-return forecast? Only by a tiny margin");
+  const s = content("Price / Return Forecasting", RET.every((r) => r.ci_lo <= 0) ? "No improvement over the zero-return forecast demonstrated with the models, data and horizons tried"
+    : "A small improvement over the zero-return forecast (exploratory)");
   const rows = RET.map((r) => [num(String(r.id), { bold: true }), cell(cfgName(r), { bold: true }), num(r.t_mae_bps.toFixed(2)), num(r.t_rmse_bps.toFixed(2)),
     num(r.t_rmse_zero_bps.toFixed(2)), num(`${f2(r.t_r2_oos_pct, 3)}%`, { bold: true, color: r.ci_lo > 0 ? GREEN : INK }), num(ciTxt(r.ci_lo, r.ci_hi, 3, "%")), num(pctv(r.t_dir_acc))]);
   s.addTable([[hdr("#"), hdr("Model, timeframe"), hdr("MAE (bp)"), hdr("RMSE (bp)"), hdr("RMSE zero (bp)"), hdr("R² vs zero"), hdr("95% interval"), hdr("Sign right")], ...rows],
@@ -211,9 +218,9 @@ const tsBeats = Object.entries(TS).filter(([f, v]) => v.vol_r2_log_pct > 0).map(
   bullets(s, [
     [{ text: "Result: ", o: { bold: true } }, { text: `${n}. A positive R² would mean a smaller squared error than always forecasting zero.` }],
     [{ text: "Predicted vs realized (right): ", o: { bold: true } }, { text: `realized returns per forecast decile. The forecasts span less than ±0.5 bp, while a typical candle moves about ${bestRet.t_rmse_zero_bps.toFixed(1)} bp (RMSE): the signal is buried in noise.` }],
-    [{ text: "Economic reading: ", o: { bold: true } }, { text: "no usable return signal: at these horizons NQ returns behave close to a random walk, as efficient-market reasoning suggests. Every return model and Timestral were tested on all five timeframes (inventory, slide 4)." }],
+    [{ text: "Economic reading: ", o: { bold: true } }, { text: "no usable return signal was found with the models, data and horizons tried. This is consistent with near-random-walk returns at these horizons, but does not prove it. All return models and Timestral were run on all five timeframes (inventory, slide 4)." }],
   ], { x: L, y: 2.75, w: 6.6, h: 3.6, fontSize: 11.5 });
-  T(s, "bp = basis point = 0.01%. Intervals: 95% moving-block bootstrap over 20-session blocks. Test 2021-07 → 2025-05 (exploratory: seen in earlier project phases).",
+  T(s, `bp = basis point = 0.01%. R² interval: model and zero-forecast errors resampled together in 20-session blocks, ratio recomputed per replicate. Decile bars: 20-session block bootstrap within each decile. Test ${testRange(bestRet.frequency)} (exploratory: examined in earlier project phases).`,
     { x: L + 6.9, y: 5.55, w: CW - 6.9, h: 0.9, fontSize: 9.5, color: GREY });
 }
 
@@ -248,47 +255,54 @@ const tsBeats = Object.entries(TS).filter(([f, v]) => v.vol_r2_log_pct > 0).map(
 
 // ================================================================ 7. Volatility
 {
-  const s = content("Volatility Forecasting", "Next-candle realized volatility is strongly predictable, well beyond persistence");
+  const s = content("Volatility Forecasting", "Large gain over persistence, smaller but positive gain over the HAR-OLS benchmark (exploratory)");
+  const ci1 = (v, lo, hi, d = 1, u = "%") => `${f2(v, d)}${u}\n${ciTxt(lo, hi, d)}`;
   const rows = VOL.map((r) => [num(String(r.id), { bold: true }), cell(cfgName(r), { bold: true }), num(r.t_rmse_log.toFixed(3), { bold: true }),
-    num(r.t_rmse_log_persistence.toFixed(3)), num(r.har_rmse_log != null ? r.har_rmse_log.toFixed(3) : "–"),
-    num(`${f2(r.t_r2_log_vs_persistence_pct, 1)}%\n${ciTxt(r.ci_lo, r.ci_hi, 1)}`, { color: GREEN, bold: true }),
-    num(r.har_qlike != null ? `${r.t_qlike.toFixed(3)} / ${r.har_qlike.toFixed(3)}` : r.t_qlike.toFixed(3)),
-    num(pctv(r.t_voldir_acc), { bold: true }), num(pctv(r.t_voldir_majority_acc)), num(pctv(r.t_voldir_balanced_acc))]);
-  s.addTable([[hdr("#"), hdr("Model, timeframe"), hdr("RMSE log RV"), hdr("Persist."), hdr("HAR-OLS"), hdr("R² vs persist."), hdr("QLIKE model / HAR"), hdr("RV dir. acc."), hdr("Majority"), hdr("Bal. acc.")], ...rows],
-    topts(L, 1.6, 7.6, [0.3, 1.7, 0.65, 0.7, 0.75, 0.8, 0.65, 0.7, 0.7, 0.65], { fontSize: 9.5, rowH: 0.4 }));
-  s.addImage({ path: IMG(D.charts[String(bestVol.id)]), x: L + 7.85, y: 1.5, w: CW - 7.85, h: (CW - 7.85) * 3.6 / 5.6 });
-  const yb = 1.6 + 0.6 + 0.68 * VOL.length + 0.15;
+    num(r.t_rmse_log_persistence.toFixed(3)), num(r.har_rmse_log.toFixed(3)),
+    num(ci1(r.t_r2_log_vs_persistence_pct, r.ci_lo, r.ci_hi), { color: GREEN, bold: true }),
+    num(ci1(r.t_r2_log_vs_har_pct, r.t_r2_log_vs_har_ci_lo_pct, r.t_r2_log_vs_har_ci_hi_pct), { color: r.t_r2_log_vs_har_ci_lo_pct > 0 ? GREEN : INK, bold: true }),
+    num(pctv(r.t_voldir_acc), { bold: true }), num(pctv(r.t_voldir_balanced_acc)), num(pctv(r.t_voldir_majority_acc)), num(pctv(r.t_voldir_acc_har)),
+    num(ci1(r.t_voldir_diff_vs_har_pp, r.t_voldir_vs_har_ci_lo_pp, r.t_voldir_vs_har_ci_hi_pp, 2, " pp"), { color: r.t_voldir_vs_har_ci_lo_pp > 0 ? GREEN : INK, bold: true })]);
+  const cwT = [0.3, 1.75, 0.8, 0.75, 0.75, 1.2, 1.2, 0.85, 0.85, 0.85, 0.85];
+  cwT.push(CW - cwT.reduce((a, b) => a + b, 0));
+  s.addTable([[hdr("#"), hdr("Model, timeframe"), hdr("RMSE log RV"), hdr("Persist."), hdr("HAR-OLS"), hdr("R² vs persistence"), hdr("R² vs HAR-OLS"),
+               hdr("RV dir. acc."), hdr("Balanced"), hdr("Majority"), hdr("HAR dir. acc."), hdr("Dir. gain vs HAR")], ...rows],
+    topts(L, 1.55, CW, cwT, { fontSize: 9.5, rowH: 0.42 }));
+  const yb = 1.55 + 0.55 + 0.62 * VOL.length + 0.15;
+  const ch = (CW - 7.6) * 3.6 / 5.6;
+  s.addImage({ path: IMG(D.charts[String(bestVol.id)]), x: L + 7.6, y: yb - 0.05, w: CW - 7.6, h: ch });
   bullets(s, [
-    [{ text: "Method: ", o: { bold: true } }, { text: "realized variance of the next candle from its own 1-minute squared log returns (r² is a variance proxy; volatility = √variance). Models forecast log RV; R² = share of persistence's squared error removed. QLIKE (variance level, lower is better) shown as a check." }],
-    [{ text: "Why it works: ", o: { bold: true } }, { text: `volatility clusters and mean-reverts, and intraday it follows a strong time-of-day pattern. The linear HAR-OLS model already removes ${VOL.map((r) => `${r.har_r2_log_pct.toFixed(0)}%`).join(" / ")}; the ML models add ${VOL.map((r) => `${(r.t_r2_log_vs_persistence_pct - r.har_r2_log_pct).toFixed(0)}`).join(" / ")} points.` }],
-    [{ text: "Direction of volatility: ", o: { bold: true } }, { text: `RV UP if RV(t+1) > RV(t). ${VOL.map((r) => `${cfgName(r)}: ${pctv(r.t_voldir_acc)} vs ${pctv(r.t_voldir_majority_acc)} majority`).join("; ")}.` }],
-  ], { x: L, y: yb, w: 7.6, h: 6.9 - yb, fontSize: 11 });
-  T(s, "Selection score changed after a first report: QLIKE vs persistence was dominated on validation by a few limit-locked candles (March 2020) with ~zero variance, so log-RV squared error is used. Interval: 95% block bootstrap.",
-    { x: L, y: 6.35, w: 7.6, h: 0.55, fontSize: 9, color: GREY });
-  callout(s, L + 7.85, 4.75, CW - 7.85, 2.05,
-    "Options relevance (qualitative): rising realized volatility favours long straddles / strangles, falling volatility favours short ones. But option prices embed IMPLIED volatility: a correct realized-volatility forecast is not a profitable options trade unless it beats what the market already prices. No option prices or P&L were computed.", 10.5);
+    [{ text: "Method: ", o: { bold: true } }, { text: `realized variance of the next candle from its 1-minute squared log returns (r² is a variance proxy; volatility = √variance). Models forecast log RV; R² = share of the benchmark's squared log-RV error removed. QLIKE check, model / HAR / persistence: ${VOL.map((r) => `${r.t_qlike.toFixed(3)} / ${r.har_qlike.toFixed(3)} / ${r.t_qlike_persistence.toFixed(3)}`).join("; ")}.` }],
+    [{ text: "Two benchmarks: ", o: { bold: true } }, { text: `persistence is naive; HAR-OLS already captures clustering, mean reversion and the time-of-day pattern (RV direction ${VOL.map((r) => pctv(r.t_voldir_acc_har)).join(" / ")}). The gain vs HAR, not vs persistence, is what ML adds.` }],
+    [{ text: "Options (qualitative): ", o: { bold: true } }, { text: "rising realized volatility favours long straddles / strangles, falling favours short ones; but option prices embed IMPLIED volatility, so a correct realized-volatility forecast is not a profitable options trade. No option prices or P&L were computed." }],
+  ], { x: L, y: yb, w: 7.3, h: 6.45 - yb, fontSize: 10.5 });
+  T(s, "Selection score: initially QLIKE vs persistence; revised to log-RV squared error after first test numbers were printed (QLIKE was dominated by a few limit-locked March 2020 candles): not blind. R² intervals: model and benchmark errors resampled together in 20-session blocks; direction gains: paired block bootstrap.",
+    { x: L, y: 6.42, w: CW, h: 0.5, fontSize: 9, color: GREY });
 }
 
 // ================================================================ 8. Final comparison
 {
-  const s = content("Which NASDAQ Market Characteristic Is Most Predictable?", "Five configurations selected on validation, scored once on the 2021–2025 test");
+  const s = content("Which NASDAQ Market Characteristic Is Most Predictable?", "Five configurations chosen with validation data (volatility score revised after a first look at test results), scored on the exploratory test");
+  const impr = (r) => r.task !== "volatility" ? r.improvement
+    : `vs persistence R² ${f2(r.t_r2_log_vs_persistence_pct, 1)}% ${ciTxt(r.ci_lo, r.ci_hi, 1)}; vs HAR R² ${f2(r.t_r2_log_vs_har_pct, 1)}% ${ciTxt(r.t_r2_log_vs_har_ci_lo_pct, r.t_r2_log_vs_har_ci_hi_pct, 1)}, RV dir. ${f2(r.t_voldir_diff_vs_har_pp)} pp`;
+  const base = (r) => r.task !== "volatility" ? r.baseline : `${r.baseline}; HAR ${r.har_rmse_log.toFixed(3)}, ${pctv(r.t_voldir_acc_har)}`;
   const rows = SEL.map((r) => [num(String(r.id), { bold: true }), cell(TASK[r.task], { bold: true, color: RED }), cell(MODEL[r.model]), num(FREQ[r.frequency]),
-    cell(r.key_metric), cell(r.baseline), cell(r.improvement, { bold: true })]);
+    cell(r.key_metric), cell(base(r)), cell(impr(r), { bold: true })]);
   s.addTable([[hdr("ID"), hdr("Task"), hdr("Model"), hdr("Timeframe"), hdr("Key metric (test)"), hdr("Baseline"), hdr("Improvement [95% interval]")], ...rows],
-    topts(L, 1.55, CW, [0.4, 1.05, 2.0, 0.95, 2.6, 2.75, CW - 9.75], { fontSize: 10, rowH: 0.37 }));
-  const y = 1.55 + 0.37 + 0.45 * SEL.length + 0.05;
+    topts(L, 1.55, CW, [0.35, 0.95, 1.75, 0.85, 2.35, 2.75, CW - 9.0], { fontSize: 9.5, rowH: 0.37 }));
+  const y = 1.55 + 0.37 + 0.4 * 3 + 0.58 * 2 + 0.1;
   const cw = (CW - 0.5) / 3;
-  [["Strongest return approach", `${cfgName(bestRet)}: R² ${f2(bestRet.t_r2_oos_pct, 3)}%, ${sig(bestRet)}. Practically a random walk.`],
+  [["Strongest return approach", `${cfgName(bestRet)}: R² ${f2(bestRet.t_r2_oos_pct, 3)}%, ${sig(bestRet)}: no improvement over zero demonstrated with the models, data and horizons tried.`],
    ["Strongest direction approach", `${cfgName(bestDir)}: ${f2(bestDir.t_diff_pp)} pp over the majority class, ${sig(bestDir)}; Long & Short ${usd(trade("long_short").net_usd)} after $2.50 per round trip.`],
-   ["Strongest volatility approach", `${VOL.map((r) => `${cfgName(r)}: R² ${volR2(r)} vs persistence, RV direction ${pctv(r.t_voldir_acc)} vs ${pctv(r.t_voldir_majority_acc)}`).join("; ")}.`]]
+   ["Strongest volatility approach", `log-RV R² vs persistence / vs HAR-OLS: ${VOL.map((r) => `${cfgName(r)} ${volR2(r)} / ${volHar(r)}`).join("; ")}. RV direction above HAR by ${VOL.map((r) => `${f2(r.t_voldir_diff_vs_har_pp)} pp`).join(" / ")}.`]]
     .forEach(([h, b], i) => {
       const x = L + i * (cw + 0.25);
-      s.addShape(pres.shapes.RECTANGLE, { x, y, w: cw, h: 1.0, fill: { color: i === 2 ? TINT : PALE }, line: { color: i === 2 ? RED : LINE, width: 1 } });
-      T(s, [{ text: h, options: { bold: true, color: RED, breakLine: true } }, { text: b, options: { fontSize: 11 } }], { x: x + 0.12, y: y + 0.05, w: cw - 0.24, h: 0.92, fontSize: 12 });
+      s.addShape(pres.shapes.RECTANGLE, { x, y, w: cw, h: 1.1, fill: { color: i === 2 ? TINT : PALE }, line: { color: i === 2 ? RED : LINE, width: 1 } });
+      T(s, [{ text: h, options: { bold: true, color: RED, breakLine: true } }, { text: b, options: { fontSize: 10.5 } }], { x: x + 0.12, y: y + 0.05, w: cw - 0.24, h: 1.0, fontSize: 12 });
     });
-  const y2 = y + 1.12;
-  T(s, [{ text: "Verdict: realized volatility is the most predictable characteristic. ", options: { bold: true, color: RED_DARK } },
-        { text: "Its gain over the benchmark is large on both selected timeframes, with intervals far from zero. The return forecast does not beat zero, and the direction gain is under one percentage point and loses money after costs. Metrics differ by task, so the ranking rests on benchmark-relative gains and their uncertainty, not raw numbers. Test 2021–2025 is exploratory." }],
+  const y2 = y + 1.2;
+  T(s, [{ text: "Exploratory verdict: realized volatility is the most predictable characteristic. ", options: { bold: true, color: RED_DARK } },
+        { text: "Its gain is large over persistence and smaller but positive over HAR-OLS, with intervals above zero on both selected timeframes. For returns no improvement over zero was demonstrated; the direction gain is under one percentage point and loses money after costs. Metrics differ by task, so the ranking rests on benchmark-relative gains and their uncertainty. Exploratory: test period examined before, volatility score revised after a first look." }],
     { x: L, y: y2, w: CW, h: 0.8, fontSize: 11.5 });
   T(s, [{ text: "Originality ", options: { bold: true, color: RED } }, { text: "one pipeline for three targets, five timeframes, classical, deep and foundation models.   " },
         { text: "Usefulness ", options: { bold: true, color: RED } }, { text: "volatility forecasts for risk and sizing; no trading edge claimed.   " },

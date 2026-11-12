@@ -68,3 +68,43 @@ def test_selection_one_per_task_then_two_extra_on_other_timeframes():
     got = set(zip(sel.task, sel.frequency, sel.model))
     assert ("volatility", "1h", "ridge") in got and ("return", "1h", "ridge") in got
     assert ("direction", "5min", "xgboost") not in got
+
+
+def test_f1_is_zero_not_nan_when_precision_and_recall_are_zero():
+    # predictions all DOWN, truth has UP cases: no positive predictions
+    s = mr.cls_stats([False, False, False], [True, False, True])
+    assert s["precision_up"] == 0.0 and s["recall_up"] == 0.0 and s["f1_up"] == 0.0
+    # positive predictions, all wrong: precision 0, recall 0, F1 0
+    s = mr.cls_stats([True, False], [False, True])
+    assert s["precision_up"] == 0.0 and s["recall_up"] == 0.0 and s["f1_up"] == 0.0
+    # usual case agrees with the harmonic mean
+    s = mr.cls_stats([True, True, False, False], [True, False, True, False])
+    assert np.isclose(s["f1_up"], 0.5) and np.isclose(s["precision_up"], 0.5)
+    # no positive case and no positive prediction: F1 0 by convention
+    assert mr.cls_stats([False, False], [False, False])["f1_up"] == 0.0
+
+
+def test_ratio_bootstrap_resamples_both_losses_together():
+    rng = np.random.default_rng(1)
+    sess = np.repeat(np.arange(400), 10)
+    bench = rng.exponential(1.0, len(sess)) * np.repeat(rng.exponential(1.0, 400), 10)   # session-level clustering
+    model = 0.7 * bench + 0.05 * rng.exponential(1.0, len(sess))
+    est, lo, hi = mr.block_boot_ratio(model, bench, sess)
+    assert np.isclose(est, 1 - model.sum() / bench.sum())
+    assert lo < est < hi and lo > 0.2 and hi < 0.35
+    # identical losses: ratio exactly 0 in every replicate
+    est, lo, hi = mr.block_boot_ratio(bench, bench, sess)
+    assert est == lo == hi == 0
+
+
+def test_timestral_vol_calibration_is_cross_fitted_on_validation():
+    n = 200
+    t = pd.date_range("2018-01-01", periods=n, freq="D", tz="UTC")
+    x = np.linspace(-15, -10, n)
+    p = pd.DataFrame({"split": ["val"] * n, "timestral_sample": True, "label_start": t,
+                      "vol_raw__timestral": x, "lrv_next": 1.0 + 0.9 * x + np.r_[np.zeros(n // 2), np.ones(n // 2)]})
+    f, fac, coefs = mr.crossfit_timestral_vol(p)
+    assert len(coefs) == 2 and all(c["fit_rows"] == c["scored_rows"] == n // 2 for c in coefs)
+    # first half scored with the second half's fit (intercept shifted by +1) and vice versa
+    assert np.allclose(f[: n // 2], 2.0 + 0.9 * x[: n // 2]) and np.allclose(f[n // 2:], 1.0 + 0.9 * x[n // 2:])
+    assert np.isfinite(fac).all()

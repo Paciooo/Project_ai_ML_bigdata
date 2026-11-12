@@ -10,8 +10,11 @@ only; VIX was removed from the project.
   `multitarget_report.py` -> `reports/multitarget_final/`, deck
   `presentation_multitarget/` (8 slides, built from its deck_data.json).
   Commission there is $2.50 per round trip (user's spec), $5 shown alongside.
-  Verdict: realized volatility predictable (log-RV R² +40% 5 min, +52% 1 h vs
-  persistence); returns not; direction +0.69 pp but loses after costs.
+  Exploratory verdict: realized volatility predictable (log-RV R² vs
+  persistence +40% 5 min, +52% 1 h; vs HAR-OLS +6.8% / +26.1%); for returns no
+  improvement demonstrated with the models, data and horizons tried (never
+  write "returns are not predictable"); direction +0.69 pp but loses after
+  costs. Selection is not blind; verify with `verify_multitarget.py`.
   Two documented deviations (majority bug fixed without refit; volatility
   selection score changed after test numbers were printed): RESEARCH_MULTITARGET.md.
 * Original direction study below is unchanged.

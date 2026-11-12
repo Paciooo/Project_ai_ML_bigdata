@@ -19,16 +19,20 @@ Intraday labels never cross a session (timeframes.next_label_eligible).
 Splits (same chronological boundaries as study.py, sessions < 2025-06-02):
   train 2006-01 .. 2017-08-24, validation 2017-08-25 .. 2021-07-14,
   test 2021-07-15 .. 2025-05-30; labels crossing a boundary are purged.
-Hyper-parameters, early stopping and the configuration selection use the
-validation block only. The test period was inspected in earlier phases of
-the project (direction task), so test results are exploratory.
+Hyper-parameters and early stopping use the validation block only; the
+selection of configurations is in multitarget_report.py (validation data,
+volatility score revised after test numbers were seen: not blind). The test
+period was inspected in earlier phases of the project (direction task), so
+test results are exploratory.
 
-Timestral (Mistral AI's pretrained time-series model, local weights,
-zero-shot, no API): forecasts quantiles of the next close from the last 512
-closes of the same timeframe. Median -> return and direction; the q10-q90
-spread -> a variance forecast, mapped to log RV by a linear calibration
-fitted on the validation sample. Scored on a fixed random sample of
-validation and test origins (it is not a classifier or regressor trained here).
+Timestral (Mistral AI's pretrained time-series model, local weights, no API)
+forecasts quantiles of the next close from the last 512 closes of the same
+timeframe. Frozen weights (zero-shot): median -> return; direction = sign of
+(median - last close), a next-CLOSE forecast, while the direction target is
+the next candle's BODY. Volatility is NOT zero-shot: the q10-q90 spread is
+mapped to log RV by a linear calibration fitted on validation targets
+(multitarget_report.py cross-fits it on validation before scoring). Scored
+on a fixed random sample of validation and test origins.
 
 Outputs (results/multitarget/runs/<id>/): predictions_<freq>.parquet (val +
 test rows, every model), models.csv, dataset_info.json, console.log, run.json.
