@@ -8,8 +8,12 @@ Selection rule (fixed before the final results were read):
   2. The overall candidate is the one with the highest validation net P&L.
   3. It is called deployable only if, on the TEST period, net P&L > 0 at $5 AND
      at $12.50 per round trip, the 95% interval of mean daily net P&L is above 0,
-     and at least 3 of 4 walk-forward years are profitable.
-Test results of every other configuration are shown descriptively only.
+     and at least 3 of 4 walk-forward years are profitable. A walk-forward year
+     whose validation block allowed no threshold (fewer than 200 executable
+     trades) is "not evaluable" for a filtered strategy and does not count as
+     profitable.
+Test results of every other configuration are shown descriptively only: they
+come from a search over many configurations and are not independent tests.
 
 Usage: python report.py results/nq_study/runs/<run id>
 """
@@ -31,7 +35,39 @@ def load(run):
     r["info"] = json.loads((run / "dataset_info.json").read_text())
     r["run_json"] = json.loads((run / "run.json").read_text())
     r["run_id"] = run.name
+    r["run_dir"] = run
+    wf = r["walk_forward"]
+    if "threshold_status" not in wf:
+        # runs before the status was recorded: tools/wf_threshold_status.py writes it from the data
+        sp = run / "walk_forward_status.csv"
+        if sp.exists():
+            st = pd.read_csv(sp)[["frequency", "fold", "threshold_status", "n_val_executable"]]
+            wf = wf.merge(st, on=["frequency", "fold"], how="left")
+        elif (wf.threshold_kind == "validated").any():
+            raise SystemExit(f"{run.name}: walk-forward threshold status not recorded (run made before the fix). "
+                             f"Run first: python tools/wf_threshold_status.py {run}")
+        else:
+            wf = wf.assign(threshold_status="ok", n_val_executable=np.nan)
+        if wf.loc[wf.threshold_kind == "validated", "threshold_status"].isna().any():
+            raise SystemExit(f"{run.name}: walk_forward_status.csv does not cover every fold; rerun tools/wf_threshold_status.py")
+        wf.loc[wf.threshold_kind == "none", "threshold_status"] = "ok"
+    r["walk_forward"] = wf
     return r
+
+
+def wf_evaluable(w):
+    return (w.threshold_kind == "none") | (w.threshold_status == "ok")
+
+
+def always_long_on(run, freq, windows, cost):
+    """Net P&L of 'always long' on exactly the walk-forward test sessions (same sample)."""
+    p = pd.read_parquet(run / f"test_predictions_{freq}.parquet", columns=["session_id", "move_points", "execution_eligible"])
+    sid = pd.to_datetime(p.session_id)
+    tot = 0.0
+    for a, b in windows:
+        m = (sid >= pd.Timestamp(a)) & (sid < (pd.Timestamp(b) if b != "end" else pd.Timestamp.max)) & p.execution_eligible
+        tot += float((p.move_points[m] * 20.0 - cost).sum())
+    return tot
 
 
 def model_table(r):
@@ -55,6 +91,8 @@ def candidates(r):
     s = r["strategies"]
     key = ["frequency", "model", "strategy", "threshold_kind"]
     val = s[(s.split == "val") & ~s.model.isin(RULES)]
+    if "economic_status" in val:      # samples without any executable entry are never candidates
+        val = val[val.economic_status == "evaluated"]
     out = []
     for f, g in val.groupby("frequency", sort=False):
         best = g.sort_values("net_usd", ascending=False).iloc[0]
@@ -70,11 +108,25 @@ def candidates(r):
         row.update({f"test_net_at_{k:g}": float(v) for k, v in c.items()})
         wf = r["walk_forward"]
         w = wf[(wf.frequency == f) & (wf.threshold_kind == best.threshold_kind)]
-        row["wf_years_positive"] = int((w.net_usd > 0).sum()) if len(w) else 0
-        row["wf_years"] = int(len(w))
-        row["wf_net_usd"] = float(w.net_usd.sum()) if len(w) else np.nan
+        ev = w[wf_evaluable(w)]
+        row["wf_folds"] = int(len(w))
+        row["wf_years"] = int(len(ev))                       # evaluable folds
+        row["wf_not_evaluable"] = int(len(w) - len(ev))
+        row["wf_years_positive"] = int((ev.net_usd > 0).sum())
+        row["wf_net_usd"] = float(ev.net_usd.sum()) if len(ev) else np.nan
+        for c in ("gross_usd", "gross_from_direction_mix_usd", "gross_from_timing_usd", "n_long", "n_short", "n_trades"):
+            row[f"wf_{c}"] = float(ev[c].sum()) if len(ev) else np.nan
+        row["wf_always_long_same_sessions_usd"] = (always_long_on(r["run_dir"], f, list(zip(ev.test_start, ev.test_end)),
+                                                                  r["run_json"]["args"]["cost"]) if len(ev) else np.nan)
+        wu = wf[(wf.frequency == f) & (wf.threshold_kind == "none")]
+        row["wf_unfiltered_net_usd"] = float(wu.net_usd.sum())
+        for c in ("gross_usd", "gross_from_direction_mix_usd", "gross_from_timing_usd"):
+            row[f"wf_unfiltered_{c}"] = float(wu[c].sum())
+        row["wf_unfiltered_always_long_same_sessions_usd"] = always_long_on(
+            r["run_dir"], f, list(zip(wu.test_start, wu.test_end)), r["run_json"]["args"]["cost"])
         row["deployable"] = bool(row["test_net_usd"] > 0 and row.get("test_net_at_12.5", -1) > 0
-                                 and row["test_daily_net_ci_lo"] > 0 and row["wf_years_positive"] >= 3)
+                                 and row["test_daily_net_ci_lo"] > 0 and row["wf_years_positive"] >= 3
+                                 and row["wf_folds"] == 4)
         out.append(row)
     c = pd.DataFrame(out)
     c["overall_choice"] = c.val_net_usd == c.val_net_usd.max()
@@ -142,6 +194,8 @@ def deck_data(r, mt, cand, choice):
                                                              "profit_factor", "max_drawdown_usd"]]
     cc = r["cost_sensitivity"]
     cand_cost = cc.merge(cand[key], on=key)
+    test_ci_pos = s[(s.split == "test") & ~s.model.isin(RULES) & (s.daily_net_ci_lo > 0)][
+        key + ["threshold", "n_trades", "net_usd", "daily_net_ci_lo"]].sort_values("daily_net_ci_lo", ascending=False)
     nn = sel[sel.family == "mlp"].merge(acc[["frequency", "model", "acc_all", "acc_nonflat", "balanced_acc_nonflat"]],
                                         on=["frequency", "model"])
     return _clean({
@@ -165,6 +219,14 @@ def deck_data(r, mt, cand, choice):
         "strategy_grid_test": grid.to_dict("records"),
         "nn": nn.to_dict("records"),
         "n_val_configurations": int(len(s[(s.split == "val") & ~s.model.isin(RULES)])),
+        "n_models_per_frequency": int(sel.groupby("frequency").size().max()),
+        "wf_always_long_by_fold": [{"fold": int(w.fold), "net_usd": always_long_on(r["run_dir"], f, [(w.test_start, w.test_end)],
+                                                                             r["run_json"]["args"]["cost"])}
+                                  for w in r["walk_forward"][(r["walk_forward"].frequency == f)
+                                                             & (r["walk_forward"].threshold_kind == "none")].itertuples()],
+        "test_ci_positive_descriptive": test_ci_pos.to_dict("records"),
+        "best_test_accuracy_any_model": acc[~acc.model.isin(RULES)].sort_values("vs_majority_pp", ascending=False)
+                                         .head(1).to_dict("records"),
     })
 
 

@@ -76,6 +76,18 @@ def custom_features(b):
 BASE_COLS = None   # filled from features.make_features column names
 
 
+def traded_return_flags(meta, move, y3, elig):
+    """With a positive latency the entry is a later minute's open, so the traded return is
+    entry -> close(t+1), NOT the candle body the model predicts. Returns (delayed mask,
+    sign mismatches between traded move and target, 'candle_body' | 'delayed_entry_to_close')."""
+    elig = np.asarray(elig, bool)
+    delayed = elig & (pd.to_datetime(meta["entry_at"]) > pd.to_datetime(meta["label_start"])).to_numpy()
+    mismatch = int((np.sign(np.asarray(move)[elig]) != np.asarray(y3)[elig]).sum())
+    if not elig.any():
+        return delayed, mismatch, strategy.NOT_EVALUABLE
+    return delayed, mismatch, "candle_body" if mismatch == 0 and not delayed.any() else "delayed_entry_to_close"
+
+
 def build(minutes, freq, latency):
     global BASE_COLS
     bars, elig = experiment.bars_for(minutes, None, freq)
@@ -93,9 +105,11 @@ def build(minutes, freq, latency):
     meta = backtest.attach_execution(meta, minutes)
     move = (meta["exit_price"] - meta["entry_price"]).to_numpy(float)
     elig_ex = meta["execution_eligible"].to_numpy(bool)
-    mismatch = int((np.sign(move[elig_ex]) != y3.to_numpy()[elig_ex]).sum())
+    delayed, mismatch, traded = traded_return_flags(meta, move, y3.to_numpy(), elig_ex)
     info.update(n_rows_final=int(len(X)), n_execution_eligible=int(elig_ex.sum()),
-                target_vs_traded_sign_mismatch=mismatch)
+                n_not_evaluable=int((~elig_ex).sum()), n_delayed_entry=int(delayed.sum()),
+                target_vs_traded_sign_mismatch=mismatch, traded_return=traded)
+    meta = meta.assign(entry_delayed=delayed)
     return X.astype(np.float32), y3, meta, np.where(elig_ex, move, 0.0), elig_ex, info
 
 
@@ -308,7 +322,12 @@ def fit_predict(factory, cols, X, y3, tr_idx, va_mask, pred_masks):
 def run_freq(minutes, freq, args, session_open_of, holdout_start, out, log):
     X, y3, meta, move, elig_ex, info = build(minutes, freq, args.latency)
     log(f"[{freq}] rows {len(X):,}; execution-eligible {info['n_execution_eligible']:,}; "
-        f"target/trade sign mismatch {info['target_vs_traded_sign_mismatch']}")
+        f"not evaluable {info['n_not_evaluable']:,}; target/trade sign mismatch {info['target_vs_traded_sign_mismatch']}")
+    if info["traded_return"] == strategy.NOT_EVALUABLE:
+        log(f"  WARNING [{freq}] no row has an observable entry before its exit: economic results not evaluable")
+    elif info["traded_return"] != "candle_body":
+        log(f"  WARNING [{freq}] latency {args.latency}: {info['n_delayed_entry']:,} entries after the candle open; "
+            f"P&L is entry -> close, not the predicted candle body")
     sessions_all = pd.DatetimeIndex(sorted(minutes["session_id"].unique()))
     usable = sessions_all[sessions_all < holdout_start]
     (first, v0, t0, _), = features.walk_forward_folds(usable, "holdout", config.TRAIN_FRAC, config.VAL_FRAC)
@@ -371,17 +390,21 @@ def run_freq(minutes, freq, args, session_open_of, holdout_start, out, log):
             if name == "always_long" and st != "long_only" or name == "always_short" and st != "short_only":
                 continue
             is_rule = name in ("always_long", "always_short", "reversal")
-            th_opt = 0.0 if is_rule else strategy.choose_threshold(
-                pr["val"], move[va], st, THRESHOLDS)
+            th_opt, th_status = (0.0, "rule") if is_rule else strategy.choose_threshold(
+                pr["val"], move[va], st, THRESHOLDS, rt_cost=args.cost, executable=elig_ex[va])
             for th_kind, th in (("none", 0.0), ("validated", th_opt)):
-                if th_kind == "validated" and (is_rule or th == 0.0):
+                # no validated row when the rule has no filter, the best threshold is 0, or no
+                # threshold reached the minimum number of validation trades (status kept below)
+                if th_kind == "validated" and (is_rule or th is None or th == 0.0):
                     continue
                 for split, msk in (("train", tr), ("val", va), ("test", te)):
                     pos = strategy.positions(pr[split], st, th) * elig_ex[msk]
-                    s = strategy.summarize(pos, move[msk], sess[msk], args.cost, bootstrap=split != "train")
+                    s = strategy.summarize(pos, move[msk], sess[msk], args.cost, bootstrap=split != "train",
+                                           executable=elig_ex[msk])
+                    ok = s["economic_status"] == strategy.EVALUATED
                     strat_rows.append({"frequency": freq, "model": name, "strategy": st, "threshold_kind": th_kind,
-                                       "threshold": th, "split": split, **s})
-                    if split == "test":
+                                       "threshold": th, "threshold_status": th_status, "split": split, **s})
+                    if split == "test" and ok:
                         e = strategy.daily_equity(pos, move[msk], sess[msk], args.cost)
                         eq_rows.append(pd.DataFrame({"frequency": freq, "model": name, "strategy": st,
                                                      "threshold_kind": th_kind, "session": e.index,
@@ -390,7 +413,8 @@ def run_freq(minutes, freq, args, session_open_of, holdout_start, out, log):
                             g, n_ = strategy.trade_pnl(pos, move[msk], c)
                             cost_rows.append({"frequency": freq, "model": name, "strategy": st,
                                               "threshold_kind": th_kind, "rt_cost": c,
-                                              "net_usd": float(n_[pos != 0].sum()), "n_trades": int((pos != 0).sum())})
+                                              "net_usd": float(n_[pos != 0].sum()), "n_trades": int((pos != 0).sum()),
+                                              "economic_status": s["economic_status"]})
     # ---- threshold sensitivity on test for every model (reported, never used for choice)
     thr_rows = []
     for name, pr in probas.items():
@@ -401,14 +425,18 @@ def run_freq(minutes, freq, args, session_open_of, holdout_start, out, log):
                 for split, msk in (("val", va), ("test", te)):
                     pos = strategy.positions(pr[split], st, th) * elig_ex[msk]
                     g, n_ = strategy.trade_pnl(pos, move[msk], args.cost)
+                    ev = bool(elig_ex[msk].any())
                     thr_rows.append({"frequency": freq, "model": name, "strategy": st, "threshold": th,
                                      "split": split, "n_trades": int((pos != 0).sum()),
-                                     "net_usd": float(n_[pos != 0].sum())})
+                                     "net_usd": float(n_[pos != 0].sum()) if ev else np.nan,
+                                     "economic_status": strategy.EVALUATED if ev else strategy.NOT_EVALUABLE})
 
     # save compact test predictions for charts / audits
     keep = pd.DataFrame({"session_id": meta.session_id[te].to_numpy(), "label_session_id": sess[te],
                          "label_start": meta.label_start[te].to_numpy(), "y3": y3[te].to_numpy(),
-                         "move_points": move[te], "execution_eligible": elig_ex[te]})
+                         "move_points": move[te], "execution_eligible": elig_ex[te],
+                         "decision_at": meta.decision_at[te].to_numpy(), "entry_at": meta.entry_at[te].to_numpy(),
+                         "entry_delayed": meta.entry_delayed[te].to_numpy()})
     for name, pr in probas.items():
         keep[f"p_{name}"] = pr["test"]          # float64: thresholds must reproduce exactly
     keep.to_parquet(out / f"test_predictions_{freq}.parquet", index=False)
@@ -433,14 +461,21 @@ def walk_forward(minutes, freq, res, model_name, strat_name, args, session_open_
         if args.max_train_rows and len(tr_idx) > args.max_train_rows:
             tr_idx = tr_idx[-args.max_train_rows:]
         _, _, pr = fit_predict(spec[3], cols_of[spec[2]], X, y3, tr_idx, va, {"val": va, "test": te})
-        th = strategy.choose_threshold(pr["val"], move[va], strat_name, THRESHOLDS)
+        th, status = strategy.choose_threshold(pr["val"], move[va], strat_name, THRESHOLDS,
+                                               rt_cost=args.cost, executable=elig_ex[va])
+        n_val_ex = int((va & elig_ex).sum())
         for th_kind, t in (("none", 0.0), ("validated", th)):
-            pos = strategy.positions(pr["test"], strat_name, t) * elig_ex[te]
-            s = strategy.summarize(pos, move[te], sess[te], args.cost)
+            if t is None:      # no threshold could be validated: the filtered strategy is not evaluable here
+                pos = np.zeros(int(te.sum()), dtype=int)
+            else:
+                pos = strategy.positions(pr["test"], strat_name, t) * elig_ex[te]
+            s = strategy.summarize(pos, move[te], sess[te], args.cost, executable=elig_ex[te])
             acc = float((np.where(pr["test"] >= .5, 1, -1) == y3[te].to_numpy()).mean())
             rows.append({"frequency": freq, "model": model_name, "strategy": strat_name, "fold": k,
                          "test_start": str(t0.date()), "test_end": str(t1.date()) if t1 is not None else "end",
-                         "threshold_kind": th_kind, "threshold": t, "acc_all": acc, **s})
+                         "threshold_kind": th_kind, "threshold": np.nan if t is None else t,
+                         "threshold_status": "ok" if th_kind == "none" else status,
+                         "n_val_executable": n_val_ex, "acc_all": acc, **s})
         log(f"  [{freq}] walk-forward fold {k}: {rows[-2]['net_usd']:,.0f} USD (no threshold)")
     return pd.DataFrame(rows)
 
@@ -477,7 +512,9 @@ def main(argv=None):
                                 "instrument": {"symbol": "NQ", "multiplier_usd_per_point": strategy.NQ_MULTIPLIER,
                                                "tick": strategy.NQ_TICK, "tick_value_usd": strategy.NQ_TICK * strategy.NQ_MULTIPLIER},
                                 "costs": {"round_trip_usd": args.cost, "slippage": "zero (idealised limit fills, 100% fill rate)"},
-                                "target": TARGET, "entry": "open of candle t+1", "exit": "close of candle t+1"})
+                                "target": TARGET, "exit": "close of candle t+1",
+                                "entry": ("open of candle t+1" if pd.Timedelta(args.latency) == pd.Timedelta(0)
+                                          else f"first clean minute open >= bar close + {args.latency} (NOT the candle open)")})
     parts = {k: [] for k in ("sel", "acc", "strat", "eq", "cost", "thr", "wf")}
     infos = {}
     for freq in args.freqs:
@@ -487,12 +524,16 @@ def main(argv=None):
         infos[freq] = res["info"]
         # walk-forward for the configuration chosen on validation (best validation net P&L)
         v = res["strat"]
-        v = v[(v.split == "val") & ~v.model.isin(["always_long", "always_short", "reversal"])]
-        best = v.sort_values("net_usd", ascending=False).iloc[0]
-        log(f"[{freq}] validation-best: {best.model} / {best.strategy} / {best.threshold_kind} "
-            f"({best.net_usd:,.0f} USD on validation)")
-        parts["wf"].append(walk_forward(minutes, freq, res, best.model, best.strategy, args,
-                                        session_open_of, holdout_start, log))
+        v = v[(v.split == "val") & ~v.model.isin(["always_long", "always_short", "reversal"])
+              & (v.economic_status == strategy.EVALUATED)]
+        if v.empty:      # no executable entry anywhere in validation: nothing to select economically
+            log(f"[{freq}] no economically evaluable validation result: walk-forward skipped")
+        else:
+            best = v.sort_values("net_usd", ascending=False).iloc[0]
+            log(f"[{freq}] validation-best: {best.model} / {best.strategy} / {best.threshold_kind} "
+                f"({best.net_usd:,.0f} USD on validation)")
+            parts["wf"].append(walk_forward(minutes, freq, res, best.model, best.strategy, args,
+                                            session_open_of, holdout_start, log))
         for k, frame in parts.items():           # save after every frequency (resumable reading)
             if frame:
                 pd.concat(frame, ignore_index=True).to_csv(out / f"{ {'sel': 'model_selection', 'acc': 'accuracy_test', 'strat': 'strategies', 'eq': 'equity_daily', 'cost': 'cost_sensitivity', 'thr': 'threshold_sensitivity', 'wf': 'walk_forward'}[k]}.csv", index=False)

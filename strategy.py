@@ -33,9 +33,16 @@ STRATEGIES = ("long_short", "long_only", "short_only")
 
 
 def positions(p_up, strategy, threshold=0.0):
+    """+1 long / -1 short / 0 flat per row. Rejects probabilities that are not
+    finite or outside [0, 1] and thresholds outside [0, 0.5]."""
     p = np.asarray(p_up, dtype=float)
+    if not np.isfinite(p).all() or ((p < 0) | (p > 1)).any():
+        raise ValueError("probabilities must be finite and within [0, 1]")
+    th = float(threshold)
+    if not np.isfinite(th) or th < 0 or th > 0.5:
+        raise ValueError(f"threshold must be finite and within [0, 0.5], got {threshold!r}")
     side = np.where(p >= 0.5, 1, -1)
-    active = np.abs(p - 0.5) >= threshold
+    active = np.abs(p - 0.5) >= th
     if strategy == "long_only":
         active &= side > 0
     elif strategy == "short_only":
@@ -53,10 +60,35 @@ def trade_pnl(pos, move_points, rt_cost=DEFAULT_RT_COST, multiplier=NQ_MULTIPLIE
     return gross, gross - cost
 
 
+EVALUATED = "evaluated"
+NOT_EVALUABLE = "not_evaluable_no_entry_before_exit"
+
+
 def summarize(pos, move_points, sessions, rt_cost=DEFAULT_RT_COST, capital=CAPITAL_USD,
-              bootstrap=True):
-    """Trading metrics for one strategy on one sample (rows in time order)."""
+              bootstrap=True, executable=None):
+    """Trading metrics for one strategy on one sample (rows in time order).
+
+    `executable` = rows with an observable entry before the exit. If there is
+    none, the sample has no tradable opportunity: economic metrics are NaN and
+    economic_status = NOT_EVALUABLE. A strategy that has opportunities but
+    chooses not to trade is EVALUATED with zero trades and zero P&L.
+    """
     pos = np.asarray(pos, dtype=int)
+    if executable is not None:
+        ex = np.asarray(executable, bool)
+        if ex.shape != pos.shape:
+            raise ValueError("executable mask must align with positions")
+        if (pos[~ex] != 0).any():
+            raise ValueError("positions on rows without an executable entry")
+        if not ex.any():
+            return {"economic_status": NOT_EVALUABLE, "n_executable": 0, "n_trades": 0, "n_long": 0, "n_short": 0,
+                    **{k: np.nan for k in ("exposure", "gross_usd", "costs_usd", "net_usd", "win_rate", "avg_win_usd",
+                                           "avg_loss_usd", "avg_net_per_trade_usd", "profit_factor", "max_drawdown_usd",
+                                           "max_drawdown_pct_capital", "sharpe_daily_ann", "sortino_daily_ann",
+                                           "long_net_usd", "short_net_usd", "long_win_rate", "short_win_rate",
+                                           "top1pct_trades_share_of_gross", "gross_from_direction_mix_usd",
+                                           "gross_from_timing_usd")},
+                    "n_sessions": int(len(pd.unique(np.asarray(sessions))))}
     gross, net = trade_pnl(pos, move_points, rt_cost)
     traded = pos != 0
     t_net, t_gross = net[traded], gross[traded]
@@ -68,6 +100,8 @@ def summarize(pos, move_points, sessions, rt_cost=DEFAULT_RT_COST, capital=CAPIT
     downside = np.sqrt(np.mean(np.minimum(daily.to_numpy(), 0) ** 2)) if len(daily) else np.nan
     longs, shorts = pos > 0, pos < 0
     out = {
+        "economic_status": EVALUATED,
+        "n_executable": int(len(pos) if executable is None else np.asarray(executable, bool).sum()),
         "n_trades": int(traded.sum()), "n_long": int(longs.sum()), "n_short": int(shorts.sum()),
         "exposure": float(traded.mean()) if len(pos) else 0.0,
         "gross_usd": float(t_gross.sum()), "costs_usd": float(rt_cost * traded.sum()),
@@ -77,7 +111,7 @@ def summarize(pos, move_points, sessions, rt_cost=DEFAULT_RT_COST, capital=CAPIT
         "avg_loss_usd": float(losses.mean()) if len(losses) else np.nan,
         "avg_net_per_trade_usd": float(t_net.mean()) if traded.any() else np.nan,
         "profit_factor": float(wins.sum() / -losses.sum()) if len(losses) and losses.sum() < 0 else np.nan,
-        "max_drawdown_usd": dd,
+        "max_drawdown_usd": dd,                  # on session-end (daily) equity, from 0
         "max_drawdown_pct_capital": 100 * dd / capital,
         "n_sessions": int(len(daily)),
         "sharpe_daily_ann": float(daily.mean() / std * np.sqrt(252)) if std and std > 0 else np.nan,
@@ -106,14 +140,31 @@ def daily_equity(pos, move_points, sessions, rt_cost=DEFAULT_RT_COST):
     return pd.Series(net).groupby(np.asarray(sessions)).sum().sort_index().cumsum()
 
 
-def choose_threshold(p_up, move_points, strategy, grid, rt_cost=DEFAULT_RT_COST, min_trades=200):
-    """Validation-only threshold maximising net P&L (ties -> smaller threshold)."""
-    best, best_net = grid[0], -np.inf
+THRESHOLD_OK = "ok"
+THRESHOLD_NONE = "no_threshold_reaches_min_trades"
+
+
+def choose_threshold(p_up, move_points, strategy, grid, rt_cost=DEFAULT_RT_COST, min_trades=200,
+                     executable=None):
+    """Validation-only threshold maximising net P&L (ties -> smaller threshold).
+
+    Only executable entries count, for both the P&L and `min_trades`
+    (`executable` = boolean mask, None = every row executable). Returns
+    (threshold, THRESHOLD_OK), or (None, THRESHOLD_NONE) when no threshold in
+    the grid reaches `min_trades`; there is no silent fallback to zero.
+    """
+    p = np.asarray(p_up, dtype=float)
+    ex = np.ones(len(p), bool) if executable is None else np.asarray(executable, bool)
+    if ex.shape != p.shape:
+        raise ValueError("executable mask must align with probabilities")
+    if not len(grid):
+        raise ValueError("empty threshold grid")
+    best, best_net = None, -np.inf
     for th in grid:
-        pos = positions(p_up, strategy, th)
+        pos = positions(p, strategy, th) * ex
         if (pos != 0).sum() < min_trades:
             continue
         net = trade_pnl(pos, move_points, rt_cost)[1].sum()
         if net > best_net + 1e-9:
             best, best_net = th, net
-    return best
+    return (best, THRESHOLD_OK) if best is not None else (None, THRESHOLD_NONE)
