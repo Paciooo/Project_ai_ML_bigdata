@@ -27,20 +27,16 @@ def test_candle_rv_uses_only_returns_inside_the_candle():
     assert np.isclose(multitarget.candle_rv(m2, "5min").iloc[1], second)
 
 
-def test_trading_pnl_charges_round_trip_cost_and_multiplier():
-    p = np.array([0.6, 0.4, 0.7, 0.2])
-    mv = np.array([2.0, -1.0, -0.5, 1.0])
-    ls = mr.positions(p, "long_short")
-    assert ls.tolist() == [1, -1, 1, -1]
-    t = mr.trades(ls, mv, cost=2.5)
-    assert t["n_trades"] == 4
-    assert np.isclose(t["gross_usd"], 20 * (2 + 1 - 0.5 - 1))
-    assert np.isclose(t["net_usd"], t["gross_usd"] - 4 * 2.5)
-    assert mr.positions(p, "long_only").tolist() == [1, 0, 1, 0]
-    assert mr.positions(p, "short_only").tolist() == [0, -1, 0, -1]
-    # drawdown on trade-by-trade equity from 0
-    assert np.isclose(t["max_drawdown_usd"], min(0, (np.cumsum([37.5, 17.5, -12.5, -22.5]) -
-                                                     np.maximum.accumulate(np.r_[0, np.cumsum([37.5, 17.5, -12.5, -22.5])])[1:]).min()))
+def test_lag1_autocorrelation_never_pairs_across_sessions():
+    # within each session x alternates perfectly (corr -1); across the boundary it would look positive
+    x = np.array([1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0])
+    sess = np.repeat([0, 1], 4)
+    assert np.isclose(mr.lag1_corr(x, sess), -1.0)
+    rng = np.random.default_rng(0)
+    ar = np.zeros(5000)
+    for i in range(1, len(ar)):
+        ar[i] = 0.8 * ar[i - 1] + rng.normal()
+    assert abs(mr.lag1_corr(ar, np.zeros(len(ar))) - 0.8) < 0.03
 
 
 def test_block_bootstrap_detects_a_clear_shift_and_not_noise():

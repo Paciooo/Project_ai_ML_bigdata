@@ -1,3 +1,0 @@
-# Optional: IBKR download scripts (tools/download_*_ibkr.py). Not needed for the tests (mocked).
--r requirements.txt
-ib_async>=1.0

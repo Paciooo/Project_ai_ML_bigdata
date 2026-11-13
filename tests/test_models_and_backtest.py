@@ -145,28 +145,6 @@ def test_regime_router_is_causal():
     assert p1.iloc[:61].equals(p2.iloc[:61])
 
 
-def test_cli_rejects_unknown_source_and_bad_args():
-    import main
-    with pytest.raises(SystemExit):
-        main.parse_args(["--data-source", "bogus"])
-    with pytest.raises(SystemExit):
-        main.parse_args(["--data-source", "nq", "--frequency", "tick"])
-    a = main.parse_args(["--smoke"])
-    assert a.data_source == "fixture" and a.max_train_rows > 0
-
-
-def test_smoke_run_writes_new_folder(tmp_path, monkeypatch):
-    import config
-    import main
-    monkeypatch.setattr(config, "RESULTS_DIR", str(tmp_path))
-    out = main.main(["--smoke", "--frequency", "1min", "--models", "logreg"])
-    assert out.parent.parent.name == "smoke" and (out / "run.json").exists()
-    preds = pd.read_parquet(out / "predictions_1min.parquet")
-    assert {"decision_at", "label_end", "proba_logreg", "y3"} <= set(preds.columns)
-    out2 = main.main(["--smoke", "--frequency", "1min", "--models", "logreg"])
-    assert out2 != out and (out / "run.json").exists()
-
-
 def test_missing_futures_data_is_reported(tmp_path):
     with pytest.raises(FileNotFoundError, match="No replacement data"):
         data.load_futures_minutes(tmp_path / "absent", "NQ", 2020, 2021)

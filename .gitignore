@@ -7,8 +7,6 @@ data_raw/
 .pytest_cache/
 
 /tmp/
-
 /logs/
-
 presentation/node_modules/
-presentation_multitarget/node_modules/
+~$*

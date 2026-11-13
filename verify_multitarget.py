@@ -16,9 +16,12 @@ Checks:
     rule (best per task, two extras on a different timeframe, at most two per
     task, no benchmark) reproduces selected_five.csv, and its test fields
     equal the results rows;
-  * trading: every row of trading_direction_test.csv ($2.50 and $5);
+  * data profile: every value of data_profile.csv (rows, sessions, class
+    shares, return mean / s.d., mean log RV, share of rising RV, lag-1
+    autocorrelations within sessions);
   * presentation: deck_data.json (report and presentation copies identical),
-    run id, selected rows, trading, charts present and identical, costs, no VIX.
+    run id, selected rows, data profile, charts present and identical, no
+    trading or P&L fields, no VIX.
 It does NOT re-run the bootstrap (interval values), rebuild the data from the
 1-minute bars or refit models.
 
@@ -33,7 +36,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-MULT = 20.0
 BENCH = {"return": {"zero", "train_mean"}, "direction": {"majority"}, "volatility": {"persistence", "rolling_mean_22"}}
 
 
@@ -41,7 +43,7 @@ def main(run, rep, pres=None):
     run, rep = Path(run), Path(rep)
     info = json.loads((run / "dataset_info.json").read_text())
     R, D, V = (pd.read_csv(rep / f"results_{k}.csv") for k in ("return", "direction", "volatility"))
-    T = pd.read_csv(rep / "trading_direction_test.csv")
+    prof = pd.read_csv(rep / "data_profile.csv")
     rank = pd.read_csv(rep / "selection_validation_ranking.csv")
     five = pd.read_csv(rep / "selected_five.csv")
     problems, n = [], 0
@@ -169,28 +171,26 @@ def main(run, rep, pres=None):
                     if pd.notna(x.r2_log_ci_lo_pct):
                         check(x.r2_log_ci_lo_pct <= x.r2_log_vs_persistence_pct + 1e-9 <= x.r2_log_ci_hi_pct + 2e-9,
                               f"{freq} {sp} vol {mdl}: interval order")
-        # ---- trading
-        q = p[p.split == "test"]
-        mv = q.move_points.to_numpy() * q.execution_eligible.to_numpy()
-        for _, t in T[T.frequency == freq].iterrows():
-            pu = np.full(len(q), c["majority_direction"] > 0) if t.model == "majority" else q[f"dir__{t.model}"].to_numpy() >= 0.5
-            side = np.where(pu, 1, -1)
-            pos = {"long_short": side, "long_only": np.where(side > 0, 1, 0), "short_only": np.where(side < 0, -1, 0)}[t.strategy]
-            pos = pos * q.execution_eligible.to_numpy()
-            tr = pos != 0
-            for cost, col in ((2.5, "net_usd"), (5.0, "net_usd_at_5")):
-                pnl = (pos * mv * MULT - cost * tr)[tr]
-                check(close(t[col], pnl.sum(), 1e-9), f"{freq} {t.model} {t.strategy}: {col} {t[col]} vs {pnl.sum()}")
-            pnl = (pos * mv * MULT - 2.5 * tr)[tr]
-            eq = np.r_[0, np.cumsum(pnl)]
-            loss = pnl[pnl <= 0].sum()
-            exp = {"n_trades": tr.sum(), "gross_usd": (pos * mv * MULT)[tr].sum(),
-                   "win_rate": (pnl > 0).mean() if tr.any() else np.nan,          # no trade: N/A, not 0
-                   "profit_factor": pnl[pnl > 0].sum() / -loss if loss < 0 else np.nan,
-                   "max_drawdown_usd": (eq - np.maximum.accumulate(eq)).min(),
-                   "avg_net_per_trade_usd": pnl.mean() if tr.any() else np.nan}
+        # ---- data profile (independent implementation of the lag-1 autocorrelation)
+        for sp in ("val", "test"):
+            q = p[p.split == sp]
+            x = prof[(prof.frequency == freq) & (prof.split == sp)]
+            check(len(x) == 1, f"{freq} {sp}: data profile row missing")
+            if len(x) != 1:
+                continue
+            x = x.iloc[0]
+            s_ = np.zeros(len(q)) if freq == "session" else q.session_id.to_numpy()
+
+            def ac(v):
+                v = np.asarray(v, float)
+                df = pd.DataFrame({"a": v[1:], "b": v[:-1]})[s_[1:] == s_[:-1]]
+                return df.a.corr(df.b)
+            exp = {"n": len(q), "sessions": q.label_session_id.nunique(), "share_up": (q.y3 > 0).mean(),
+                   "share_down": (q.y3 < 0).mean(), "share_doji": (q.y3 == 0).mean(), "ret_mean_bps": q.ret_bps.mean(),
+                   "ret_sd_bps": q.ret_bps.std(), "lrv_mean": q.lrv_next.mean(),
+                   "share_rv_up": (q.lrv_next > q.lrv_now).mean(), "ret_acf1": ac(q.ret_bps), "lrv_acf1": ac(q.lrv_next)}
             for k, v in exp.items():
-                check(close(t[k], v, 1e-9), f"{freq} {t.model} {t.strategy}: {k} {t[k]} vs {v}")
+                check(close(x[k], v, 1e-6), f"{freq} {sp} data profile {k}: {x[k]} vs {v}")
 
     # ---- selection
     for task, df in (("return", R), ("direction", D), ("volatility", V)):
@@ -223,7 +223,8 @@ def main(run, rep, pres=None):
     # ---- presentation data
     dd = json.loads((rep / "deck_data.json").read_text(encoding="utf-8"))
     check(dd["run_id"] == run.name, "deck_data.json from another run")
-    check(dd["costs"]["round_trip_usd"] == 2.5, "deck cost is not $2.50")
+    check(not any(k in dd for k in ("trading", "costs")), "deck data still holds trading or cost fields")
+    check(pd.DataFrame(dd["data_profile"]).round(9).equals(prof.round(9)), "deck data profile differs from data_profile.csv")
     check("vix" not in json.dumps(dd).lower(), "deck data mentions VIX")
     check([(s["task"], s["frequency"], s["model"]) for s in dd["selected"]] == list(zip(five.task, five.frequency, five.model)),
           "deck selected rows differ from selected_five.csv")
@@ -231,11 +232,18 @@ def main(run, rep, pres=None):
         x = five[five.id == s["id"]].iloc[0]
         for k in ("improvement_value", "ci_lo", "ci_hi", "val_z"):
             check(close(s[k], x[k], 1e-9), f"deck selected {s['id']} {k}")
-    for sid, rows in dd["trading"].items():
-        for t in rows:
-            x = T[(T.frequency == t["frequency"]) & (T.model == t["model"]) & (T.strategy == t["strategy"])].iloc[0]
-            check(close(t["net_usd"], x.net_usd, 1e-9) and close(t["max_drawdown_usd"], x.max_drawdown_usd, 1e-9),
-                  f"deck trading {sid} {t['strategy']}")
+    for sid, rows in dd.get("direction_by_year", {}).items():
+        r = five[five.id == int(sid)].iloc[0]
+        q = pd.read_parquet(run / f"predictions_{r.frequency}.parquet")
+        q = q[q.split == "test"]
+        yv = q.y3.to_numpy()
+        d = 100 * ((np.where(q[f"dir__{r.model}"].to_numpy() >= 0.5, 1, -1) == yv).astype(float)
+                   - (yv == info[r.frequency]["consts"]["majority_direction"]))
+        yr = pd.to_datetime(q.session_id).dt.year.astype(str).to_numpy()
+        for x in rows:
+            v = d.mean() if x["year"] == "all" else d[yr == x["year"]].mean()
+            check(close(x["gain_pp"], v, 1e-9), f"deck direction_by_year {sid} {x['year']}: {x['gain_pp']} vs {v}")
+            check(x["ci_lo_pp"] <= x["gain_pp"] + 1e-9 <= x["ci_hi_pp"] + 2e-9, f"deck direction_by_year {sid} {x['year']}: interval order")
     for f, fi in dd["dataset"].items():
         check(fi["test"] == info[f]["test"] and fi["train"] == info[f]["train"], f"deck dataset {f} differs")
     for sid, fn in dd["charts"].items():

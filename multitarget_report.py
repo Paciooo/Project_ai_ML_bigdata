@@ -43,9 +43,10 @@ Classification convention: precision = 0 when there are no positive
 predictions, recall = 0 when there are no positive cases, F1 = 2TP/(2TP+FP+FN)
 and 0 when that denominator is 0 (scikit-learn's zero_division=0).
 
-Trading (direction task, test block): UP -> long, DOWN -> short at the next
-candle's open, exit at its close, 1 NQ contract ($20/point), $2.50 per round
-trip, zero slippage, 100% fills (idealised). Drawdown on trade-by-trade equity.
+The study is statistical only: no trading rules, P&L or costs are computed.
+Data profile (data_profile.csv): per timeframe and split, rows, sessions,
+UP / DOWN / doji shares, return mean and standard deviation, mean log RV,
+share of rising RV and the lag-1 autocorrelation of returns and of log RV.
 
 Usage: python multitarget_report.py results/multitarget/runs/<id> [out_dir]
 """
@@ -61,7 +62,6 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
-MULT, COST, COST_ALT = 20.0, 2.5, 5.0
 BLOCK, REPS = 20, 2000
 FREQ_LABEL = {"5min": "5 min", "15min": "15 min", "30min": "30 min", "1h": "1 hour", "session": "1 day"}
 BENCH = {"return": ("zero", "train_mean"), "direction": ("majority",),
@@ -152,26 +152,32 @@ def cls_stats(pred_up, true_up, valid=None):
             "tp": tp, "fp": fp, "tn": tn, "fn": fn, "pred_up_share": float(p.mean()) if len(p) else np.nan}
 
 
-def trades(pos, move, cost=COST):
-    pnl = pos * move * MULT - cost * (pos != 0)
-    t = pos != 0
-    tn = pnl[t]
-    eq = np.r_[0.0, np.cumsum(tn)]
-    win, loss = tn[tn > 0].sum(), tn[tn <= 0].sum()
-    return {"n_trades": int(t.sum()), "net_usd": float(tn.sum()), "gross_usd": float((pos * move * MULT)[t].sum()),
-            "win_rate": float((tn > 0).mean()) if t.any() else np.nan,
-            "profit_factor": float(win / -loss) if loss < 0 else np.nan,
-            "max_drawdown_usd": float((eq - np.maximum.accumulate(eq)).min()),
-            "avg_net_per_trade_usd": float(tn.mean()) if t.any() else np.nan}
+def lag1_corr(x, sess):
+    """Lag-1 autocorrelation of x within sessions (pairs never cross a session boundary)."""
+    x, sess = np.asarray(x, float), np.asarray(sess)
+    same = sess[1:] == sess[:-1]
+    return float(np.corrcoef(x[1:][same], x[:-1][same])[0, 1]) if same.sum() > 2 else np.nan
 
 
-def positions(p_up, strat):
-    side = np.where(p_up >= 0.5, 1, -1)
-    if strat == "long_only":
-        return np.where(side > 0, 1, 0)
-    if strat == "short_only":
-        return np.where(side < 0, -1, 0)
-    return side
+def data_profile(run, info):
+    """Descriptive statistics of the three targets per timeframe and split (saved predictions)."""
+    rows = []
+    for freq in info:
+        p = pd.read_parquet(run / f"predictions_{freq}.parquet",
+                            columns=["split", "session_id", "label_session_id", "y3", "ret_bps", "lrv_next", "lrv_now"])
+        for split in ("val", "test"):
+            q = p[p.split == split]
+            # daily candles: one per session, so lag-1 pairs are consecutive sessions
+            key = np.zeros(len(q)) if freq == "session" else q.session_id.to_numpy()
+            rows.append({"frequency": freq, "split": split, "n": len(q), "sessions": int(q.label_session_id.nunique()),
+                         "first_session": str(pd.Timestamp(q.session_id.min()).date()),
+                         "last_session": str(pd.Timestamp(q.session_id.max()).date()),
+                         "share_up": float((q.y3 > 0).mean()), "share_down": float((q.y3 < 0).mean()),
+                         "share_doji": float((q.y3 == 0).mean()), "ret_mean_bps": float(q.ret_bps.mean()),
+                         "ret_sd_bps": float(q.ret_bps.std()), "lrv_mean": float(q.lrv_next.mean()),
+                         "share_rv_up": float((q.lrv_next > q.lrv_now).mean()),
+                         "ret_acf1": lag1_corr(q.ret_bps, key), "lrv_acf1": lag1_corr(q.lrv_next, key)})
+    return pd.DataFrame(rows)
 
 
 # ---------------------------------------------------------------------------
@@ -229,7 +235,7 @@ def crossfit_timestral_vol(p, n_blocks=CAL_BLOCKS):
 
 def evaluate(run):
     info = json.loads((run / "dataset_info.json").read_text())
-    R, D, V, T, CAL = [], [], [], [], {}
+    R, D, V, CAL = [], [], [], {}
     for freq, fi in info.items():
         p = pd.read_parquet(run / f"predictions_{freq}.parquet")
         c = fi["consts"]
@@ -295,13 +301,6 @@ def evaluate(run):
                               "acc_nonflat": ok[y != 0].mean(), "diff_pp": 100 * est, "ci_lo_pp": 100 * lo,
                               "ci_hi_pp": 100 * hi, "z": z, "n_doji": int((y == 0).sum()),
                               **cls_stats(pu, y > 0, y != 0)})
-                    if split == "test" and rows == "all" and not is_timestral(m):
-                        mv = q.move_points.to_numpy() * q.execution_eligible.to_numpy()
-                        pp = np.where(pu, 1.0, 0.0)
-                        for st in ("long_short", "long_only", "short_only"):
-                            pos = positions(pp, st) * q.execution_eligible.to_numpy()
-                            T.append({"frequency": freq, "model": m, "strategy": st, **trades(pos, mv),
-                                      "net_usd_at_5": trades(pos, mv, COST_ALT)["net_usd"]})
                 # ---- volatility (Timestral sample: only rows with a causal calibration, the
                 # same rows for Timestral and the benchmarks)
                 if rows == "timestral_sample" and "_ts_vol_ok" in q:
@@ -358,7 +357,7 @@ def evaluate(run):
                                    r2_log_vs_har_ci_hi_pct=100 * hhi, voldir_diff_vs_har_pp=100 * hd,
                                    voldir_vs_har_ci_lo_pp=100 * hdlo, voldir_vs_har_ci_hi_pp=100 * hdhi)
                     V.append(row)
-    return info, pd.DataFrame(R), pd.DataFrame(D), pd.DataFrame(V), pd.DataFrame(T), CAL
+    return info, pd.DataFrame(R), pd.DataFrame(D), pd.DataFrame(V), CAL
 
 
 def select(R, D, V):
@@ -387,7 +386,7 @@ def select(R, D, V):
     return c, sel.reset_index(drop=True)
 
 
-def test_row(task, r, R, D, V, T):
+def test_row(task, r, R, D, V):
     rows = "timestral_sample" if is_timestral(r.model) else "all"
     if task == "return":
         x = R[(R.split == "test") & (R.rows == rows) & (R.frequency == r.frequency) & (R.model == r.model)].iloc[0]
@@ -421,7 +420,7 @@ def test_row(task, r, R, D, V, T):
 def charts(run, sel, out, info):
     plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 11, "axes.spines.top": False,
                          "axes.spines.right": False})
-    files = {}
+    files, by_year = {}, {}
     for _, r in sel.iterrows():
         p = pd.read_parquet(run / f"predictions_{r.frequency}.parquet")
         q = p[p.split == "test"]
@@ -449,19 +448,28 @@ def charts(run, sel, out, info):
             ax.set_ylabel("realized next return (bp)")
             ax.legend(frameon=False, fontsize=8.5)
         elif r.task == "direction":
+            # accuracy gain over the majority class per test year, 95% session-block interval
+            c = info[r.frequency]["consts"]["majority_direction"]
+            y = q.y3.to_numpy()
+            d = ((np.where(q[col].to_numpy() >= 0.5, 1, -1) == y).astype(float) - (y == c)) * 100
+            yr = pd.to_datetime(q.session_id).dt.year.to_numpy()
+            sess = q.label_session_id.to_numpy()
+            g = []
+            for k in sorted(set(yr)):
+                mk = yr == k
+                est, lo, hi, _ = block_boot(d[mk], sess[mk])
+                g.append((str(k), est, lo, hi))
+            est, lo, hi, _ = block_boot(d, sess)
+            g.append(("all", est, lo, hi))
+            g = pd.DataFrame(g, columns=["year", "y", "lo", "hi"])
+            by_year[int(r.id)] = g.rename(columns={"y": "gain_pp", "lo": "ci_lo_pp", "hi": "ci_hi_pp"}).to_dict("records")
             fig, ax = plt.subplots(figsize=(6.4, 3.6), dpi=200)
-            pu = q[col].to_numpy()
-            mv = q.move_points.to_numpy() * q.execution_eligible.to_numpy()
-            ts = pd.to_datetime(q.entry_at)
-            for st, colr, lab in (("long_short", "#1f5fa8", "Long & Short"), ("long_only", "#2e8b57", "Long only"),
-                                  ("short_only", "#c0392b", "Short only")):
-                pos = positions(pu, st) * q.execution_eligible.to_numpy()
-                pnl = pos * mv * MULT - COST * (pos != 0)
-                ax.plot(ts, np.cumsum(pnl) / 1e3, color=colr, lw=1.4, label=lab)
-            ax.axhline(0, color="#999", lw=0.8)
-            ax.set_ylabel("cumulative net P&L ($ thousand)")
-            ax.legend(frameon=False, fontsize=9)
-            fig.autofmt_xdate()
+            colors = ["#9db6d6"] * (len(g) - 1) + ["#1f5fa8"]
+            ax.bar(g.year, g.y, color=colors, width=0.6)
+            ax.errorbar(g.year, g.y, yerr=[g.y - g.lo, g.hi - g.y], fmt="none", ecolor="#333", capsize=3, lw=1)
+            ax.axhline(0, color="#888", lw=0.8)
+            ax.set_ylabel("accuracy minus majority (pp)")
+            ax.set_xlabel("test year (2021 from July; 2025 to the end of the test)")
         else:
             f, y = q[col].to_numpy(), q.lrv_next.to_numpy()
             b = pd.qcut(pd.Series(f).rank(method="first"), 20, labels=False)
@@ -483,7 +491,7 @@ def charts(run, sel, out, info):
         fig.savefig(fp)
         plt.close(fig)
         files[int(r.id)] = fp.name
-    return files
+    return files, by_year
 
 
 def clean(o):
@@ -504,22 +512,20 @@ def main(run, out=None):
     run = Path(run)
     out = Path(out) if out else run / "report"
     out.mkdir(parents=True, exist_ok=True)
-    info, R, D, V, T, CAL = evaluate(run)
+    info, R, D, V, CAL = evaluate(run)
     cand, sel = select(R, D, V)
-    tests = [test_row(r.task, r, R, D, V, T) for _, r in sel.iterrows()]
+    tests = [test_row(r.task, r, R, D, V) for _, r in sel.iterrows()]
+    prof = data_profile(run, info)
+    prof.to_csv(out / "data_profile.csv", index=False)
     five = pd.concat([sel, pd.DataFrame(tests)], axis=1)
     R.to_csv(out / "results_return.csv", index=False)
     D.to_csv(out / "results_direction.csv", index=False)
     V.to_csv(out / "results_volatility.csv", index=False)
-    T.to_csv(out / "trading_direction_test.csv", index=False)
     cand.to_csv(out / "selection_validation_ranking.csv", index=False)
     five.to_csv(out / "selected_five.csv", index=False)
     (out / "timestral_calibration.json").write_text(json.dumps(clean(CAL), indent=1), encoding="utf-8")
-    files = charts(run, sel, out, info)
+    files, by_year = charts(run, sel, out, info)
     models = pd.read_csv(run / "models.csv")
-    tr = {}
-    for _, r in sel[sel.task == "direction"].iterrows():
-        tr[int(r.id)] = T[(T.frequency == r.frequency) & (T.model == r.model)].to_dict("records")
     tested = pd.concat([R[["frequency", "model"]].assign(task="return"), D[["frequency", "model"]].assign(task="direction"),
                         V[["frequency", "model"]].assign(task="volatility")]).drop_duplicates()
     tested.to_csv(out / "configurations_tested.csv", index=False)
@@ -530,11 +536,11 @@ def main(run, out=None):
     deck = {"run_id": run.name, "dataset": info, "n_models_tested": int(tested.model.map(
                 lambda m: "timestral" if is_timestral(m) else m).nunique()),
             "n_configs": int(len(tested)), "selected": five.to_dict("records"), "charts": files,
-            "trading": tr, "models": models.to_dict("records"),
+            "data_profile": prof.to_dict("records"), "models": models.to_dict("records"),
             # qualitative Timestral outcome per timeframe (interval above zero on test); numbers in results_*.csv
             "timestral_outcome": ts,
-            "costs": {"round_trip_usd": COST, "alt_round_trip_usd": COST_ALT, "slippage": "zero",
-                      "fills": "100% at the next candle's open (idealised)"}}
+            # direction: accuracy gain over the majority class per test year (block-bootstrap interval)
+            "direction_by_year": by_year}
     (out / "deck_data.json").write_text(json.dumps(clean(deck), indent=1), encoding="utf-8")
     pd.set_option("display.width", 250)
     print(five[["id", "task", "model", "frequency", "val_z", "slot", "key_metric", "baseline", "improvement"]].to_string())

@@ -1,7 +1,0 @@
-{
-  "name": "nasdaq-multitarget-deck",
-  "private": true,
-  "description": "Builds the 8-slide multi-target deck from deck_data.json",
-  "scripts": { "build": "node build_deck.js NASDAQ_multitarget_report.pptx" },
-  "dependencies": { "pptxgenjs": "3.12.0" }
-}
