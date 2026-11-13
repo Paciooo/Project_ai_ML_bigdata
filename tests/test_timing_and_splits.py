@@ -164,6 +164,36 @@ def test_causal_quarantine_prefix_invariant():
     assert info["n_quarantine_window"] > 0
 
 
+def test_flag_provenance_survives_dropping_an_out_of_schedule_predecessor():
+    # Wed 2024-01-10, CT = UTC-6: 15:55-15:59 CT in schedule, a bad print at 16:59 CT
+    # (daily break, out of schedule), the reopen at 17:00 CT back at the normal level
+    t = pd.to_datetime(["2024-01-10 21:55", "2024-01-10 21:56", "2024-01-10 21:57", "2024-01-10 21:58",
+                        "2024-01-10 21:59", "2024-01-10 22:59", "2024-01-10 23:00", "2024-01-10 23:01"], utc=True)
+    c = np.array([100.0, 100.1, 100.0, 100.05, 100.0, 90.0, 100.02, 100.03])
+    bars = pd.DataFrame({"bar_start": t, "bar_end": t + pd.Timedelta("1min"), "open": c, "high": c,
+                         "low": c, "close": c, "volume": 1})
+    bars["available_at"] = bars["bar_end"]
+    bars["suspect"] = quality.flag_suspect(bars, 0.02)               # as experiment.load_minutes
+    det = quality.suspect_details(bars, 0.02)
+    assert [d["bar_start_utc"] for d in det] == [str(t[5]), str(t[6])]
+    d = det[1]                                                        # the in-schedule reopen bar
+    assert d["prev_bar_start_utc"] == str(t[5]) and d["prev_close"] == 90.0
+    assert d["flag_log_return_pct"] == pytest.approx(100 * np.log(100.02 / 90.0), abs=1e-3)
+    assert all(abs(x["flag_log_return_pct"]) > x["threshold_pct"] for x in det)
+    m, rep = tf.add_sessions(bars)
+    assert rep["bars_outside_schedule_dropped"] == 1 and t[5] not in set(m["bar_start"])
+    i = int(np.flatnonzero(m["bar_start"] == t[6])[0])
+    assert bool(m["suspect"].iloc[i])                                  # the flag is kept unchanged ...
+    filtered = 100 * np.log(m["close"].iloc[i] / m["close"].iloc[i - 1])
+    assert abs(filtered) < 0.1 and m["bar_start"].iloc[i - 1] == t[4]   # ... though vs the kept bar it is ~0
+
+
+def test_load_minutes_reports_flag_provenance():
+    import experiment
+    _, _, rep, _ = experiment.load_minutes("fixture", smoke=True)
+    assert len(rep["suspect_flag_details"]) == rep["n_suspect_minutes"]
+
+
 def test_validate_bars_rejects_bad_ohlc():
     b = tf.aggregate(minutes(1), "1min")
     b.loc[3, "high"] = b.loc[3, "low"] - 1

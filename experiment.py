@@ -127,6 +127,9 @@ def load_minutes(source, years=None, spike_policy="quarantine", smoke=False, fix
         bars["suspect"] = False
     elif spike_policy == "quarantine":
         bars["suspect"] = quality.flag_suspect(bars, config.SPIKE_THRESHOLD)
+        # provenance of each flag, on the unfiltered sequence the flag was computed on
+        # (add_sessions below drops out-of-schedule bars, possibly the predecessor itself)
+        rep["suspect_flag_details"] = quality.suspect_details(bars, config.SPIKE_THRESHOLD)
     elif spike_policy == "none":
         bars["suspect"] = False
     else:

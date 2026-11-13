@@ -18,10 +18,34 @@ removed from the project.
   SQUARED log-RV error (not RMSE; vs HAR-OLS stated separately); the ranking
   is not pre-registered (volatility score revised after test numbers);
   statistical accuracy only, economic value not studied; no option strategies.
-* Known sample issues (README "Sample checks"): the daily test loses 304 of
-  1,002 sessions to the 50-session flagged-bar window (ends 2025-01-30);
-  incomplete intraday candles are accepted (impact < 0.4 points). Fixing
-  either needs a new run: propose it, do not run it unasked.
+* Known sample issues (README "Sample checks"): 304 of 1,002 daily test
+  sessions lie in the 50-session flagged-bar window and are excluded (50 of
+  them only because of a flag measured against a dropped 16:59 CT bar); 56
+  more are excluded for label eligibility; 642 kept (ends 2025-01-30). Daily
+  results = filtered sample, exploratory: never "volatility predictable on
+  every horizon" without that caveat; the daily issue is documented, NOT
+  resolved. Flags are computed before the schedule filter: describe them with
+  `suspect_flag_details` (the values that generated them), not with
+  filtered-sequence returns; timing/persistence are clues, not proof.
+  Incomplete intraday candles are accepted; the < 0.4-point figure is a
+  rescoring of saved TEST forecasts only (training, features and a refit not
+  evaluated). Fixing either needs a new run: propose it, do not run it
+  unasked.
+* Prices are additively back-adjusted (TradeStation): percentage returns are
+  compressed (vs ^NDX: std ratio 0.42 in 2006-2012, 0.90 in the test;
+  re-levelled correlation 0.998; re-levelling = retrospective estimate from
+  Yahoo, not the contract prices), README "Sample checks" C, appendix A6,
+  `tools/yahoo_compare.py`. Effect on relative performance NOT measured
+  (never write "should change little"); a fix (ratio adjustment) needs a new
+  run.
+* Yahoo day-by-day comparison: the reconciled daily close-to-close returns
+  of all 16 flagged sessions and of the 292 excluded test sessions with a
+  quote agree with ^NDX / NQ=F within 0.5 pp. "Confirmed" = closing returns
+  only (range not in the rule): it suggests the quarantine also removes
+  plausible sessions, it does not verify minutes or RV. Never call Yahoo a
+  certification of data quality. A
+  daily filter based on this comparison (about 921 test sessions) was proposed; the
+  user chose "documentation only" (2026-11-13): no new run.
 * The study is statistical only: no trading rules, P&L, costs or equity
   curves anywhere in the main project, at the user's request.
 * Exploratory verdict: realized volatility predictable (log-RV R² vs

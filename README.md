@@ -41,7 +41,10 @@ here is a blind, confirmatory test.
 ## Results (run `20261112T050812Z_82953a_final`)
 
 **Answer (exploratory): realized volatility is the most predictable
-characteristic in this study, on every candle length tested. For next-candle
+characteristic in this study, on every intraday candle length tested (5
+minutes to 1 hour); on daily candles it beats persistence too, but only on a
+filtered sample that under-represents turbulent periods (see "Sample
+checks"), so the daily result is not a robust conclusion. For next-candle
 returns no improvement over forecasting zero was demonstrated with the
 models, data and horizons tried. For next-candle direction a small accuracy
 gain was measured on 5-minute candles only, and it is not stable across the
@@ -68,8 +71,15 @@ that task and candle length, scored on the test (95% interval):
 | Volatility: squared log-RV error cut vs HAR-OLS (%) | **6.8 [6.2, 7.3]** | **10.3 [8.8, 11.6]** | **16.7 [14.5, 18.7]** | **26.1 [23.8, 28.5]** | 7.6 [−0.9, 14.6] |
 
 Bold: interval above zero. The gain over HAR-OLS grows with candle length up
-to one hour; on daily candles (642 test sessions, see "Sample checks") the
-interval includes zero.
+to one hour; on daily candles the interval includes zero.
+
+> **Daily caveat.** The 1-day column is a filtered sample: 642 of the 1,002
+> daily test sessions. 304 sessions lie within 50 sessions after a session
+> with a flagged 1-minute bar and are excluded by the data-quality filter
+> (another 56 for other reasons, below), so turbulent periods are
+> under-represented. The daily results are exploratory and hold for this
+> filtered sample only; they say nothing robust about the unfiltered daily
+> series.
 
 ### Five models per task (slides 6–8, `comparison_by_task.csv`)
 
@@ -169,19 +179,40 @@ Measured from the 1-minute data and the saved forecasts, without training.
 to 2025-05-30 are dropped. 84 of them fall within 50 sessions after a session
 containing a flagged 1-minute bar: `study.build` keeps a row only if none of
 the last 50 candles contains one (`clean50`), and `quality.flag_suspect`
-flags any 1-minute bar whose log return exceeds 2% in absolute value. The
-flags are on 2025-02-03 (−2.7%), 2025-04-07 (−4.5%) and 2025-04-09 (+2.6%);
+flags any 1-minute bar whose log return against the previous bar exceeds 2%
+in absolute value. The flags are on 2025-02-03, 2025-04-07 and 2025-04-09;
 2025-01-31 itself is dropped because its label session (2025-02-03) contains
-the flag. Over 2006–2025 there are 16 flagged bars; 9 come right after a gap
-of more than an hour (weekend, holiday or daily break) and the 2022 flags fall
-at 8:30 ET, when US macro data are released, so they look like genuine price
-moves rather than bad prints. Impact: 304 of the 1,002 daily test sessions
-(train 150, validation 115) lie in such 50-session windows, so the **daily
-sample under-represents turbulent periods**; the 642-session daily results
-should be read with that in mind. Intraday the window is 50 candles, a
-negligible loss. A correction (for example not flagging opening gaps)
-changes the sample and needs a new daily run; the saved results were not
-altered (see "Future experiments").
+the flag.
+
+*Which return generated each flag (diagnostic corrected).* The flag is
+computed in `experiment.load_minutes` on the unfiltered 1-minute sequence,
+before `timeframes.add_sessions` drops the bars outside the CME schedule. The
+first version of this diagnostic recomputed the returns after that filter, so
+for 5 of the 16 in-schedule flags it showed returns close to zero against a
+different predecessor. `load_minutes` now records, for every flag, the return
+that triggered it, the predecessor's time and price
+(`quality.suspect_details`, report key `suspect_flag_details`); the tool uses
+those values and reports the filtered-sequence returns separately
+(`filtered_*`). Flags and sample are unchanged. On the original sequence all
+21 flags (16 in schedule, 5 outside it and dropped) exceed 2%.
+
+| In-schedule flags | n | Verified facts | Clues (not proof) |
+|---|---|---|---|
+| Out-of-schedule predecessor | 5 (2010-03-17, 2013-03-12, 2017-03-24, 2019-03-14, 2023-03-16) | the predecessor is a 16:59 CT bar (daily break, dropped) 989–991 points below the bars just before and after it; the flagged bar returns to the earlier level (+7% to +27% vs that bar, under 0.05% vs the last kept bar) | same time and offset each time, in March: looks like a data artefact; cause not established |
+| Move persists 30 minutes later | 9 (2020-03-09, 2020-03-23, 2022-02-28, 2022-07-13, 2022-10-13, 2022-11-10, 2025-02-03, 2025-04-07, 2025-04-09) | −4.5% to +2.6% vs an in-schedule predecessor, still beyond 2% in the same direction 30 in-schedule minutes later | 5 follow a weekend gap; the 2022 ones fall at 8:30 ET (US data releases); 2025-04-09 at 13:19 ET. Consistent with genuine moves, not proof of them |
+| Unresolved | 2 (2020-03-02, 2020-03-16) | −2.4% and −3.0%, partly retraced within 30 minutes (−1.7%, −1.6%) | weekend reopening / 15-minute gap; nothing decisive |
+
+*Impact on the daily sample.* 304 of the 1,002 daily test sessions (train
+150, validation 115) lie in 50-session windows after an in-schedule flag and
+all 304 are excluded; 50 of them only because of the 2023-03-16 flag, whose
+predecessor is the dropped 16:59 CT bar, 254 because of flags whose move
+persists. Another 56 test sessions are excluded because their label is not
+the next session (`timeframes.next_label_eligible`; the conditions overlap), so 642
+are kept. The **daily sample under-represents turbulent periods**: the daily
+results are exploratory and refer to this filtered sample. Intraday the
+window is 50 candles, a negligible loss. Changing the filter changes the
+sample and needs a new daily run; this was not done, so the daily limitation
+is documented, not resolved (see "Future experiments").
 
 **B. Incomplete intraday candles.** `timeframes.aggregate` stores the number
 of 1-minute bars in each candle (`n_minutes`) but does not use it: a
@@ -200,11 +231,112 @@ outside the candles. Share of full-length candles with missing minutes:
 Missing minutes are concentrated overnight in 2006–2017 (54% of 5-minute
 candles in 2006, 0.02% in 2025), consistent with thin trading; in the test a
 few sessions with long gaps coincide with quarterly contract-roll days
-(e.g. 2021-09-09, 2022-09-08) and are dataset gaps. Rescoring the saved test
-forecasts without rows whose label candle is incomplete moves the rescored
-metrics (HAR-OLS, the 5-minute networks and XGBoost; return, direction,
-volatility) by at most 0.4 points (e.g. 5-minute DNN volatility 39.99% →
-40.00%, 1-hour XGBoost 51.95% → 52.34%): no conclusion changes.
+(e.g. 2021-09-09, 2022-09-08), consistent with dataset gaps.
+
+*Scope of the sensitivity check.* The saved test forecasts were rescored
+without the rows whose label candle is incomplete (point estimates; HAR-OLS,
+the 5-minute networks and XGBoost; return, direction, volatility): the
+rescored metrics move by at most 0.4 points (e.g. 5-minute DNN volatility
+39.99% → 40.00%, 1-hour XGBoost 51.95% → 52.34%). This check does **not**
+measure the effect of incomplete candles in the training data, their effect
+on the features of the rows that were kept, or the result of re-training on
+corrected data. The conclusions are unchanged in this check on the test
+sample; the impact on the historical training data was not evaluated.
+
+**C. External comparison with Yahoo Finance: daily returns of the excluded
+sessions, and back-adjusted percentage returns.** `tools/yahoo_compare.py` builds daily candles from the
+1-minute bars (same session calendar as the study) and compares them with
+Yahoo Finance daily data: NQ=F (front-month futures, not back-adjusted) and
+^NDX (cash index, close at 16:00 ET). Only summary statistics are saved
+(`yahoo_check.json`, appendix A6); the Yahoo files stay in the gitignored
+`data_raw/yahoo/`.
+
+*Measured.* The TradeStation series is back-adjusted **additively**: every
+roll gap is added to all earlier prices. Its level is about 2,200 points
+above the unadjusted futures price in 2006–2022, about 770 in 2024 and 170 in
+2025 (median of Yahoo NQ=F minus futures-data per year). Additive adjustment
+keeps point changes, not percentages, so a log return computed on the
+adjusted price is scaled by roughly unadjusted/adjusted price, a factor that
+changes slowly over time. Daily log returns, futures-data at 15:00 CT
+(= 16:00 ET) against ^NDX:
+
+| Period | Std ratio (as used) | Beta (as used) | Std ratio, re-levelled | Correlation, re-levelled |
+|---|---|---|---|---|
+| 2006–2012 | 0.42 | 0.42 | 0.98 | 0.996 |
+| 2013–2020 | 0.74 | 0.74 | 1.00 | 0.999 |
+| Train + validation (to 2021-07-14) | 0.59 | 0.56 | 0.99 | 0.998 |
+| Test (2021-07-15 → 2025-05-30) | 0.90 | 0.89 | 0.99 | 0.998 |
+
+"Re-levelled" adds back an estimated offset: the centred 21-day rolling
+median of Yahoo NQ=F minus futures-data. This is a retrospective
+reconciliation built from Yahoo itself; it does not recover the original
+prices of the individual contracts and is not a fully independent
+validation. After it, the daily returns are close to the cash index (whole
+period: correlation 0.998, beta 0.99, mean absolute difference 0.05
+percentage points), which is consistent with the gap in return scale coming
+from the additive adjustment. Against Yahoo NQ=F
+itself the match is looser (correlation 0.96) because NQ=F has its own roll
+artefacts (e.g. 2020-03-23: −6.0% against +0.2% for ^NDX).
+
+*Consequences (not measured).* Returns and realized volatility in the study
+are in "adjusted-percentage" units: by the estimate above, 2006–2012 returns
+are about 0.4× and test returns about 0.9× the percentage moves of the
+traded contract, and log-RV is shifted by about 2·log of that factor (about
+−1.7 in 2006–2012, −0.3 to 0 in the test). The sign of a within-contract
+change is not affected by an additive shift. The factor changes over time
+and differs between training and test, and the 2% flag threshold
+corresponds to about 4–5% moves in 2006–2012. **The effect on the relative
+performance (models vs benchmarks) was not measured**: comparing a model and
+its benchmark on the same series does not guarantee that their difference
+stays the same after the correction. None of this was re-estimated: it needs the series rebuilt with ratio
+(multiplicative) adjustment or per-contract returns, and a new run (see
+"Future experiments"). This check does not explain the 16:59 CT bars about
+990 points off (A above): that is not the size of the level offset on those
+dates (about 1,950–2,340 points).
+
+*Day by day: do the daily returns of the excluded sessions agree with Yahoo?*
+A daily session is called **confirmed** when its re-levelled close-to-close
+return is within 0.5 percentage points of ^NDX (15:00 CT close) or of Yahoo
+NQ=F (session close); the typical gap to ^NDX is 0.03 pp (95th percentile
+0.16 pp). Sessions without a Yahoo quote are counted apart. "Confirmed"
+refers to closing returns only: the daily range is computed and reported but
+is not part of the rule, so a session with a wrong high or low would still be
+confirmed if its closes agree. The check does not validate the whole daily
+candle, the single minutes or the realized volatility.
+
+* All 16 sessions with an in-schedule flagged minute are confirmed; their
+  daily range is also close to NQ=F's (descriptive, not part of the rule)
+  (e.g. 2023-03-16, the 16:59 CT case: +2.68% vs
+  ^NDX +2.66%, range 3.40% vs 3.32%; 2020-03-16, unresolved above: −13.4% vs
+  −13.0%; 2025-04-09: +11.1% vs +11.4%). The 16:59 CT bars are outside the
+  schedule and dropped; on the other flagged days the cash index shows a
+  large move too.
+
+| Daily sessions | With a Yahoo quote | Confirmed | Median gap to ^NDX |
+|---|---|---|---|
+| Test, in the 50-session windows (excluded) | 292 of 304 | 100% | 0.034 pp |
+| Test, outside the windows | 658 of 698 | 99.5% | 0.030 pp |
+| All splits, in the windows | 551 of 569 | 99.6% | 0.032 pp |
+| All splits, outside the windows | 4,214 of 4,442 | 99.7% | 0.032 pp |
+
+* Only 13 sessions in 2006–2025 disagree (3 in the test: 2023-09-15,
+  2023-12-18, 2024-12-23). Almost all fall on a quarterly expiry Friday or
+  the Monday after it, consistent with the contract switch in the continuous
+  series rather than with bad prices; 2020-03-18/19 were futures limit-down
+  days. None of them is among the excluded sessions.
+
+**Conclusion.** The reconciled daily returns of the excluded sessions agree
+with the Yahoo references within the chosen tolerance. This suggests that
+the quarantine also removes plausible sessions, but it does not verify the
+correctness of the single minutes or of the realized volatility; Yahoo is
+not a certification of data quality. A daily filter based on this check (a flagged minute excludes a
+session only if Yahoo does not confirm its daily candle) would currently
+remove no session and keep about 921 of the 1,002 daily test sessions
+(the 81 whose label is not the next session stay out). This was **not**
+applied: it needs a new daily run (see "Future experiments"), so the daily
+limitation remains documented, not resolved. The check uses only end-of-day
+data and cannot validate single minutes; Yahoo NQ=F and ^NDX have their own
+errors (one reference is enough to confirm a day for that reason).
 
 ## Timestral on the same sample (`tools/timestral_same_sample.py`, appendix A4)
 
@@ -238,8 +370,11 @@ intervals in `timestral_same_sample.csv`):
 
 * Instrument: **NQ**, E-mini Nasdaq-100 futures (CME), back-adjusted
   continuous TradeStation 1-minute series (sessions before the 2025-06-02
-  confirmatory hold-out), $20 per index point. No QQQ, MNQ, cash index or VIX
-  data is mixed in.
+  confirmatory hold-out), $20 per index point. The adjustment is additive:
+  percentage returns are compressed by up to about 60% in early years and
+  about 10% in the test (estimated against Yahoo Finance, "Sample checks" C).
+  No QQQ, MNQ, cash index or VIX data enters features or targets; Yahoo
+  daily data (^NDX, NQ=F) are used only for that external check.
 * Timeframes: 5 min, 15 min, 30 min, 1 hour, 1 day (one CME session,
   17:00–16:00 CT), all rebuilt from the 1-minute bars inside each session
   (`timeframes.aggregate`; `30min` was added to `FREQUENCIES` for this study).
@@ -438,13 +573,21 @@ with a check that no calibration target falls after the origins it is used
 for, and the HAR-OLS comparisons), the ranking rules, the five-model tables,
 the timeframe map, the selected-five fields, every value of
 `data_profile.csv`, the per-year direction gains and the deck data (run id,
-rows, charts, appendix inputs, no trading fields, no VIX). On the final run,
-with the presentation folder: 3,960 checks, 0 problems. The unit tests
-(`pytest`, 41 tests) cover targets, timing, sessions, splits,
-bootstrap, the ranking rule and the causal Timestral calibration.
+rows, charts, appendix inputs, no trading fields, no VIX). It also checks
+the content of `sample_checks.json`: every flag above the threshold and
+equal to the log return against its recorded predecessor, the categories
+re-derived from their rule, the counts and the daily accounting adding up,
+the daily test rows equal to the saved forecasts, no saved daily forecast
+within 50 sessions of an in-schedule flag, and the all-rows rescoring of the
+incomplete-candle check. On the final run, with the presentation folder:
+4,128 checks, 0 problems. The unit tests (`pytest`, 43 tests) cover
+targets, timing, sessions, splits, bootstrap, the ranking rule, the causal
+Timestral calibration and the flag provenance (a flag whose predecessor is
+an out-of-schedule bar dropped later).
 
 **What they do not cover.** The raw 1-minute data and the candle building
-(checked separately by `tools/sample_checks.py`); the training (models were
+(measured by `tools/sample_checks.py`; the verifier checks that tool's output
+for coherence but does not re-read the 1-minute prices); the training (models were
 not re-fitted); the bootstrap intervals (only their order is checked). The
 final run used an uncommitted version of `multitarget.py`: its hash in
 `run.json` (`a448847f…`) matches no committed version. The known later
@@ -468,8 +611,13 @@ Tools: `sample_checks.json`, `timestral_same_sample.csv/.json`.
 ## Future experiments (proposed, not run; by benefit and cost)
 
 1. **Daily sample fix** — high benefit, low cost (daily data set is small):
-   flag only isolated reverting spikes, not opening gaps, then re-run
-   `multitarget.py --freqs session` as a new run; compare with the saved one.
+   for daily candles, let a flagged minute exclude a session only if the
+   Yahoo comparison ("Sample checks" C) does not confirm its daily return
+   (ideally extended to the daily range and to RV) (today:
+   no session; test about 921 of 1,002 sessions instead of 642), keeping the
+   old rule as the default for reproducibility; then re-run
+   `multitarget.py --freqs session` as a new run, merge it with the intraday
+   predictions of the saved run and compare with the saved daily results.
 2. **Aligned Timestral targets** — medium benefit, low–medium cost: forecast
    open and close of t+1 (body direction) and the quantiles of the next
    candle's 1-minute returns, derive RV from Timestral's own path, and add
@@ -481,9 +629,16 @@ Tools: `sample_checks.json`, `timestral_same_sample.csv/.json`.
 4. **Economic evaluation of volatility forecasts** — medium benefit, medium
    cost: e.g. volatility-targeted position sizing with realistic costs,
    reported separately from the statistical results.
-5. **Incomplete-candle policy** — low benefit (impact < 0.4 points), medium
+5. **Incomplete-candle policy** — benefit unknown beyond the test rescoring
+   (< 0.4 points there; training and features not evaluated), medium
    cost: use `n_minutes` to drop or flag candles in dataset-gap sessions, then
    a full re-run.
+6. **Ratio-adjusted prices** — benefit unknown (the effect on relative
+   performance was not measured; absolute return and volatility levels and
+   the training history are scaled),
+   medium–high cost: rebuild the continuous series with multiplicative
+   adjustment (or compute returns within each contract), recompute the data
+   quality flags, then a full re-run compared with the saved one.
 
 ## Repository map
 

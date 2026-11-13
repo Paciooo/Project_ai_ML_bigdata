@@ -91,6 +91,24 @@ def flag_suspect(bars, threshold):
     return (r > threshold).fillna(False).to_numpy()
 
 
+def suspect_details(bars, threshold):
+    """Provenance of every flag of flag_suspect, on the SAME sequence the flag
+    was computed on (before any schedule filter): the flagged bar, the log
+    return that triggered it, and the predecessor bar it was measured against.
+    Diagnostics only: the flags themselves are unchanged."""
+    lr = np.log(bars["close"].to_numpy(float))
+    flags = flag_suspect(bars, threshold)
+    rows = []
+    for i in np.flatnonzero(flags):
+        t, tp = pd.Timestamp(bars["bar_start"].iloc[i]), pd.Timestamp(bars["bar_start"].iloc[i - 1])
+        rows.append({"bar_start_utc": str(t), "close": float(bars["close"].iloc[i]),
+                     "flag_log_return_pct": round(100 * float(lr[i] - lr[i - 1]), 4),
+                     "prev_bar_start_utc": str(tp), "prev_close": float(bars["close"].iloc[i - 1]),
+                     "minutes_since_prev": float((t - tp) / pd.Timedelta("1min")),
+                     "threshold_pct": 100 * threshold})
+    return rows
+
+
 def legacy_remove_reverting_spikes(bars, threshold):
     """OLD rule, future-dependent: drop a bar whose jump reverts at the next bar."""
     r = np.log(bars["close"]).diff()

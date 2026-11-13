@@ -6,8 +6,13 @@ A. Daily sample end. Traces, filter by filter, why daily rows after
    2025-01-30 are not in the data set, and how many daily rows of each split
    fall in the 50-session "no flagged minute" window of study.build. Lists
    every flagged 1-minute bar (|1-min log return| > 2%, quality.flag_suspect)
-   with the gap to the previous bar, so a weekend/holiday opening gap can be
-   told apart from an isolated bad print.
+   with the values that generated the flag: the flag is computed BEFORE the
+   schedule filter (timeframes.add_sessions), so its predecessor can be an
+   out-of-schedule bar that the experiment later drops. Those values come
+   from experiment.load_minutes (report key suspect_flag_details); values
+   recomputed on the filtered, in-schedule sequence are reported separately
+   (filtered_*). Categories are descriptive and do not prove that a price is
+   genuine or wrong.
 
 B. Incomplete intraday candles. A full-length candle (not `is_partial`) can
    contain fewer 1-minute bars than scheduled: timeframes.aggregate counts
@@ -35,6 +40,7 @@ import config  # noqa: E402
 import experiment  # noqa: E402
 import multitarget  # noqa: E402
 import study  # noqa: E402
+import timeframes  # noqa: E402
 
 FREQS = ("5min", "15min", "30min", "1h")
 SPLIT_EDGES = ("2017-08-25", "2021-07-15", "2025-06-02")
@@ -45,7 +51,7 @@ def split_of(sid):
     return np.where(sid < a, "train", np.where(sid < b, "val", np.where(sid < c, "test", "after")))
 
 
-def daily_checks(minutes):
+def daily_checks(minutes, rep):
     b, elig = experiment.bars_for(minutes, None, "session")
     b = b.reset_index(drop=True)
     X = multitarget.build(minutes, "session")[0]
@@ -66,13 +72,87 @@ def daily_checks(minutes):
                             "label_not_next_session": int((lost & ~pd.Series(elig)).sum())},
            "daily_rows_in_50_session_window_by_split": pd.Series(~clean50.to_numpy()).groupby(split_of(sid)).sum().astype(int).to_dict(),
            "daily_sessions_by_split": pd.Series(1, index=b.index).groupby(split_of(sid)).sum().astype(int).to_dict()}
-    lr = np.log(minutes["close"]).diff()
-    gap = minutes["bar_start"].diff() / pd.Timedelta("1min")
-    m = minutes[minutes["suspect"].astype(bool)]
-    out["flagged_minutes"] = [{"session": str(r.session_id.date()), "bar_start_utc": str(r.bar_start),
-                               "log_return_pct": round(100 * float(lr[i]), 2), "minutes_since_previous_bar": float(gap[i])}
-                              for i, r in zip(m.index, m.itertuples())]
-    out["flagged_after_gap_over_60min"] = int((gap[m.index] > 60).sum())
+    test_lost = (split_of(sid) == "test") & ~kept
+    nxt = susp.shift(-1, fill_value=False).to_numpy()
+    out["daily_test_sessions_not_in_data_set_by_condition (not exclusive)"] = {
+        "total": int(test_lost.sum()),
+        "label_session_contains_flagged_minute": int((test_lost & nxt).sum()),
+        "flagged_minute_in_feature_window": int((test_lost & ~window_clean.to_numpy()).sum()),
+        "flagged_minute_in_last_50_sessions (study.build)": int((test_lost & ~clean50.to_numpy()).sum()),
+        "label_not_next_session": int((test_lost & ~np.asarray(elig)).sum()),
+        "none_of_the_above": int((test_lost & clean50.to_numpy() & ~nxt & np.asarray(elig)).sum())}
+    out.update(flag_checks(minutes, rep, b, sid, susp, clean50, kept))
+    return out
+
+
+PERSIST_MIN = 30      # in-schedule minutes after the flag used to describe what the price did next
+
+
+def flag_checks(minutes, rep, b, sid, susp, clean50, kept):
+    """Flagged 1-minute bars, described with the values that GENERATED each
+    flag (quality.suspect_details on the unfiltered sequence, stored by
+    experiment.load_minutes) and, separately labelled, with values recomputed
+    on the in-schedule sequence the experiment uses. Categories are
+    descriptive; none of them proves that a price was genuine or wrong."""
+    thr = 100 * config.SPIKE_THRESHOLD
+    det = rep["suspect_flag_details"]
+    t_in = pd.DatetimeIndex(minutes["bar_start"])
+    pos = pd.Series(np.arange(len(minutes)), index=t_in)
+    lc = np.log(minutes["close"].to_numpy(float))
+    rows = []
+    for d in det:
+        t, tp = pd.Timestamp(d["bar_start_utc"]), pd.Timestamp(d["prev_bar_start_utc"])
+        cal = timeframes.session_calendar(pd.DatetimeIndex([t, tp]))
+        r = dict(d, consistent_with_threshold=bool(abs(d["flag_log_return_pct"]) > thr
+                                                  and abs(100 * np.log(d["close"] / d["prev_close"]) - d["flag_log_return_pct"]) < 1e-3),
+                 bar_in_schedule=bool(cal.in_schedule[0]), prev_in_schedule=bool(cal.in_schedule[1]),
+                 bar_time_et=str(t.tz_convert("America/New_York").strftime("%a %H:%M")))
+        if r["bar_in_schedule"]:
+            i = int(pos[t])
+            r["session"] = str(minutes["session_id"].iloc[i].date())
+            r["filtered_prev_bar_start_utc"] = str(minutes["bar_start"].iloc[i - 1])
+            r["filtered_log_return_pct"] = round(100 * float(lc[i] - lc[i - 1]), 4)
+            j = min(i + PERSIST_MIN, len(lc) - 1)
+            r[f"log_change_flag_prev_to_{PERSIST_MIN}_in_schedule_min_later_pct"] = round(100 * float(lc[j] - np.log(d["prev_close"])), 3)
+            later = r[f"log_change_flag_prev_to_{PERSIST_MIN}_in_schedule_min_later_pct"]
+            if not r["prev_in_schedule"] and abs(r["filtered_log_return_pct"]) < thr:
+                r["category"] = "out_of_schedule_predecessor"     # flag measured against a bar the experiment drops
+            elif np.sign(later) == np.sign(d["flag_log_return_pct"]) and abs(later) > thr:
+                r["category"] = "move_persists_30min"
+            else:
+                r["category"] = "unresolved"
+        else:
+            r["category"] = "flagged_bar_out_of_schedule"         # dropped by add_sessions, no effect on the sample
+        rows.append(r)
+    out = {"flag_threshold_pct": thr, "flagged_minutes": rows,
+           "n_flags_unfiltered_sequence": len(rows),
+           "n_flags_in_schedule": sum(r["bar_in_schedule"] for r in rows),
+           "n_flags_inconsistent_with_threshold": sum(not r["consistent_with_threshold"] for r in rows),
+           "flag_categories_in_schedule": pd.Series([r["category"] for r in rows if r["bar_in_schedule"]]).value_counts().to_dict(),
+           "flagged_in_schedule_after_gap_over_60min": sum(r["bar_in_schedule"] and r["minutes_since_prev"] > 60 for r in rows)}
+    # daily test sessions in the 50-session window, by the category of the flags behind the window
+    sess_cat = {}
+    for r in rows:
+        if r["bar_in_schedule"]:
+            sess_cat.setdefault(pd.Timestamp(r["session"]), set()).add(r["category"])
+    sp = split_of(sid)
+    win = {}
+    for c in ("out_of_schedule_predecessor", "move_persists_30min", "unresolved"):
+        s = pd.Series([c in sess_cat.get(pd.Timestamp(x), ()) for x in sid], index=b.index)
+        win[c] = s.rolling(50, min_periods=1).max().astype(bool).to_numpy()
+    inw = ~clean50.to_numpy()
+    test = sp == "test"
+    only = lambda c: inw & win[c] & ~np.logical_or.reduce([win[o] for o in win if o != c])
+    out["daily_test_sessions_in_50_session_window_by_flag_category"] = {
+        "total_in_window": int((test & inw).sum()),
+        **{f"only_{c}": int((test & only(c)).sum()) for c in win},
+        "several_categories": int((test & inw & (np.sum([win[c] for c in win], axis=0) > 1)).sum())}
+    out["daily_test_sessions_accounting"] = {
+        "test_sessions": int(test.sum()), "in_data_set": int((test & kept).sum()),
+        "not_in_data_set": int((test & ~kept).sum()),
+        "not_in_data_set_and_in_50_session_window": int((test & ~kept & inw).sum()),
+        "not_in_data_set_outside_window": int((test & ~kept & ~inw).sum()),
+        "in_window_but_in_data_set": int((test & kept & inw).sum())}
     return out
 
 
@@ -129,7 +209,7 @@ def main(run, out):
     run, out = Path(run), Path(out)
     minutes, _, rep, _ = experiment.load_minutes("nq")
     res = {"note": "point estimates from saved forecasts; no training, no bootstrap",
-           "daily_sample": daily_checks(minutes), "incomplete_candles": candle_checks(minutes, run)}
+           "daily_sample": daily_checks(minutes, rep), "incomplete_candles": candle_checks(minutes, run)}
     (out / "sample_checks.json").write_text(json.dumps(res, indent=1, default=str), encoding="utf-8")
     d = res["daily_sample"]
     print(json.dumps({k: d[k] for k in d if k != "flagged_minutes"}, indent=1))

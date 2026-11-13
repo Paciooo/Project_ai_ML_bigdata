@@ -21,7 +21,15 @@ Checks:
     autocorrelations within sessions);
   * presentation: deck_data.json (report and presentation copies identical),
     run id, selected rows, data profile, charts present and identical, no
-    trading or P&L fields, no VIX.
+    trading or P&L fields, no VIX;
+  * sample_checks.json (tools/sample_checks.py): every flag above the
+    threshold and equal to log(close / predecessor close) on the sequence
+    that generated it, predecessor times, categories re-derived from their
+    rule, counts and the daily accounting adding up, the daily test rows
+    equal to the saved forecasts, no saved daily forecast within 50 sessions
+    of an in-schedule flag, and the all-rows rescoring of the incomplete-
+    candle check recomputed from the saved forecasts. The 1-minute prices and
+    the incomplete-candle classes themselves are not re-read.
 It does NOT re-run the bootstrap (interval values), rebuild the data from the
 1-minute bars or refit models.
 
@@ -297,13 +305,90 @@ def main(run, rep, pres=None):
         check(h(pres / "deck_data.json") == h(rep / "deck_data.json"), "presentation deck_data.json differs from the report")
         for fn in dd["charts"].values():
             check((pres / fn).exists() and h(pres / fn) == h(rep / fn), f"presentation chart {fn} differs")
-        for fn in ("sample_checks.json", "timestral_same_sample.json"):     # appendix inputs (tools/)
+        for fn in ("sample_checks.json", "timestral_same_sample.json", "yahoo_check.json"):     # appendix inputs (tools/)
             if (rep / fn).exists():
                 check((pres / fn).exists() and h(pres / fn) == h(rep / fn), f"presentation {fn} differs from the report")
+    if (rep / "sample_checks.json").exists():     # content of the sample diagnostics (tools/sample_checks.py)
+        try:
+            check_sample_checks(json.loads((rep / "sample_checks.json").read_text(encoding="utf-8")), run, info, check, close)
+        except KeyError as e:                     # e.g. a file written by the earlier version of the tool
+            check(False, f"sample_checks.json: missing field {e} (re-run tools/sample_checks.py)")
     print(f"{n} checks, {len(problems)} problems")
     for msg in problems[:50]:
         print("  " + msg)
     return 1 if problems else 0
+
+
+def check_sample_checks(sc, run, info, check, close):
+    """Internal consistency of sample_checks.json and its agreement with the
+    saved forecasts. Cannot re-read the 1-minute data: the flagged prices and
+    the incomplete-candle classes are checked for coherence, not re-measured."""
+    d = sc["daily_sample"]
+    thr = d["flag_threshold_pct"]
+    rows = d["flagged_minutes"]
+    check(len(rows) == d["n_flags_unfiltered_sequence"], "sample checks: flag count")
+    for r in rows:
+        tag = f"sample checks flag {r['bar_start_utc']}"
+        t, tp = pd.Timestamp(r["bar_start_utc"]), pd.Timestamp(r["prev_bar_start_utc"])
+        check(abs(r["flag_log_return_pct"]) > thr, f"{tag}: |flag return| not above the threshold")
+        check(abs(100 * np.log(r["close"] / r["prev_close"]) - r["flag_log_return_pct"]) < 1e-3, f"{tag}: flag return != log(close / prev close)")
+        check(tp < t and close((t - tp) / pd.Timedelta("1min"), r["minutes_since_prev"], 1e-9), f"{tag}: predecessor time")
+        check(r["consistent_with_threshold"] is True, f"{tag}: marked inconsistent")
+        if r["bar_in_schedule"]:
+            later = r["log_change_flag_prev_to_30_in_schedule_min_later_pct"]
+            if not r["prev_in_schedule"] and abs(r["filtered_log_return_pct"]) < thr:
+                cat = "out_of_schedule_predecessor"
+            elif np.sign(later) == np.sign(r["flag_log_return_pct"]) and abs(later) > thr:
+                cat = "move_persists_30min"
+            else:
+                cat = "unresolved"
+            check(r["category"] == cat, f"{tag}: category {r['category']} != rule {cat}")
+            check(not r["prev_in_schedule"] or r["filtered_prev_bar_start_utc"] == r["prev_bar_start_utc"],
+                  f"{tag}: in-schedule predecessor but different filtered predecessor")
+        else:
+            check(r["category"] == "flagged_bar_out_of_schedule", f"{tag}: category")
+    ins = [r for r in rows if r["bar_in_schedule"]]
+    check(d["n_flags_in_schedule"] == len(ins) and d["n_flags_inconsistent_with_threshold"] == 0, "sample checks: in-schedule / inconsistent counts")
+    check(d["flag_categories_in_schedule"] == pd.Series([r["category"] for r in ins]).value_counts().to_dict(), "sample checks: category counts")
+    check(d["flagged_in_schedule_after_gap_over_60min"] == sum(r["minutes_since_prev"] > 60 for r in ins), "sample checks: gap count")
+    # daily accounting vs the saved daily forecasts
+    a = d["daily_test_sessions_accounting"]
+    ps = pd.read_parquet(run / "predictions_session.parquet")
+    test_days = pd.DatetimeIndex(ps.loc[ps.split == "test", "session_id"])
+    check(a["in_data_set"] == len(test_days) == info["session"]["test"][2], "sample checks: daily test rows differ from the saved forecasts")
+    check(a["test_sessions"] == a["in_data_set"] + a["not_in_data_set"]
+          and a["not_in_data_set"] == a["not_in_data_set_and_in_50_session_window"] + a["not_in_data_set_outside_window"], "sample checks: daily accounting does not add up")
+    w = d["daily_test_sessions_in_50_session_window_by_flag_category"]
+    check(w["total_in_window"] == d["daily_rows_in_50_session_window_by_split"]["test"]
+          == sum(v for k, v in w.items() if k != "total_in_window"), "sample checks: window categories do not add up")
+    check(w["total_in_window"] == a["not_in_data_set_and_in_50_session_window"] + a["in_window_but_in_data_set"], "sample checks: window total")
+    c = d["daily_test_sessions_not_in_data_set_by_condition (not exclusive)"]
+    check(c["total"] == a["not_in_data_set"] and c["flagged_minute_in_last_50_sessions (study.build)"] == a["not_in_data_set_and_in_50_session_window"],
+          "sample checks: exclusion conditions")
+    # no saved daily forecast lies in the 50-session window after a flagged session
+    # (session calendar = sessions seen in the 5-minute forecasts plus the daily ones)
+    p5 = pd.read_parquet(run / "predictions_5min.parquet", columns=["session_id"])
+    cal = pd.DatetimeIndex(sorted(set(pd.DatetimeIndex(p5.session_id)) | set(pd.DatetimeIndex(ps.session_id))))
+    for r in ins:
+        s = pd.Timestamp(r["session"])
+        if cal[0] <= s <= cal[-1]:
+            k = cal.searchsorted(s)
+            check(not set(cal[k:k + 50]) & set(test_days), f"sample checks: daily forecast within 50 sessions of flag {r['session']}")
+    # incomplete candles: the all-rows rescoring recomputed from the saved forecasts
+    for freq, r in sc["incomplete_candles"].items():
+        q = pd.read_parquet(run / f"predictions_{freq}.parquet")
+        q = q[q.split == "test"]
+        check(r["test_rows"] == len(q) and 0 <= r["test_rows_label_candle_incomplete"] <= len(q), f"sample checks {freq}: test rows")
+        lv, ln, rr, y = q.lrv_next.to_numpy(), q.lrv_now.to_numpy(), q.ret_bps.to_numpy(), q.y3.to_numpy()
+        s = r["test_rescored"]["all_rows"]
+        for m in ("har_ols", "mlp_128-64-32", "xgboost"):
+            f = q[f"vol__{m}"].to_numpy()
+            check(abs(s[f"vol_R2_log_vs_persistence_pct_{m}"] - 100 * (1 - ((lv - f) ** 2).sum() / ((lv - ln) ** 2).sum())) < 6e-4, f"sample checks {freq}: vol {m}")
+        call = np.where(q["dir__mlp_256-128-64-32"].to_numpy() >= 0.5, 1, -1)
+        maj = info[freq]["consts"]["majority_direction"]
+        check(abs(s["dir_gain_pp_mlp_256-128-64-32"] - 100 * ((call == y).mean() - (y == maj).mean())) < 6e-4, f"sample checks {freq}: direction")
+        f = q["ret__mlp_256-128-64-32"].to_numpy()
+        check(abs(s["ret_R2_pct_mlp_256-128-64-32"] - 100 * (1 - ((rr - f) ** 2).sum() / (rr ** 2).sum())) < 6e-4, f"sample checks {freq}: return")
 
 
 if __name__ == "__main__":
