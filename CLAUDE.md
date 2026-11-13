@@ -7,12 +7,21 @@ removed from the project.
 
 * Main project (branch `main`): multi-target study. `multitarget.py` -> run
   `20261112T050812Z_82953a_final`; `multitarget_report.py` ->
-  `reports/multitarget_final/`; deck `presentation/` (cover + 8 slides, the
-  last on reproducibility, built from its deck_data.json; slides 5-7 compare
-  five models per task, slide 8 shows only the best model overall by
-  validation z); check with
-  `verify_multitarget.py` (recomputes the numbers, not the bootstraps, data
-  or models; do not call it a full audit).
+  `reports/multitarget_final/`; `presentation/build_deck.js` writes the main
+  deck (cover + 9 slides: slide 4 task x timeframe map, slides 6-8 five models
+  per task, slide 9 strongest evidence, slide 10 reproducibility + references)
+  and the appendix A1-A5. Check with `verify_multitarget.py` (recomputes the
+  numbers, not the bootstraps, data or models; do not call it a full audit).
+  `tools/sample_checks.py` and `tools/timestral_same_sample.py` feed A3/A4.
+* Wording: z = strength of evidence against each task's OWN naive benchmark,
+  not a "best model overall"; volatility "error cut" = reduction of the
+  SQUARED log-RV error (not RMSE; vs HAR-OLS stated separately); the ranking
+  is not pre-registered (volatility score revised after test numbers);
+  statistical accuracy only, economic value not studied; no option strategies.
+* Known sample issues (README "Sample checks"): the daily test loses 304 of
+  1,002 sessions to the 50-session flagged-bar window (ends 2025-01-30);
+  incomplete intraday candles are accepted (impact < 0.4 points). Fixing
+  either needs a new run: propose it, do not run it unasked.
 * The study is statistical only: no trading rules, P&L, costs or equity
   curves anywhere in the main project, at the user's request.
 * Exploratory verdict: realized volatility predictable (log-RV R² vs

@@ -1,10 +1,12 @@
-# Environment in which the test suite and the reported runs passed (Python 3.13, Linux).
-# pip install -r requirements-lock.txt
-numpy==2.5.3
-pandas==3.0.5
+# Environment of the final run 20261112T050812Z_82953a_final (run.json "versions"):
+# Python 3.12.3, Windows 11, CPU only. Tests and verify_multitarget.py pass with it.
+# pip install -r requirements-lock.txt   (Timestral: also requirements-timestral.txt)
+numpy==2.5.4
+pandas==3.0.6
 scipy==1.18.1
 scikit-learn==1.9.1
 xgboost==3.4.1
 pyarrow==26.0.0
 matplotlib==3.11.2
+torch==2.15.0          # the run used the CPU build (2.15.0+cpu)
 pytest==9.2.0

@@ -1,0 +1,76 @@
+frequency,n,task,target,model,metric,value,ci_lo,ci_hi,accuracy,corr_with_next_log_rv
+5min,20000,return,log return,timestral,R2_vs_zero_pct,-2.548292993215817,-3.4336871911758013,-1.6169752327400706,,
+5min,20000,return,log return,mlp_256-128-64-32,R2_vs_zero_pct,0.19817481957531413,0.021445080127652782,0.3987970442771339,,
+5min,20000,return,log return,xgboost,R2_vs_zero_pct,0.018283543454977735,-0.0774946203018223,0.11587435110549794,,
+5min,20000,direction,body C(t+1) vs O(t+1),timestral,acc_minus_majority_pp,-0.59,-1.6494990170133679,0.45014718636458456,0.49255,
+5min,20000,direction,close-to-close C(t+1) vs C(t),timestral,acc_minus_majority_pp,-0.655,-1.7248325422457946,0.3655593991286278,0.49415,
+5min,20000,direction,body C(t+1) vs O(t+1),mlp_256-128-64-32,acc_minus_majority_pp,0.505,-0.507207473921368,1.5177988023130746,0.5035,
+5min,20000,direction,close-to-close C(t+1) vs C(t),mlp_256-128-64-32,acc_minus_majority_pp,0.505,-0.5342398130153856,1.5284991790431768,0.50575,
+5min,20000,direction,body C(t+1) vs O(t+1),xgboost,acc_minus_majority_pp,0.51,-0.4461029725202343,1.4060141944395326,0.50355,
+5min,20000,direction,close-to-close C(t+1) vs C(t),xgboost,acc_minus_majority_pp,0.36,-0.6032980074016431,1.2818889868441699,0.5043,
+5min,20000,volatility,log RV,timestral (spread + calibration),R2_log_vs_persistence_pct,12.183641775468656,9.690891498667249,14.759543806721739,,0.7567098799014603
+5min,20000,volatility,log RV,mlp_128-64-32,R2_log_vs_persistence_pct,39.62397940043392,38.41229223448937,41.11958892076003,,0.841585026196608
+5min,20000,volatility,log RV,xgboost,R2_log_vs_persistence_pct,41.485711085428775,40.309365299129695,42.874100640091356,,0.8468652272519682
+5min,20000,volatility,log RV,har_ols,R2_log_vs_persistence_pct,35.40042045065955,34.27285354841865,36.66933061721119,,0.8281688390415619
+5min,20000,volatility,log RV,timestral raw spread (uncalibrated),corr_with_next_log_rv,0.7567098799014603,,,,0.7567098799014603
+5min,20000,volatility,log RV,persistence (current log RV),corr_with_next_log_rv,0.756100622201606,,,,0.756100622201606
+15min,20000,return,log return,timestral,R2_vs_zero_pct,-2.2307957367956988,-3.7442709142810475,-0.9625951046261627,,
+15min,20000,return,log return,mlp_256-128-64-32,R2_vs_zero_pct,-0.10354452271403858,-0.24183792088608272,0.030584886951887904,,
+15min,20000,return,log return,xgboost,R2_vs_zero_pct,0.029539706900660878,-0.0972267650358527,0.14300729219098446,,
+15min,20000,direction,body C(t+1) vs O(t+1),timestral,acc_minus_majority_pp,0.005,-0.8894974507685602,0.8635018420232325,0.49745,
+15min,20000,direction,close-to-close C(t+1) vs C(t),timestral,acc_minus_majority_pp,-0.08,-0.972028019152736,0.7879647021299216,0.49745,
+15min,20000,direction,body C(t+1) vs O(t+1),mlp_256-128-64-32,acc_minus_majority_pp,1.09,0.20700652465987157,1.8215844959948122,0.5083,
+15min,20000,direction,close-to-close C(t+1) vs C(t),mlp_256-128-64-32,acc_minus_majority_pp,1.005,0.1868112349120143,1.707846732121071,0.5083,
+15min,20000,direction,body C(t+1) vs O(t+1),xgboost,acc_minus_majority_pp,0.855,0.10129305893032807,1.5936305449121497,0.50595,
+15min,20000,direction,close-to-close C(t+1) vs C(t),xgboost,acc_minus_majority_pp,0.8500000000000001,0.09326233596220848,1.5403090893511135,0.50675,
+15min,20000,volatility,log RV,timestral (spread + calibration),R2_log_vs_persistence_pct,-37.05726480915632,-41.883320557802946,-33.18681900865033,,0.7436459011128961
+15min,20000,volatility,log RV,mlp_128-64-32,R2_log_vs_persistence_pct,34.79627710177703,32.892390845363906,36.36146256126955,,0.8876665817987592
+15min,20000,volatility,log RV,xgboost,R2_log_vs_persistence_pct,41.817658894608286,40.39676956525152,43.198978178822394,,0.9002632340349969
+15min,20000,volatility,log RV,har_ols,R2_log_vs_persistence_pct,29.533667324730583,27.864047486846523,31.18296889784554,,0.8778165816982674
+15min,20000,volatility,log RV,timestral raw spread (uncalibrated),corr_with_next_log_rv,0.743645901112896,,,,0.743645901112896
+15min,20000,volatility,log RV,persistence (current log RV),corr_with_next_log_rv,0.8374245921019655,,,,0.8374245921019655
+30min,20000,return,log return,timestral,R2_vs_zero_pct,-1.4626835670383809,-2.025581314304125,-0.9186349056839097,,
+30min,20000,return,log return,mlp_256-128-64-32,R2_vs_zero_pct,0.01930320604407454,-0.027026334127601137,0.06516897505525668,,
+30min,20000,return,log return,xgboost,R2_vs_zero_pct,0.020453038501666576,-0.013085216637895858,0.051564965370177726,,
+30min,20000,direction,body C(t+1) vs O(t+1),timestral,acc_minus_majority_pp,-1.765,-2.69966128692339,-0.8575824312584814,0.49515,
+30min,20000,direction,close-to-close C(t+1) vs C(t),timestral,acc_minus_majority_pp,-1.875,-2.7851136296740306,-0.9681404811276773,0.4951,
+30min,20000,direction,body C(t+1) vs O(t+1),mlp_256-128-64-32,acc_minus_majority_pp,0.135,-0.25146547447804696,0.4384530089421471,0.51415,
+30min,20000,direction,close-to-close C(t+1) vs C(t),mlp_256-128-64-32,acc_minus_majority_pp,0.08499999999999999,-0.32433933184343877,0.40957947692684266,0.5147,
+30min,20000,direction,body C(t+1) vs O(t+1),xgboost,acc_minus_majority_pp,-0.28500000000000003,-1.0973826516535798,0.4890562807373979,0.50995,
+30min,20000,direction,close-to-close C(t+1) vs C(t),xgboost,acc_minus_majority_pp,-0.345,-1.201506848019406,0.44091277410125695,0.5104,
+30min,20000,volatility,log RV,timestral (spread + calibration),R2_log_vs_persistence_pct,-56.24483788351304,-62.156037791522756,-50.9668962447296,,0.7086680487421263
+30min,20000,volatility,log RV,mlp_128-64-32,R2_log_vs_persistence_pct,41.298567616628944,39.1435363785379,43.11884104149371,,0.9018979742039457
+30min,20000,volatility,log RV,xgboost,R2_log_vs_persistence_pct,48.02204272031497,46.36431371336645,49.639272183086256,,0.9135084354113077
+30min,20000,volatility,log RV,har_ols,R2_log_vs_persistence_pct,30.21963350492223,27.374009191126003,32.6873107024182,,0.8818658346691257
+30min,20000,volatility,log RV,timestral raw spread (uncalibrated),corr_with_next_log_rv,0.7086680487421264,,,,0.7086680487421264
+30min,20000,volatility,log RV,persistence (current log RV),corr_with_next_log_rv,0.8407907713011626,,,,0.8407907713011626
+1h,20000,return,log return,timestral,R2_vs_zero_pct,-1.5876101283729183,-2.006545221463174,-1.1641687660827866,,
+1h,20000,return,log return,mlp_256-128-64-32,R2_vs_zero_pct,0.002504459235286305,-0.11605605253461437,0.11736212808306602,,
+1h,20000,return,log return,xgboost,R2_vs_zero_pct,0.03639586455016497,-0.053413617059544505,0.13615147532160085,,
+1h,20000,direction,body C(t+1) vs O(t+1),timestral,acc_minus_majority_pp,-2.2800000000000002,-3.192114596598473,-1.3940903610572097,0.4939,
+1h,20000,direction,close-to-close C(t+1) vs C(t),timestral,acc_minus_majority_pp,-2.36,-3.2964985823670663,-1.4697032767997917,0.49415,
+1h,20000,direction,body C(t+1) vs O(t+1),mlp_256-128-64-32,acc_minus_majority_pp,0.02,-0.1542480445280225,0.17746447734660092,0.5169,
+1h,20000,direction,close-to-close C(t+1) vs C(t),mlp_256-128-64-32,acc_minus_majority_pp,0.015,-0.16352844838497235,0.17868687483933424,0.5179,
+1h,20000,direction,body C(t+1) vs O(t+1),xgboost,acc_minus_majority_pp,0.2,-0.13918969304085924,0.4932840748869067,0.5187,
+1h,20000,direction,close-to-close C(t+1) vs C(t),xgboost,acc_minus_majority_pp,0.16,-0.17882159071598813,0.4588038892868203,0.51935,
+1h,20000,volatility,log RV,timestral (spread + calibration),R2_log_vs_persistence_pct,-74.32951757246946,-81.43916487780564,-68.31412063455844,,0.6369912092271037
+1h,20000,volatility,log RV,mlp_128-64-32,R2_log_vs_persistence_pct,41.83005617123627,39.44895810070456,44.234255872343134,,0.8958841514704694
+1h,20000,volatility,log RV,xgboost,R2_log_vs_persistence_pct,51.87488875243502,49.87906000145802,53.99764771873444,,0.9149063640544173
+1h,20000,volatility,log RV,har_ols,R2_log_vs_persistence_pct,34.697815801647316,31.350991859657185,38.04911122437804,,0.8836363015135938
+1h,20000,volatility,log RV,timestral raw spread (uncalibrated),corr_with_next_log_rv,0.636991209227104,,,,0.636991209227104
+1h,20000,volatility,log RV,persistence (current log RV),corr_with_next_log_rv,0.829355327263912,,,,0.829355327263912
+session,642,return,log return,timestral,R2_vs_zero_pct,-1.8334386844099493,-4.377088652836047,0.189267944328764,,
+session,642,return,log return,mlp_256-128-64-32,R2_vs_zero_pct,0.1705229173801448,-0.7185736413001048,1.0414570838055466,,
+session,642,return,log return,xgboost,R2_vs_zero_pct,-1.9481565871805717,-6.105949618698271,1.7312218669506236,,
+session,642,direction,body C(t+1) vs O(t+1),timestral,acc_minus_majority_pp,-1.8691588785046727,-5.606060606060606,1.9734848484848275,0.5233644859813084,
+session,642,direction,close-to-close C(t+1) vs C(t),timestral,acc_minus_majority_pp,-1.557632398753894,-5.151515151515151,2.124999999999979,0.5311526479750779,
+session,642,direction,body C(t+1) vs O(t+1),mlp_256-128-64-32,acc_minus_majority_pp,0.0,0.0,0.0,0.5420560747663551,
+session,642,direction,close-to-close C(t+1) vs C(t),mlp_256-128-64-32,acc_minus_majority_pp,0.0,0.0,0.0,0.5467289719626168,
+session,642,direction,body C(t+1) vs O(t+1),xgboost,acc_minus_majority_pp,0.0,0.0,0.0,0.5420560747663551,
+session,642,direction,close-to-close C(t+1) vs C(t),xgboost,acc_minus_majority_pp,0.0,0.0,0.0,0.5467289719626168,
+session,642,volatility,log RV,timestral (spread + calibration),R2_log_vs_persistence_pct,-19.30299246540459,-46.985722199211665,-1.9821934615819177,,0.7523657675270858
+session,642,volatility,log RV,mlp_128-64-32,R2_log_vs_persistence_pct,18.65273232468573,9.687967641381922,24.548495886101403,,0.8467871377845121
+session,642,volatility,log RV,xgboost,R2_log_vs_persistence_pct,9.000161704802156,-2.5527238721641887,15.880513995874576,,0.8311822453837555
+session,642,volatility,log RV,har_ols,R2_log_vs_persistence_pct,11.925140738094065,5.026404863064286,16.740186041771185,,0.8285537004090325
+session,642,volatility,log RV,timestral raw spread (uncalibrated),corr_with_next_log_rv,0.7523657675270868,,,,0.7523657675270868
+session,642,volatility,log RV,persistence (current log RV),corr_with_next_log_rv,0.8175958306423744,,,,0.8175958306423744

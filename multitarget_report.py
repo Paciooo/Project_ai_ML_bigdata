@@ -395,8 +395,9 @@ def compare_by_task(cand, R, D, V):
     """Five models per task, one per family (linear, random forest, XGBoost, best DNN
     architecture, Timestral), on the task's best validation timeframe (the timeframe of its
     highest validation z). Ranked by validation z; test fields from the results tables.
-    The best model overall is the task winner with the highest validation z (z = validation
-    improvement over the naive benchmark / its block-bootstrap standard error: unit-free)."""
+    Task winners are ranked by validation z (z = validation
+    improvement over the task's naive benchmark / its block-bootstrap standard error): the
+    strength of evidence against each task's own benchmark, not a common scale of usefulness."""
     rows = []
     for task, fams in FAMILIES.items():
         c = cand[cand.task == task]
@@ -415,6 +416,27 @@ def compare_by_task(cand, R, D, V):
                             if s.name == "task" else s).reset_index(drop=True)
     winners = cmp_[cmp_.rank_in_task == 1].sort_values("val_z", ascending=False)
     return cmp_, winners
+
+
+def timeframe_map(cand, R, D, V):
+    """Task x timeframe summary: in every cell the trained model with the highest VALIDATION z
+    (rows = all candles; benchmarks and Timestral excluded) and its TEST improvement over the
+    task's naive benchmark with the 95% interval; volatility also vs HAR-OLS."""
+    rows = []
+    for task in ("return", "direction", "volatility"):
+        for freq in FREQ_LABEL:
+            c = cand[(cand.task == task) & (cand.frequency == freq) & (cand.rows == "all")]
+            if c.empty:
+                continue
+            r = c.iloc[0]
+            t = test_row(task, r, R, D, V)
+            row = {"task": task, "frequency": freq, "model": r.model, "val_z": r.val_z, "value": t["improvement_value"],
+                   "ci_lo": t["ci_lo"], "ci_hi": t["ci_hi"], "n_test": t["t_n"]}
+            if task == "volatility":
+                row.update(vs_har=t.get("t_r2_log_vs_har_pct"), vs_har_lo=t.get("t_r2_log_vs_har_ci_lo_pct"),
+                           vs_har_hi=t.get("t_r2_log_vs_har_ci_hi_pct"))
+            rows.append(row)
+    return pd.DataFrame(rows)
 
 
 def test_row(task, r, R, D, V):
@@ -556,6 +578,8 @@ def main(run, out=None):
     five.to_csv(out / "selected_five.csv", index=False)
     cmp_, winners = compare_by_task(cand, R, D, V)
     cmp_.to_csv(out / "comparison_by_task.csv", index=False)
+    tmap = timeframe_map(cand, R, D, V)
+    tmap.to_csv(out / "timeframe_map.csv", index=False)
     (out / "timestral_calibration.json").write_text(json.dumps(clean(CAL), indent=1), encoding="utf-8")
     files, by_year = charts(run, sel, out, info)
     models = pd.read_csv(run / "models.csv")
@@ -574,10 +598,12 @@ def main(run, out=None):
             "timestral_outcome": ts,
             # direction: accuracy gain over the majority class per test year (block-bootstrap interval)
             "direction_by_year": by_year,
-            # slides 5-7: five models per task (one per family) on the task's best validation timeframe
+            # slides 6-8: five models per task (one per family) on the task's best validation timeframe
             "comparison": {t: cmp_[cmp_.task == t].to_dict("records") for t in FAMILIES},
-            # slide 8: task winners ranked by validation z; the first is the best model overall
-            "winners": winners.to_dict("records")}
+            # slide 9: task winners ranked by validation z (strongest evidence against own benchmark first)
+            "winners": winners.to_dict("records"),
+            # task x timeframe map: validation-chosen trained model per cell, test improvement
+            "timeframe_map": tmap.to_dict("records")}
     (out / "deck_data.json").write_text(json.dumps(clean(deck), indent=1), encoding="utf-8")
     pd.set_option("display.width", 250)
     print(five[["id", "task", "model", "frequency", "val_z", "slot", "key_metric", "baseline", "improvement"]].to_string())

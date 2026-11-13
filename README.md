@@ -1,17 +1,32 @@
 # What Can Machine Learning Predict in NASDAQ Markets?
 
 University project (Waseda University, *AI, Machine Learning and Big Data for
-Finance and Management*). Author: Alessandro Pacifici.
+Finance and Management*; assignment: data analysis with AI, machine learning
+and/or big data, judged on originality, usefulness and feasibility). Author:
+Alessandro Pacifici.
 
-Research question: **which characteristic of the next NASDAQ futures candle —
-its return, its direction or its realized volatility — can machine learning
-predict, and on which timeframe?** The study is purely statistical: forecast
-accuracy against simple benchmarks, with uncertainty intervals. It contains
-no trading rules, P&L or cost assumptions.
+**Problem.** Markets are hard to forecast, but not every characteristic of
+the market need be equally hard. **Research question:** which characteristic
+of the next NASDAQ futures candle — its return, its direction or its realized
+volatility — can machine learning predict, and on which candle length?
 
-* Deck (cover + 8 slides: five models compared per task, the best model overall, reproducibility):
-  [presentation/NASDAQ_multitarget_report.pptx](presentation/NASDAQ_multitarget_report.pptx)
-  ([PDF](presentation/NASDAQ_multitarget_report.pdf)).
+**Originality.** Experimental: one pipeline, one data set and one test period
+for three targets and five horizons (5 minutes to 1 day), so "what is
+predictable" is compared like for like across tasks. Applied: machine
+learning and a new time-series foundation model (Mistral AI's Timestral) are
+set against the classical HAR benchmark for realized volatility (Corsi, 2009).
+
+**Usefulness and implications.** Realized-volatility forecasts are inputs to
+risk limits and position sizing; the study shows on which horizons machine
+learning adds to HAR and where it adds nothing. The study is purely
+statistical: it contains no trading rules, P&L, costs or option strategies,
+and it does not show that any forecast is profitable.
+
+* Deck (cover + 9 slides): [presentation/NASDAQ_multitarget_report.pptx](presentation/NASDAQ_multitarget_report.pptx)
+  ([PDF](presentation/NASDAQ_multitarget_report.pdf)); technical appendix A1–A5
+  (reproduction, selection and statistics, sample checks, Timestral on the
+  same sample, data profile): [presentation/NASDAQ_multitarget_appendix.pptx](presentation/NASDAQ_multitarget_appendix.pptx)
+  ([PDF](presentation/NASDAQ_multitarget_appendix.pdf)).
 * Result tables and charts: [reports/multitarget_final/](reports/multitarget_final/).
 * Earlier phases of the project (next-candle direction with long/short
   trading tests, IBKR tick tools, the first decks) are kept in Git on the
@@ -26,97 +41,88 @@ here is a blind, confirmatory test.
 ## Results (run `20261112T050812Z_82953a_final`)
 
 **Answer (exploratory): realized volatility is the most predictable
-characteristic in this study. For next-candle returns no improvement over
-forecasting zero was demonstrated with the models, data and horizons tried.
-For next-candle direction a small accuracy gain was measured, and it is not
-stable across the test years.**
+characteristic in this study, on every candle length tested. For next-candle
+returns no improvement over forecasting zero was demonstrated with the
+models, data and horizons tried. For next-candle direction a small accuracy
+gain was measured on 5-minute candles only, and it is not stable across the
+test years.**
 
-The five configurations (chosen with validation data, scored on the test
-block; 95% intervals from 20-session moving-block bootstraps, see
-"Statistics"):
+Metric conventions. For volatility, the "error cut" (an out-of-sample R²) is
+the reduction of the **squared log-RV forecast error** relative to a
+benchmark: 40.0% vs persistence for the 5-minute DNN means its squared error
+is 40% smaller. This is not the RMSE reduction (RMSE 0.901 vs 1.163, i.e.
+22.5% lower) and not the gain over HAR-OLS (6.8% smaller squared error than
+HAR-OLS). For returns, R² is relative to the zero forecast; for direction,
+the gain is accuracy minus the majority-class accuracy, in percentage points.
 
-| ID | Task | Model | Timeframe | Key metric (test) | Baseline | Improvement |
-|---|---|---|---|---|---|---|
-| 1 | Return | DNN 256-128-64-32 | 5 min | RMSE 7.71 bp | zero return: RMSE 7.71 bp | R² −0.04% [−0.10, +0.02] |
-| 2 | Direction | DNN 256-128-64-32 | 5 min | accuracy 50.59% (balanced 51.37%) | majority (UP) 49.90% | +0.69 pp [+0.40, +0.98] |
-| 3 | Direction | DNN 64-32 | 15 min | accuracy 50.99% (balanced 50.83%) | majority (UP) 50.74% | +0.25 pp [−0.07, +0.57] |
-| 4 | Volatility | DNN 128-64-32 | 5 min | log-RV RMSE 0.901; RV UP/DOWN 72.2% | persistence 1.163, majority 51.1%; HAR-OLS 0.933, 71.0% | vs persistence R² +40.0% [+39.5, +40.4]; vs HAR-OLS R² +6.8% [+6.2, +7.3], RV direction +1.13 pp [+0.95, +1.31] |
-| 5 | Volatility | XGBoost | 1 hour | log-RV RMSE 0.572; RV UP/DOWN 74.8% | persistence 0.825, majority 47.7%; HAR-OLS 0.666, 70.5% | vs persistence R² +52.0% [+50.0, +54.1]; vs HAR-OLS R² +26.1% [+23.8, +28.5], RV direction +4.28 pp [+3.53, +4.88] |
+### What is predictable on which horizon (`timeframe_map.csv`, slide 4)
 
-Accuracy counts dojis as misses for every call, so the majority baseline
-can be below 50%. Test periods: 2021-07-15 → 2025-05-30 for the intraday
-timeframes, 2021-07-15 → 2025-01-30 for daily candles (see "Data").
+In each cell, the trained model with the highest validation evidence z for
+that task and candle length, scored on the test (95% interval):
 
-* **Return:** no selected or unselected model shows an improvement over the
-  zero forecast on the test block; the selected network's forecasts span less
-  than ±0.5 bp against a typical 5-minute move of 7.7 bp. This is consistent
-  with near-random-walk returns at these horizons but does not prove it.
-* **Direction:** configuration 2 gains +0.69 pp over the majority class
-  (about 7 more right calls per 1,000 candles), but the gain comes from the
-  early test years: +1.18 / +1.33 / +0.82 pp in 2021 / 2022 / 2023 (intervals
-  above zero), +0.02 and −0.12 pp in 2024 and 2025 (intervals include zero;
-  `deck_data.json`, `direction_by_year`, and chart 2). Configuration 3 (DNN
-  64-32, 15 min) is not distinguishable from the majority class.
-* **Volatility, two benchmarks:** persistence is naive; HAR-OLS (linear
-  regression on past log RV and the time-of-day slot) already captures
-  volatility clustering, mean reversion and the intraday pattern: it removes
-  36% (5 min) and 35% (1 h) of persistence's squared log-RV error and gets the
-  RV direction right 71.0% / 70.5% of the time. What ML adds is the gain
-  **over HAR-OLS**: +6.8% and +26.1% of HAR's squared error, +1.13 and +4.28
-  pp of RV-direction accuracy, all with intervals above zero. Intraday, every
-  trained volatility model beats persistence on the test (log-RV R² +29% to
-  +52%); on daily candles the gain is smaller and not universal (+9% to +22%,
-  random forest −19%; `results_volatility.csv`). It concerns realized, not
-  implied, volatility: it says nothing about option prices, which were not
-  computed.
-* **Mistral / Timestral-5M** (test sample of each timeframe; not among the five):
-  * frozen weights, return: R² −2.55% (5 min), −2.23% (15 min), −1.46%
-    (30 min), −1.59% (1 h), −1.83% (1 day) vs forecasting zero, intervals
-    below zero except daily [−4.38, +0.19];
-  * frozen weights, direction: −0.59, 0.00, −1.76, −2.28, −1.87 pp vs the
-    majority class (30 min and 1 h intervals below zero, the others include 0);
-  * with supervised volatility calibration: log-RV R² vs persistence +12.2%
-    [+9.7, +14.8] at 5 min, negative on every other timeframe (−37% to −74%,
-    daily −19%).
-* **Deeper networks:** no consistent gain. On the selected configurations
-  the best network depth differs by task and timeframe (256-128-64-32,
-  128-64-32 and 64-32), and differences between networks are a fraction of
-  the gap to the benchmark (`results_*.csv`).
+| Task (test) | 5 min | 15 min | 30 min | 1 hour | 1 day |
+|---|---|---|---|---|---|
+| Return: R² vs zero (%) | −0.04 [−0.10, +0.02] | −0.01 [−0.07, +0.04] | +0.00 [−0.02, +0.02] | −0.01 [−0.06, +0.04] | −1.95 [−6.11, +1.73] |
+| Direction: accuracy gain vs majority (pp) | **+0.69 [+0.40, +0.98]** | +0.25 [−0.07, +0.57] | +0.16 [−0.12, +0.38] | +0.26 [−0.08, +0.55] | −0.78 [−1.52, +0.00] |
+| Volatility: squared log-RV error cut vs persistence (%) | **40.0 [39.5, 40.4]** | **36.5 [35.1, 37.7]** | **42.6 [40.8, 44.3]** | **52.0 [50.0, 54.1]** | **18.7 [9.7, 24.5]** |
+| Volatility: squared log-RV error cut vs HAR-OLS (%) | **6.8 [6.2, 7.3]** | **10.3 [8.8, 11.6]** | **16.7 [14.5, 18.7]** | **26.1 [23.8, 28.5]** | 7.6 [−0.9, 14.6] |
 
-## Five models per task and the best model overall (slides 5–8)
+Bold: interval above zero. The gain over HAR-OLS grows with candle length up
+to one hour; on daily candles (642 test sessions, see "Sample checks") the
+interval includes zero.
 
-For each task the deck compares five models, one per family, on the task's
-best validation timeframe (5 minutes for all three): a linear model (Ridge,
-or logistic regression for direction), random forest, XGBoost, the best
-neural-network architecture on validation, and Timestral (frozen weights;
-for volatility with the supervised calibration). Rows are ranked by the
-validation evidence score z (`comparison_by_task.csv`); all other columns
-are test results.
+### Five models per task (slides 6–8, `comparison_by_task.csv`)
+
+One model per family on the task's best validation timeframe (5 minutes for
+all three): a linear model (Ridge, or logistic regression for direction),
+random forest, XGBoost, the best network architecture on validation, and
+Timestral (frozen weights; for volatility with the supervised calibration).
+Rows are ranked by validation z; the values are test results. Timestral is
+scored on its fixed random sample of 20,000 test candles.
 
 | Task | #1 | #2 | #3 | #4 | #5 |
 |---|---|---|---|---|---|
 | Return (R² vs zero) | DNN 256-128-64-32 −0.04% | XGBoost +0.00% | Ridge −0.03% | Random forest −0.05% | Timestral −2.55% |
 | Direction (pp vs majority) | DNN 256-128-64-32 +0.69 | Random forest +0.62 | Logistic +0.50 | XGBoost +0.58 | Timestral −0.59 |
-| Volatility (log-RV R² vs persistence / vs HAR-OLS) | DNN 128-64-32 +40.0% / +6.8% | XGBoost +42.0% / +9.9% | Random forest +37.1% / +2.3% | Ridge +35.7% / +0.1% | Timestral + calibration +12.2% / −35.9% |
+| Volatility (error cut vs persistence / vs HAR-OLS) | DNN 128-64-32 40.0% / 6.8% | XGBoost 42.0% / 9.9% | Random forest 37.1% / 2.3% | Ridge 35.7% / 0.1% | Timestral + calibration 12.2% / −35.9% |
 
-Timestral is scored on its fixed random sample of 20,000 test candles.
+* **Return:** no model improves on the zero forecast on any candle length; the
+  5-minute network's forecasts span less than ±0.5 bp against a typical move
+  of 7.7 bp. Consistent with near-random-walk returns at these horizons, but
+  not a proof of it.
+* **Direction:** the 5-minute gain of +0.69 pp is about 7 more right calls per
+  1,000 candles, and comes from the early test years: +1.18 / +1.33 / +0.82
+  pp in 2021 / 2022 / 2023 (intervals above zero), +0.02 and −0.12 pp in 2024
+  and 2025 (intervals include zero; chart 2, `direction_by_year`).
+* **Volatility:** HAR-OLS already captures volatility clustering, mean
+  reversion and the intraday pattern (36% error cut vs persistence at 5
+  minutes); what machine learning adds is the gain over HAR-OLS. It concerns
+  realized, not implied, volatility (Andersen & Bollerslev, 1998).
+* **Deeper networks:** no consistent gain; the best depth differs by task and
+  timeframe, and differences between networks are small next to the gap to
+  the benchmark.
 
-**Ranking rule (slide 8).** (1) Every model × timeframe is scored on
-validation by its improvement over the task's naive benchmark; (2) the
-evidence score z = improvement / block-bootstrap standard error is
-unit-free, so tasks can be compared; (3) the highest z wins within each
-task, and the best model overall is the task winner with the highest z;
-(4) only then is it scored on the test. Task winners: volatility DNN
-128-64-32 (z 44.0), direction DNN 256-128-64-32 (z 11.9), return DNN
-256-128-64-32 (z 3.1). **Best model overall: DNN 128-64-32 forecasting
-5-minute realized volatility.** On the test XGBoost (#2 on validation) is
-slightly better (+42.0% vs +40.0% over persistence); the ranking follows the
-validation rule fixed in advance, not the test.
+### Strongest evidence (slide 9)
 
-**Laboratory conditions.** Every number is measured on clean historical
-data with no commissions, bid-ask spread, slippage or latency. In live
-markets these costs apply, so the values shown are not reproducible in
-practice and a small edge (such as +0.69 pp in direction) may disappear.
+Ranking rule: (1) every model × timeframe is scored on validation by its
+improvement over its task's naive benchmark; (2) z = that improvement / its
+block-bootstrap standard error; (3) the highest z wins within each task.
+Across tasks, z only says where the evidence of beating the **task's own**
+naive benchmark is strongest; it is not a common scale of usefulness and does
+not show that one task's model is "better" than another's. Task winners:
+volatility DNN 128-64-32 at 5 minutes (z 44.0), direction DNN 256-128-64-32
+at 5 minutes (z 11.9), return DNN 256-128-64-32 at 5 minutes (z 3.1). The
+rule was applied as computed on validation; it is not a pre-registered
+choice, because the volatility score itself was revised after a first look
+at test numbers. On the test XGBoost (#2 by validation z) cuts the
+volatility error slightly more (42.0% vs 40.0%); the ranking was not
+re-chosen on the test.
+
+**Statistical vs economic performance.** The metrics above are statistical
+and are reproducible from the saved forecasts. Whether a statistical gain is
+economically useful was not studied: commissions, bid-ask spread, slippage
+and latency would decide that, and a small gain such as +0.69 pp in
+direction may not survive them.
 
 ## Data analysis (test sample, `data_profile.csv`)
 
@@ -155,6 +161,79 @@ The same statistics for the validation block are in `data_profile.csv`.
    (daily −32.1% → −39.5%). The ranking of the selected configurations, the
    five configurations and every test number are unchanged.
 
+## Sample checks (`tools/sample_checks.py` → `sample_checks.json`, appendix A3)
+
+Measured from the 1-minute data and the saved forecasts, without training.
+
+**A. Why the daily test ends on 2025-01-30.** All 85 sessions from 2025-01-31
+to 2025-05-30 are dropped. 84 of them fall within 50 sessions after a session
+containing a flagged 1-minute bar: `study.build` keeps a row only if none of
+the last 50 candles contains one (`clean50`), and `quality.flag_suspect`
+flags any 1-minute bar whose log return exceeds 2% in absolute value. The
+flags are on 2025-02-03 (−2.7%), 2025-04-07 (−4.5%) and 2025-04-09 (+2.6%);
+2025-01-31 itself is dropped because its label session (2025-02-03) contains
+the flag. Over 2006–2025 there are 16 flagged bars; 9 come right after a gap
+of more than an hour (weekend, holiday or daily break) and the 2022 flags fall
+at 8:30 ET, when US macro data are released, so they look like genuine price
+moves rather than bad prints. Impact: 304 of the 1,002 daily test sessions
+(train 150, validation 115) lie in such 50-session windows, so the **daily
+sample under-represents turbulent periods**; the 642-session daily results
+should be read with that in mind. Intraday the window is 50 candles, a
+negligible loss. A correction (for example not flagging opening gaps)
+changes the sample and needs a new daily run; the saved results were not
+altered (see "Future experiments").
+
+**B. Incomplete intraday candles.** `timeframes.aggregate` stores the number
+of 1-minute bars in each candle (`n_minutes`) but does not use it: a
+full-length 5-minute candle with 4 of its 5 minutes is accepted as complete
+(`tests/test_timing_and_splits.py` documents this). TradeStation writes no
+bar for a minute without trades; scheduled halts and the overnight break lie
+outside the candles. Share of full-length candles with missing minutes:
+
+| Candle | All years | Test | Test, 08:30–15:00 CT | Test rows whose label candle is incomplete |
+|---|---|---|---|---|
+| 5 min | 18.0% | 0.23% | 0.003% | 601 of 273,340 |
+| 15 min | 25.8% | 0.43% | 0.008% | 385 of 90,189 |
+| 30 min | 30.6% | 0.65% | 0.008% | 279 of 44,395 |
+| 1 hour | 34.3% | 1.01% | 0.000% | 201 of 21,507 |
+
+Missing minutes are concentrated overnight in 2006–2017 (54% of 5-minute
+candles in 2006, 0.02% in 2025), consistent with thin trading; in the test a
+few sessions with long gaps coincide with quarterly contract-roll days
+(e.g. 2021-09-09, 2022-09-08) and are dataset gaps. Rescoring the saved test
+forecasts without rows whose label candle is incomplete moves the rescored
+metrics (HAR-OLS, the 5-minute networks and XGBoost; return, direction,
+volatility) by at most 0.4 points (e.g. 5-minute DNN volatility 39.99% →
+40.00%, 1-hour XGBoost 51.95% → 52.34%): no conclusion changes.
+
+## Timestral on the same sample (`tools/timestral_same_sample.py`, appendix A4)
+
+On exactly the same random test candles (saved forecasts, 95% block
+intervals in `timestral_same_sample.csv`):
+
+| Candle | Return R²: Timestral / DNN | Direction pp, Timestral: body / close-to-close | Direction pp, DNN (body) | Volatility error cut vs persistence: Timestral / DNN | Correlation with next log RV: Timestral spread / current RV |
+|---|---|---|---|---|---|
+| 5 min | −2.55% / +0.20% | −0.59 / −0.66 | +0.51 | +12.2% / +39.6% | 0.76 / 0.76 |
+| 15 min | −2.23% / −0.10% | +0.01 / −0.08 | +1.09 | −37.1% / +34.8% | 0.74 / 0.84 |
+| 30 min | −1.46% / +0.02% | −1.76 / −1.88 | +0.14 | −56.2% / +41.3% | 0.71 / 0.84 |
+| 1 hour | −1.59% / +0.00% | −2.28 / −2.36 | +0.02 | −74.3% / +41.8% | 0.64 / 0.83 |
+| 1 day | −1.83% / +0.17% | −1.87 / −1.56 | +0.00 | −19.3% / +18.7% | 0.75 / 0.82 |
+
+* **Target:** Timestral forecasts the next close (direction = median vs last
+  close) while the study scores the candle body. Scored on the close-to-close
+  direction it does no better, so the mismatch does not explain its result.
+* **Sample:** the trained models keep their advantage on Timestral's own
+  20,000-candle sample (daily: all 642 sessions), so the gap is not a
+  sampling artefact.
+* **Volatility:** Timestral's volatility is indirect, the q10–q90 spread of
+  its price forecast mapped to log RV by a linear calibration fitted on
+  validation; the trained models forecast log RV directly. The raw spread
+  correlates with next log RV slightly less than the current RV does, and the
+  calibrated forecast is worse than persistence beyond 5 minutes.
+* **Scope:** one small model (5M parameters), frozen weights, a 512-close
+  context, one market. These results do not generalise to time-series
+  foundation models in general (Mistral AI, 2026).
+
 ## Data
 
 * Instrument: **NQ**, E-mini Nasdaq-100 futures (CME), back-adjusted
@@ -179,9 +258,8 @@ The same statistics for the validation block are in `data_profile.csv`.
 | 1 day | 2006-03-13 → 2017-08-23, 1,991 | 2017-08-25 → 2021-07-13, 822 | 2021-07-15 → **2025-01-30**, 642 |
 
   The daily sample starts later because the 50-candle moving-average
-  feature needs 50 sessions of history. It ends on 2025-01-30: later daily
-  rows are removed by the filters of the shared pipeline (label eligibility,
-  suspect-bar windows); the exact cause was not investigated in this study.
+  feature needs 50 sessions of history. It ends on 2025-01-30 because of the
+  flagged-bar filter (measured cause in "Sample checks").
 * The test period was already inspected for the direction task in earlier
   project phases, so the test results are **exploratory**, not a clean
   confirmation.
@@ -209,7 +287,7 @@ previous sessions. HAR-OLS uses only the realized-variance features.
 
 ## Models
 
-See slide 4 and `reports/multitarget_final/models.csv` (every fit, with
+See slide 5 and `reports/multitarget_final/models.csv` (every fit, with
 epochs / best iteration / chosen hyper-parameter).
 
 * Benchmarks: zero return, training mean, majority class, persistence,
@@ -260,7 +338,7 @@ epochs / best iteration / chosen hyper-parameter).
   early-stopping optimum within a few epochs, and a sequence model would add
   cost without a reason in the validation results.
 
-## Selection of the five configurations
+## Selection
 
 `multitarget_report.py`. The criteria use validation data only, but the
 selection is **not blind**:
@@ -287,6 +365,13 @@ selection is **not blind**:
 Because the revision came after test numbers were seen, and the test period
 had been examined before, the selection and all test results are exploratory.
 
+The deck uses these z scores in three ways: the five-model tables (one model
+per family on each task's best validation timeframe), the timeframe map (the
+highest-z trained model per task and timeframe) and the task winners on
+slide 9. The earlier five-configuration selection (`selected_five.csv`, the
+rule above with two extra slots on a different timeframe) still provides the
+charts.
+
 ## Statistics
 
 * Differences (accuracy gains, RV-direction gains vs majority or HAR-OLS,
@@ -299,7 +384,7 @@ had been examined before, the selection and all test results are exploratory.
   report divided an interval of the loss difference by a fixed denominator;
   point estimates were unaffected, intervals moved by up to a few tenths of a
   point.)
-* Return chart (slide 5): each decile's realized-mean interval is a
+* Return chart (slide 6): each decile's realized-mean interval is a
   20-session block bootstrap within the decile (first report: independent
   standard errors).
 * Classification convention (`cls_stats`, scikit-learn's
@@ -312,11 +397,14 @@ had been examined before, the selection and all test results are exploratory.
 
 ## Reproduce
 
-Windows PowerShell from the repository root, Python 3.12
-(`requirements.txt`, plus `requirements-timestral.txt` for Timestral; the run
-used torch 2.15.0+cpu, xgboost 3.4.1, scikit-learn 1.9.1, timestral 1.0.0),
-Node.js 18+, and the Timestral-5M weights in the Hugging Face cache (first
-download: `python -c "from timestral import TimestralForecaster; TimestralForecaster.from_pretrained('mistralai/Timestral-5M')"`
+Windows PowerShell from the repository root. Environment of the final run
+(`run.json`): Python 3.12.3, Windows 11, CPU; exact versions in
+`requirements-lock.txt` (numpy 2.5.4, pandas 3.0.6, scikit-learn 1.9.1,
+xgboost 3.4.1, torch 2.15.0+cpu, …) and `requirements-timestral.txt`
+(timestral 1.0.0 at a pinned commit). Node.js 18+ for the deck (pptxgenjs
+3.12.0 pinned in `presentation/package-lock.json`). Timestral-5M weights must
+be in the Hugging Face cache (first download:
+`python -c "from timestral import TimestralForecaster; TimestralForecaster.from_pretrained('mistralai/Timestral-5M')"`
 with `HF_HUB_OFFLINE` unset; `multitarget.py` itself runs offline).
 
 The NQ 1-minute data (TradeStation, 2006–2025) are licensed and **not in
@@ -325,15 +413,17 @@ Point `FUTURES_DATA_DIR` to a local copy (default `..\futures-data`).
 
 ```powershell
 python -m venv .venv; .venv\Scripts\Activate.ps1
-pip install -r requirements.txt -r requirements-timestral.txt
+pip install -r requirements-lock.txt -r requirements-timestral.txt
 $env:FUTURES_DATA_DIR = "C:\path\to\futures-data"
 python multitarget.py --tag final                       # full training, ~30 min on 16 CPU threads
 python multitarget_report.py results\multitarget\runs\<run id> reports\multitarget_final
-copy reports\multitarget_final\deck_data.json, reports\multitarget_final\chart_*.png presentation\
+python tools\timestral_same_sample.py results\multitarget\runs\<run id> reports\multitarget_final
+python tools\sample_checks.py results\multitarget\runs\<run id> reports\multitarget_final   # reads the 1-minute data, ~1 min
+copy reports\multitarget_final\deck_data.json, reports\multitarget_final\chart_*.png, reports\multitarget_final\sample_checks.json, reports\multitarget_final\timestral_same_sample.json presentation\
 python verify_multitarget.py results\multitarget\runs\<run id> reports\multitarget_final presentation
 cd presentation
 npm ci                                                  # installs pptxgenjs 3.12.0 from package-lock.json
-node build_deck.js NASDAQ_multitarget_report.pptx
+node build_deck.js                                      # main deck + appendix
 cd ..
 python -m pytest -q                                     # from the repository root
 ```
@@ -341,42 +431,90 @@ python -m pytest -q                                     # from the repository ro
 Pipeline check in a minute:
 `python multitarget.py --freqs 1h session --years 2015 2019 --quick --timestral-n 500`.
 
-`verify_multitarget.py` recomputes, from the saved predictions and without
-`multitarget_report.py`, every point estimate in the three results tables
-(including the past-to-future Timestral calibration, with a check that no
-calibration target falls after the origins it is used for, and the HAR-OLS
-comparisons), the selection rule, the selected-five test fields, every value
-of `data_profile.csv`, the per-year direction gains and the deck data (run
-id, rows, charts, no trading fields, no VIX). It does not re-run the
-bootstraps (it checks interval order only), rebuild the data from the
-1-minute bars or refit models. On the final run, with the presentation
-folder: 3,922 checks, 0 problems.
+**What the checks cover.** `verify_multitarget.py` recomputes, from the saved
+forecasts and without `multitarget_report.py`, every point estimate in the
+three results tables (including the past-to-future Timestral calibration,
+with a check that no calibration target falls after the origins it is used
+for, and the HAR-OLS comparisons), the ranking rules, the five-model tables,
+the timeframe map, the selected-five fields, every value of
+`data_profile.csv`, the per-year direction gains and the deck data (run id,
+rows, charts, appendix inputs, no trading fields, no VIX). On the final run,
+with the presentation folder: 3,960 checks, 0 problems. The unit tests
+(`pytest`, 41 tests) cover targets, timing, sessions, splits,
+bootstrap, the ranking rule and the causal Timestral calibration.
+
+**What they do not cover.** The raw 1-minute data and the candle building
+(checked separately by `tools/sample_checks.py`); the training (models were
+not re-fitted); the bootstrap intervals (only their order is checked). The
+final run used an uncommitted version of `multitarget.py`: its hash in
+`run.json` (`a448847f…`) matches no committed version. The known later
+changes are the majority-class fix (applied to the saved outputs by
+`tools/mt_fix_majority.py`) and docstrings; the other source files used by
+the run match the committed versions (hashes in `run.json`). A bit-identical
+re-run is therefore not guaranteed.
 
 Outputs of `multitarget.py` (`results/multitarget/runs/<id>/`):
 `predictions_<freq>.parquet` (validation and test rows, every model's
-forecast), `models.csv`, `dataset_info.json`, `console.log`, `run.json`
-(package versions and the hash of every source file; the final run was made
-from a working copy of commit `35be806`). Outputs of `multitarget_report.py`:
-`results_return.csv`, `results_direction.csv`, `results_volatility.csv`
-(every model × timeframe × split, plus the Timestral-sample rows),
-`data_profile.csv`, `selection_validation_ranking.csv`, `comparison_by_task.csv` (slides 5–8), `selected_five.csv` (the earlier five-configuration selection),
-`configurations_tested.csv`, `timestral_calibration.json`,
-`chart_cfg<id>_*.png`, `deck_data.json`.
+forecast), `models.csv`, `dataset_info.json`, `console.log`, `run.json`.
+Outputs of `multitarget_report.py`: `results_return.csv`,
+`results_direction.csv`, `results_volatility.csv` (every model × timeframe ×
+split, plus the Timestral-sample rows), `data_profile.csv`,
+`selection_validation_ranking.csv`, `comparison_by_task.csv`,
+`timeframe_map.csv`, `selected_five.csv` (the earlier five-configuration
+selection, source of the charts), `configurations_tested.csv`,
+`timestral_calibration.json`, `chart_cfg<id>_*.png`, `deck_data.json`.
+Tools: `sample_checks.json`, `timestral_same_sample.csv/.json`.
+
+## Future experiments (proposed, not run; by benefit and cost)
+
+1. **Daily sample fix** — high benefit, low cost (daily data set is small):
+   flag only isolated reverting spikes, not opening gaps, then re-run
+   `multitarget.py --freqs session` as a new run; compare with the saved one.
+2. **Aligned Timestral targets** — medium benefit, low–medium cost: forecast
+   open and close of t+1 (body direction) and the quantiles of the next
+   candle's 1-minute returns, derive RV from Timestral's own path, and add
+   Timestral-28M/123M/209M (weights already cached) on the same sample.
+3. **Pre-registered confirmation** — high benefit, medium cost: freeze the
+   models and the ranking rule now and score them once on data after
+   2025-06-02 (the reserved hold-out), turning the exploratory result into a
+   confirmatory one.
+4. **Economic evaluation of volatility forecasts** — medium benefit, medium
+   cost: e.g. volatility-targeted position sizing with realistic costs,
+   reported separately from the statistical results.
+5. **Incomplete-candle policy** — low benefit (impact < 0.4 points), medium
+   cost: use `n_minutes` to drop or flag candles in dataset-gap sessions, then
+   a full re-run.
 
 ## Repository map
 
 | Path | Content |
 |---|---|
 | `multitarget.py` | builds the data for each timeframe, trains every model, runs Timestral, saves the forecasts |
-| `multitarget_report.py` | tables, data profile, selection of the five, charts, `deck_data.json` (reads saved forecasts only) |
+| `multitarget_report.py` | tables, data profile, rankings, five-model tables, timeframe map, charts, `deck_data.json` (reads saved forecasts only) |
 | `verify_multitarget.py` | independent recomputation of the reported numbers |
 | `config.py`, `data.py`, `timeframes.py`, `quality.py`, `features.py`, `evaluation.py`, `runlog.py` | data loading, CME sessions and candles, data checks, features and splits, run folders |
 | `study.py`, `experiment.py`, `backtest.py`, `strategy.py`, `regimes.py`, `plots.py` | shared pipeline code from the earlier direction study; `multitarget.py` uses `study.build` (data set) and `experiment.load_minutes` / `bars_for`; their trading functions are not used here |
+| `tools/sample_checks.py`, `tools/timestral_same_sample.py` | sample checks (appendix A3) and Timestral on the same sample (appendix A4) |
 | `tools/mt_fix_majority.py`, `tools/timestral_direction.py` | majority-class fix without refitting; original zero-shot Timestral direction tool |
 | `tests/` | unit tests (`python -m pytest -q`) |
-| `presentation/` | deck generator, deck data, charts, `.pptx` and `.pdf` |
-| `reports/multitarget_final/` | final tables and charts |
+| `presentation/` | deck generator, deck data, charts, main deck and appendix (`.pptx`, `.pdf`) |
+| `reports/multitarget_final/` | final tables, charts and check outputs |
 
 The earlier direction-and-trading study (`study.py` run, `report.py`,
 `verify.py`, the NQ decks, IBKR download tools) is on the Git branch
 `archive/nq-direction-study`.
+
+## References
+
+* Andersen, T. G., & Bollerslev, T. (1998). Answering the skeptics: Yes,
+  standard volatility models do provide accurate forecasts. *International
+  Economic Review*, 39(4), 885–905.
+* Corsi, F. (2009). A simple approximate long-memory model of realized
+  volatility. *Journal of Financial Econometrics*, 7(2), 174–196.
+* Künsch, H. R. (1989). The jackknife and the bootstrap for general stationary
+  observations. *Annals of Statistics*, 17(3), 1217–1241.
+* Patton, A. J. (2011). Volatility forecast comparison using imperfect
+  volatility proxies. *Journal of Econometrics*, 160(1), 246–256.
+* Mistral AI (2026). Timestral: time series foundation models. Announcement
+  https://mistral.ai/news/timestral; code https://github.com/mistralai/timestral
+  (commit a534bdbd); weights https://huggingface.co/mistralai/Timestral-5M.

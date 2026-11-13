@@ -273,6 +273,20 @@ def main(run, rep, pres=None):
         check([r["model"] for r in dd["comparison"][task]] == list(got.model), f"deck comparison {task} differs")
     winners = sorted(winners, key=lambda t: -t[2])
     check([(w["task"], w["model"]) for w in dd["winners"]] == [(t, m) for t, m, _ in winners], "deck winners / best overall differ")
+    # task x timeframe map: validation-best trained model per cell, test improvement from the results tables
+    tmap = pd.read_csv(rep / "timeframe_map.csv")
+    key = {"return": ("r2_oos_pct", "r2_ci_lo_pct"), "direction": ("diff_pp", "ci_lo_pp"),
+           "volatility": ("r2_log_vs_persistence_pct", "r2_log_ci_lo_pct")}
+    for _, r in tmap.iterrows():
+        rk = rank[(rank.task == r.task) & (rank.frequency == r.frequency) & (rank.rows == "all")].sort_values("val_z", ascending=False)
+        check(len(rk) and rk.iloc[0].model == r.model, f"timeframe map {r.task} {r.frequency}: not the validation-best model")
+        df = {"return": R, "direction": D, "volatility": V}[r.task]
+        x = df[(df.split == "test") & (df.rows == "all") & (df.frequency == r.frequency) & (df.model == r.model)].iloc[0]
+        check(close(r.value, x[key[r.task][0]], 1e-9) and close(r.ci_lo, x[key[r.task][1]], 1e-9), f"timeframe map {r.task} {r.frequency}: value")
+        if r.task == "volatility":
+            check(close(r.vs_har, x.r2_log_vs_har_pct, 1e-9), f"timeframe map {r.frequency}: vs HAR")
+    check(len(dd["timeframe_map"]) == len(tmap) and [(m["task"], m["frequency"]) for m in dd["timeframe_map"]] == list(zip(tmap.task, tmap.frequency)),
+          "deck timeframe map differs from timeframe_map.csv")
     for f, fi in dd["dataset"].items():
         check(fi["test"] == info[f]["test"] and fi["train"] == info[f]["train"], f"deck dataset {f} differs")
     for sid, fn in dd["charts"].items():
@@ -283,6 +297,9 @@ def main(run, rep, pres=None):
         check(h(pres / "deck_data.json") == h(rep / "deck_data.json"), "presentation deck_data.json differs from the report")
         for fn in dd["charts"].values():
             check((pres / fn).exists() and h(pres / fn) == h(rep / fn), f"presentation chart {fn} differs")
+        for fn in ("sample_checks.json", "timestral_same_sample.json"):     # appendix inputs (tools/)
+            if (rep / fn).exists():
+                check((pres / fn).exists() and h(pres / fn) == h(rep / fn), f"presentation {fn} differs from the report")
     print(f"{n} checks, {len(problems)} problems")
     for msg in problems[:50]:
         print("  " + msg)

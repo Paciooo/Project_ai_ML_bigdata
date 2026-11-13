@@ -76,6 +76,23 @@ def test_hourly_bar_available_at_end_not_label():
     assert inside["bar_end"].max() <= row["available_at"]
 
 
+def test_missing_minute_inside_a_full_candle_is_counted_but_not_partial():
+    # Documents current behaviour (tools/sample_checks.py measures its incidence): a 5-minute
+    # candle with 4 of its 5 one-minute bars keeps its scheduled interval, is NOT flagged
+    # partial and stays label-eligible; only n_minutes records the missing minute.
+    m = minutes(2)
+    full = tf.aggregate(m, "5min")
+    first = full.iloc[3]
+    inside = m[(m["bar_start"] >= first["bar_start"]) & (m["bar_start"] < first["bar_end"])]
+    m2 = m.drop(index=inside.index[2]).reset_index(drop=True)          # remove the middle minute
+    b = tf.aggregate(m2, "5min")
+    row = b[b["bar_start"] == first["bar_start"]].iloc[0]
+    assert first["n_minutes"] == 5 and row["n_minutes"] == 4
+    assert not row["is_partial"] and row["bar_end"] - row["bar_start"] == pd.Timedelta("5min")
+    ok = tf.next_label_eligible(b, "5min")
+    assert ok[b.index[b["bar_start"] == first["bar_start"]][0] - 1]    # the previous candle may still use it as label
+
+
 def test_4h_last_bin_partial_and_not_eligible():
     h4 = tf.aggregate(minutes(3), "4h")
     last = h4.groupby("session_id").tail(1)
