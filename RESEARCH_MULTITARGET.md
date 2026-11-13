@@ -93,10 +93,13 @@ timeframes, 2021-07-15 → 2025-01-30 for daily candles (see "Data").
    "Selection").
 3. **Timestral volatility calibration** (review of 2026-11-12): the first
    report scored the calibrated Timestral variant on the same validation rows
-   used to fit its calibration. Its validation score is now cross-fitted
-   (below). Its validation numbers changed slightly (e.g. 5 min selection z
-   8.19 → 8.09, log-RV R² +18.4% → +18.2%); the ranking and the five
-   configurations did not change, and its test numbers are unchanged.
+   used to fit its calibration. A first fix used 2-fold cross-fitting, but
+   one fold calibrated on the LATER half and scored the earlier one, which
+   is not causal. Its validation score is now past-to-future only (below):
+   5 min selection z 8.19 → 8.09 (2-fold) → 6.37, log-RV R² vs persistence
+   +18.4% → +18.2% → +18.3% [+12.3, +22.7] on the 16,036 scorable rows
+   (daily −32.1% → −39.5%). The ranking of the selected configurations, the
+   five configurations and every test number are unchanged.
 
 ## Data
 
@@ -181,12 +184,18 @@ epochs / best iteration / chosen hyper-parameter).
   * **Timestral-5M + supervised volatility calibration** (volatility; not
     zero-shot): the q10–q90 spread gives a variance proxy, mapped to log RV
     by a linear regression fitted on **validation targets**. For the
-    validation score used in selection the calibration is 2-fold
-    chronologically cross-fitted (each half of the validation sample is
-    scored with the coefficients fitted on the other half), so calibration
-    and selection never use the same rows. Test forecasts use the calibration
-    fitted on the whole validation sample (coefficients in
-    `dataset_info.json` and `timestral_calibration.json`).
+    validation score used in selection the calibration runs only from past
+    to future: the validation sample is cut into 5 consecutive blocks of
+    origin sessions, and block k (k = 1..4) is scored with a regression
+    fitted on every earlier row whose target session ends before block k
+    starts (expanding window), so each calibration target is already known
+    when the scored forecasts are made. Block 0 has no earlier calibration
+    and is excluded from the score, for Timestral and for the benchmarks
+    compared with it (about 16,000 of the 20,000 intraday rows and 657 of
+    the 822 daily rows are scored). Test forecasts use the calibration
+    fitted on the whole validation sample, whose targets all precede the
+    first test origin. Coefficients and the calibration / evaluation date
+    ranges of every block are in `timestral_calibration.json`.
   Both are scored on a fixed random sample of 20,000 validation and 20,000
   test origins per timeframe (all of them for daily candles), against the
   benchmarks on exactly those rows. Pretraining-data overlap with NQ is
@@ -283,12 +292,13 @@ minute: `python multitarget.py --freqs 1h session --years 2015 2019 --quick --ti
 
 `verify_multitarget.py` recomputes, from the saved predictions and without
 `multitarget_report.py`, every point estimate in the three results tables
-(including the cross-fitted Timestral calibration and the HAR-OLS
+(including the past-to-future Timestral calibration, with a check that
+no calibration target falls after the origins it is used for, and the HAR-OLS
 comparisons), the selection rule, every trading row, the selected-five test
 fields and the deck data (run id, rows, trading, charts, costs, no VIX). It
 does not re-run the bootstraps (it checks interval order only), rebuild the
 data from the 1-minute bars or refit models. On the final run, with the
-presentation folder: 4,361 checks, 0 problems (an altered P&L or HAR ratio
+presentation folder: 4,401 checks, 0 problems (an altered P&L or HAR ratio
 in a copied report is flagged).
 
 Outputs of `multitarget.py` (`results/multitarget/runs/<id>/`):

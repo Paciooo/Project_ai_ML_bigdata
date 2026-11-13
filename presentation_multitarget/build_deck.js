@@ -187,7 +187,7 @@ const ym = (d) => d.slice(0, 7);
     ["Machine learning", [["Random forest", "200 trees, depth 8", "R · D · V"], ["XGBoost", "gradient boosting, depth 4, early stopping", "R · D · V"]]],
     ["Deep learning", [["DNN 64-32-16 (original)", "feed-forward, ReLU, AdamW, early stopping", "R · D · V"], ["DNN 64-32", "", "R · D · V"], ["DNN 128-64-32", "", "R · D · V"], ["DNN 256-128-64-32", "", "R · D · V"]]],
     ["Mistral AI", [["Timestral-5M, frozen weights", "zero-shot quantiles of the next close from 512 past closes; median → return; direction = median vs last close (target: next candle's body)", "R · D"],
-                    ["Timestral-5M + supervised calibration", "q10–q90 spread → log RV via a linear map fitted on validation targets (cross-fitted when scored on validation)", "V"]]],
+                    ["Timestral-5M + supervised calibration", "q10–q90 spread → log RV via a linear map fitted on validation targets (on validation: fitted on earlier sessions only)", "V"]]],
   ];
   const body = [[hdr("Family"), hdr("Model"), hdr("Method"), hdr("Tasks")]];
   fam.forEach(([f, ms]) => ms.forEach((m, i) => body.push([

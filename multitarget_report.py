@@ -26,10 +26,14 @@ Timestral (Mistral): return and direction use the frozen pretrained weights
 close), while the target is the BODY of the next candle (close vs open).
 The volatility variant is "Timestral + supervised calibration": a linear map
 from log(q10-q90 spread variance) to log RV fitted on validation targets. Its
-VALIDATION score is computed with 2-fold chronological cross-fitting (each
-half calibrated on the other half), so calibration and selection never use
-the same rows; its TEST forecasts use the calibration fitted on the whole
-validation sample (saved by multitarget.py).
+VALIDATION score is computed past-to-future only: the validation sample is
+cut into 5 consecutive blocks of origin sessions and block k is scored with a
+calibration fitted on all earlier rows whose target session ends before block
+k starts (expanding window); block 0 has no earlier calibration and is
+excluded, for Timestral AND the benchmarks compared with it on those rows.
+Its TEST forecasts use the calibration fitted on the whole validation sample
+(saved by multitarget.py), which precedes the test block. Calibration and
+evaluation date ranges are in timestral_calibration.json.
 
 Intervals: differences (accuracy, z) use a moving-block bootstrap of the
 paired per-row differences; relative improvements (R^2-type ratios) resample
@@ -174,25 +178,49 @@ def positions(p_up, strat):
 # Timestral volatility calibration: cross-fitted on validation
 # ---------------------------------------------------------------------------
 
-def crossfit_timestral_vol(p):
-    """Validation rows of the Timestral sample: 2-fold chronological cross-fitting of the linear
-    calibration log RV ~ a + b * log(spread variance). Returns (forecast, level factor) per row
-    (NaN outside the validation sample) and the fold coefficients."""
+CAL_BLOCKS = 5
+
+
+def _day(v):
+    return str(pd.Timestamp(v).date())
+
+
+def crossfit_timestral_vol(p, n_blocks=CAL_BLOCKS):
+    """Past-to-future (expanding-window) calibration of log RV ~ a + b * log(spread variance) on
+    the validation rows of the Timestral sample.
+
+    The rows are cut into `n_blocks` consecutive blocks of ORIGIN sessions (session_id). Block k
+    (k >= 1) is scored with coefficients fitted on every earlier validation row whose TARGET
+    session (label_session_id) ends before block k's first origin session, so each calibration
+    target is already known when the scored forecasts are made. Block 0 has no earlier
+    calibration and is left NaN (excluded from scoring). Returns (forecast, level factor) per row
+    (NaN outside the scored rows) and per-block metadata with the calibration and evaluation
+    date ranges."""
     f = np.full(len(p), np.nan)
     fac = np.full(len(p), np.nan)
     idx = np.flatnonzero(((p.split == "val") & p.timestral_sample).to_numpy())
-    idx = idx[np.argsort(p.label_start.to_numpy()[idx], kind="stable")]
-    halves = np.array_split(idx, 2)
-    coefs = []
+    org = pd.to_datetime(p.session_id).to_numpy()
+    lab = pd.to_datetime(p.label_session_id).to_numpy()
+    idx = idx[np.argsort(org[idx], kind="stable")]
+    sessions = np.unique(org[idx])
+    blocks = np.array_split(sessions, n_blocks)
     x, y = p.vol_raw__timestral.to_numpy(), p.lrv_next.to_numpy()
-    for k, (fit, pred) in enumerate(((halves[1], halves[0]), (halves[0], halves[1]))):
+    meta = []
+    for k, bs in enumerate(blocks):
+        ev = idx[(org[idx] >= bs[0]) & (org[idx] <= bs[-1])]
+        rec = {"block": k, "eval_origin_sessions": [_day(bs[0]), _day(bs[-1])], "eval_rows": int(len(ev))}
+        fit = idx[lab[idx] < bs[0]]                          # targets realised before block k starts
+        if k == 0 or len(fit) < 30:
+            meta.append({**rec, "scored": False, "reason": "no earlier calibration data"})
+            continue
         A = np.c_[np.ones(len(fit)), x[fit]]
         (a, b), *_ = np.linalg.lstsq(A, y[fit], rcond=None)
-        f[pred] = a + b * x[pred]
-        fac[pred] = np.mean(np.exp(y[fit] - (a + b * x[fit])))
-        coefs.append({"fold": k, "fit_rows": int(len(fit)), "scored_rows": int(len(pred)),
-                      "intercept": float(a), "slope": float(b)})
-    return f, fac, coefs
+        f[ev] = a + b * x[ev]
+        fac[ev] = np.mean(np.exp(y[fit] - (a + b * x[fit])))
+        meta.append({**rec, "scored": True, "calib_rows": int(len(fit)),
+                     "calib_target_sessions": [_day(lab[fit].min()), _day(lab[fit].max())],
+                     "intercept": float(a), "slope": float(b)})
+    return f, fac, meta
 
 
 # ---------------------------------------------------------------------------
@@ -209,10 +237,25 @@ def evaluate(run):
         if "vol_raw__timestral" in p:
             cf, cfac, coefs = crossfit_timestral_vol(p)
             val = (p.split == "val").to_numpy()
-            p.loc[val, "vol__timestral"] = cf[val]                  # validation: cross-fitted only
+            p.loc[val, "vol__timestral"] = cf[val]                  # validation: past-to-future only
             fac_row = np.where(val, cfac, c["vol_level_factor"]["vol__timestral"])
-            CAL[freq] = {"validation_crossfit": coefs, "test": c.get("timestral_vol_calibration")}
             p["_fac_timestral"] = fac_row
+            # volatility rows of the Timestral sample that can be scored (validation: a previous
+            # calibration exists; test: calibration on the whole validation sample)
+            p["_ts_vol_ok"] = p.timestral_sample & (~val | np.isfinite(cf))
+            cal_rows = (val & p.timestral_sample).to_numpy()
+            te = ((p.split == "test") & p.timestral_sample).to_numpy()
+            lab_end = pd.to_datetime(p.label_session_id[cal_rows]).max()
+            CAL[freq] = {"validation_past_to_future": coefs,
+                         "test": {**(c.get("timestral_vol_calibration") or {}),
+                                  "calib_target_sessions": [_day(pd.to_datetime(p.label_session_id[cal_rows]).min()),
+                                                            _day(lab_end)],
+                                  "calib_rows": int(cal_rows.sum()),
+                                  "eval_origin_sessions": [_day(pd.to_datetime(p.session_id[te]).min()),
+                                                           _day(pd.to_datetime(p.session_id[te]).max())],
+                                  "eval_rows": int(te.sum()),
+                                  "calib_targets_before_every_test_origin": bool(
+                                      lab_end < pd.to_datetime(p.session_id[te]).min())}}
         for split in ("val", "test"):
             s = p[p.split == split]
             for rows in ("all", "timestral_sample"):
@@ -259,7 +302,12 @@ def evaluate(run):
                             pos = positions(pp, st) * q.execution_eligible.to_numpy()
                             T.append({"frequency": freq, "model": m, "strategy": st, **trades(pos, mv),
                                       "net_usd_at_5": trades(pos, mv, COST_ALT)["net_usd"]})
-                # ---- volatility
+                # ---- volatility (Timestral sample: only rows with a causal calibration, the
+                # same rows for Timestral and the benchmarks)
+                if rows == "timestral_sample" and "_ts_vol_ok" in q:
+                    q = q[q._ts_vol_ok]
+                    sess = q.label_session_id.to_numpy()
+                    tag = {**tag, "n": len(q)}
                 lv, ln = q.lrv_next.to_numpy(), q.lrv_now.to_numpy()
                 rv = np.exp(lv)
                 fac = c["vol_level_factor"]

@@ -1,117 +1,472 @@
 {
  "5min": {
-  "validation_crossfit": [
+  "validation_past_to_future": [
    {
-    "fold": 0,
-    "fit_rows": 10000,
-    "scored_rows": 10000,
-    "intercept": -1.0456835009275318,
-    "slope": 0.9668697545410792
+    "block": 0,
+    "eval_origin_sessions": [
+     "2017-08-25",
+     "2018-06-07"
+    ],
+    "eval_rows": 3964,
+    "scored": false,
+    "reason": "no earlier calibration data"
    },
    {
-    "fold": 1,
-    "fit_rows": 10000,
-    "scored_rows": 10000,
-    "intercept": -1.4022577500464957,
-    "slope": 0.9414312930338348
+    "block": 1,
+    "eval_origin_sessions": [
+     "2018-06-08",
+     "2019-03-19"
+    ],
+    "eval_rows": 3943,
+    "scored": true,
+    "calib_rows": 3964,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2018-06-07"
+    ],
+    "intercept": -1.5135784562275134,
+    "slope": 0.9353862709354399
+   },
+   {
+    "block": 2,
+    "eval_origin_sessions": [
+     "2019-03-20",
+     "2019-12-26"
+    ],
+    "eval_rows": 4049,
+    "scored": true,
+    "calib_rows": 7907,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2019-03-19"
+    ],
+    "intercept": -1.2583888396149618,
+    "slope": 0.9499019051047158
+   },
+   {
+    "block": 3,
+    "eval_origin_sessions": [
+     "2019-12-27",
+     "2020-10-05"
+    ],
+    "eval_rows": 3992,
+    "scored": true,
+    "calib_rows": 11956,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2019-12-26"
+    ],
+    "intercept": -1.514450047768144,
+    "slope": 0.9354484316762405
+   },
+   {
+    "block": 4,
+    "eval_origin_sessions": [
+     "2020-10-06",
+     "2021-07-14"
+    ],
+    "eval_rows": 4052,
+    "scored": true,
+    "calib_rows": 15948,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2020-10-05"
+    ],
+    "intercept": -1.2984634385846572,
+    "slope": 0.9492110968208737
    }
   ],
   "test": {
    "intercept": -1.2694373772258971,
    "slope": 0.9509173015200238,
-   "fitted_on": "validation sample"
+   "fitted_on": "validation sample",
+   "calib_target_sessions": [
+    "2017-08-25",
+    "2021-07-14"
+   ],
+   "calib_rows": 20000,
+   "eval_origin_sessions": [
+    "2021-07-15",
+    "2025-05-30"
+   ],
+   "eval_rows": 20000,
+   "calib_targets_before_every_test_origin": true
   }
  },
  "15min": {
-  "validation_crossfit": [
+  "validation_past_to_future": [
    {
-    "fold": 0,
-    "fit_rows": 10000,
-    "scored_rows": 10000,
-    "intercept": -1.2947957159820642,
-    "slope": 0.937670043668847
+    "block": 0,
+    "eval_origin_sessions": [
+     "2017-08-25",
+     "2018-06-07"
+    ],
+    "eval_rows": 4007,
+    "scored": false,
+    "reason": "no earlier calibration data"
    },
    {
-    "fold": 1,
-    "fit_rows": 10000,
-    "scored_rows": 10000,
-    "intercept": -1.3532508886173118,
-    "slope": 0.9326334849063884
+    "block": 1,
+    "eval_origin_sessions": [
+     "2018-06-08",
+     "2019-03-19"
+    ],
+    "eval_rows": 4040,
+    "scored": true,
+    "calib_rows": 4007,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2018-06-07"
+    ],
+    "intercept": -1.193326528202175,
+    "slope": 0.9412563034194494
+   },
+   {
+    "block": 2,
+    "eval_origin_sessions": [
+     "2019-03-20",
+     "2019-12-26"
+    ],
+    "eval_rows": 4065,
+    "scored": true,
+    "calib_rows": 8047,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2019-03-19"
+    ],
+    "intercept": -1.2454411666420062,
+    "slope": 0.9392955418100295
+   },
+   {
+    "block": 3,
+    "eval_origin_sessions": [
+     "2019-12-27",
+     "2020-10-05"
+    ],
+    "eval_rows": 3934,
+    "scored": true,
+    "calib_rows": 12112,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2019-12-26"
+    ],
+    "intercept": -1.4909547946019912,
+    "slope": 0.9239294387614694
+   },
+   {
+    "block": 4,
+    "eval_origin_sessions": [
+     "2020-10-06",
+     "2021-07-14"
+    ],
+    "eval_rows": 3954,
+    "scored": true,
+    "calib_rows": 16046,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2020-10-05"
+    ],
+    "intercept": -1.3227552751746545,
+    "slope": 0.9351396204400827
    }
   ],
   "test": {
    "intercept": -1.3425522892955029,
    "slope": 0.9338022677150376,
-   "fitted_on": "validation sample"
+   "fitted_on": "validation sample",
+   "calib_target_sessions": [
+    "2017-08-25",
+    "2021-07-14"
+   ],
+   "calib_rows": 20000,
+   "eval_origin_sessions": [
+    "2021-07-15",
+    "2025-05-30"
+   ],
+   "eval_rows": 20000,
+   "calib_targets_before_every_test_origin": true
   }
  },
  "30min": {
-  "validation_crossfit": [
+  "validation_past_to_future": [
    {
-    "fold": 0,
-    "fit_rows": 10000,
-    "scored_rows": 10000,
-    "intercept": -1.147234684169036,
-    "slope": 0.9426740890707848
+    "block": 0,
+    "eval_origin_sessions": [
+     "2017-08-25",
+     "2018-06-06"
+    ],
+    "eval_rows": 4042,
+    "scored": false,
+    "reason": "no earlier calibration data"
    },
    {
-    "fold": 1,
-    "fit_rows": 10000,
-    "scored_rows": 10000,
-    "intercept": -1.6183249544148746,
-    "slope": 0.907531611782123
+    "block": 1,
+    "eval_origin_sessions": [
+     "2018-06-07",
+     "2019-03-18"
+    ],
+    "eval_rows": 3939,
+    "scored": true,
+    "calib_rows": 4042,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2018-06-06"
+    ],
+    "intercept": -1.3634620853953252,
+    "slope": 0.9241897629139029
+   },
+   {
+    "block": 2,
+    "eval_origin_sessions": [
+     "2019-03-19",
+     "2019-12-24"
+    ],
+    "eval_rows": 4043,
+    "scored": true,
+    "calib_rows": 7981,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2019-03-18"
+    ],
+    "intercept": -1.4994181025181543,
+    "slope": 0.9159832643124116
+   },
+   {
+    "block": 3,
+    "eval_origin_sessions": [
+     "2019-12-26",
+     "2020-10-06"
+    ],
+    "eval_rows": 3959,
+    "scored": true,
+    "calib_rows": 12024,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2019-12-24"
+    ],
+    "intercept": -1.516252983330932,
+    "slope": 0.9154195227058899
+   },
+   {
+    "block": 4,
+    "eval_origin_sessions": [
+     "2020-10-07",
+     "2021-07-14"
+    ],
+    "eval_rows": 4017,
+    "scored": true,
+    "calib_rows": 15983,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2020-10-06"
+    ],
+    "intercept": -1.4021613478243036,
+    "slope": 0.9234631267310093
    }
   ],
   "test": {
    "intercept": -1.3826866989677373,
    "slope": 0.9246159603393876,
-   "fitted_on": "validation sample"
+   "fitted_on": "validation sample",
+   "calib_target_sessions": [
+    "2017-08-25",
+    "2021-07-14"
+   ],
+   "calib_rows": 20000,
+   "eval_origin_sessions": [
+    "2021-07-15",
+    "2025-05-30"
+   ],
+   "eval_rows": 20000,
+   "calib_targets_before_every_test_origin": true
   }
  },
  "1h": {
-  "validation_crossfit": [
+  "validation_past_to_future": [
    {
-    "fold": 0,
-    "fit_rows": 10000,
-    "scored_rows": 10000,
-    "intercept": -1.029853838365754,
-    "slope": 0.9464136877628908
+    "block": 0,
+    "eval_origin_sessions": [
+     "2017-08-25",
+     "2018-06-05"
+    ],
+    "eval_rows": 4022,
+    "scored": false,
+    "reason": "no earlier calibration data"
    },
    {
-    "fold": 1,
-    "fit_rows": 10000,
-    "scored_rows": 10000,
-    "intercept": -1.2723232137505,
-    "slope": 0.925760371937648
+    "block": 1,
+    "eval_origin_sessions": [
+     "2018-06-06",
+     "2019-03-13"
+    ],
+    "eval_rows": 4008,
+    "scored": true,
+    "calib_rows": 4022,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2018-06-05"
+    ],
+    "intercept": -1.0325131626771524,
+    "slope": 0.943580744191584
+   },
+   {
+    "block": 2,
+    "eval_origin_sessions": [
+     "2019-03-18",
+     "2019-12-20"
+    ],
+    "eval_rows": 4037,
+    "scored": true,
+    "calib_rows": 8030,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2019-03-13"
+    ],
+    "intercept": -1.1294686084284549,
+    "slope": 0.9357141479249191
+   },
+   {
+    "block": 3,
+    "eval_origin_sessions": [
+     "2019-12-23",
+     "2020-10-07"
+    ],
+    "eval_rows": 3945,
+    "scored": true,
+    "calib_rows": 12067,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2019-12-20"
+    ],
+    "intercept": -1.2276790351179685,
+    "slope": 0.9303656691572433
+   },
+   {
+    "block": 4,
+    "eval_origin_sessions": [
+     "2020-10-08",
+     "2021-07-14"
+    ],
+    "eval_rows": 3988,
+    "scored": true,
+    "calib_rows": 16012,
+    "calib_target_sessions": [
+     "2017-08-25",
+     "2020-10-07"
+    ],
+    "intercept": -1.2100786968846273,
+    "slope": 0.9319209576585407
    }
   ],
   "test": {
    "intercept": -1.190245756829905,
    "slope": 0.9327627835155365,
-   "fitted_on": "validation sample"
+   "fitted_on": "validation sample",
+   "calib_target_sessions": [
+    "2017-08-25",
+    "2021-07-14"
+   ],
+   "calib_rows": 20000,
+   "eval_origin_sessions": [
+    "2021-07-15",
+    "2025-05-30"
+   ],
+   "eval_rows": 20000,
+   "calib_targets_before_every_test_origin": true
   }
  },
  "session": {
-  "validation_crossfit": [
+  "validation_past_to_future": [
    {
-    "fold": 0,
-    "fit_rows": 411,
-    "scored_rows": 411,
-    "intercept": -0.3308347279572297,
-    "slope": 0.9802174071518925
+    "block": 0,
+    "eval_origin_sessions": [
+     "2017-08-25",
+     "2018-05-01"
+    ],
+    "eval_rows": 165,
+    "scored": false,
+    "reason": "no earlier calibration data"
    },
    {
-    "fold": 1,
-    "fit_rows": 411,
-    "scored_rows": 411,
-    "intercept": -0.3948349846454997,
-    "slope": 0.9610063764496455
+    "block": 1,
+    "eval_origin_sessions": [
+     "2018-05-02",
+     "2019-01-09"
+    ],
+    "eval_rows": 165,
+    "scored": true,
+    "calib_rows": 164,
+    "calib_target_sessions": [
+     "2017-08-28",
+     "2018-05-01"
+    ],
+    "intercept": 1.6033650324015614,
+    "slope": 1.1336174107154404
+   },
+   {
+    "block": 2,
+    "eval_origin_sessions": [
+     "2019-01-10",
+     "2019-11-22"
+    ],
+    "eval_rows": 164,
+    "scored": true,
+    "calib_rows": 329,
+    "calib_target_sessions": [
+     "2017-08-28",
+     "2019-01-09"
+    ],
+    "intercept": 0.4849178349674461,
+    "slope": 1.039077844381973
+   },
+   {
+    "block": 3,
+    "eval_origin_sessions": [
+     "2019-11-25",
+     "2020-11-02"
+    ],
+    "eval_rows": 164,
+    "scored": true,
+    "calib_rows": 493,
+    "calib_target_sessions": [
+     "2017-08-28",
+     "2019-11-22"
+    ],
+    "intercept": -0.5105023272214234,
+    "slope": 0.9505759800768468
+   },
+   {
+    "block": 4,
+    "eval_origin_sessions": [
+     "2020-11-03",
+     "2021-07-13"
+    ],
+    "eval_rows": 164,
+    "scored": true,
+    "calib_rows": 657,
+    "calib_target_sessions": [
+     "2017-08-28",
+     "2020-11-02"
+    ],
+    "intercept": -0.2678665225594746,
+    "slope": 0.9758505935960496
    }
   ],
   "test": {
    "intercept": -0.6642826996671934,
    "slope": 0.9389134457608368,
-   "fitted_on": "validation sample"
+   "fitted_on": "validation sample",
+   "calib_target_sessions": [
+    "2017-08-28",
+    "2021-07-14"
+   ],
+   "calib_rows": 822,
+   "eval_origin_sessions": [
+    "2021-07-15",
+    "2025-01-30"
+   ],
+   "eval_rows": 642,
+   "calib_targets_before_every_test_origin": true
   }
  }
 }

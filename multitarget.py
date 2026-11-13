@@ -31,7 +31,7 @@ timeframe. Frozen weights (zero-shot): median -> return; direction = sign of
 (median - last close), a next-CLOSE forecast, while the direction target is
 the next candle's BODY. Volatility is NOT zero-shot: the q10-q90 spread is
 mapped to log RV by a linear calibration fitted on validation targets
-(multitarget_report.py cross-fits it on validation before scoring). Scored
+(multitarget_report.py scores it on validation past-to-future only). Scored
 on a fixed random sample of validation and test origins.
 
 Outputs (results/multitarget/runs/<id>/): predictions_<freq>.parquet (val +

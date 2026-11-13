@@ -97,14 +97,39 @@ def test_ratio_bootstrap_resamples_both_losses_together():
     assert est == lo == hi == 0
 
 
-def test_timestral_vol_calibration_is_cross_fitted_on_validation():
-    n = 200
-    t = pd.date_range("2018-01-01", periods=n, freq="D", tz="UTC")
-    x = np.linspace(-15, -10, n)
-    p = pd.DataFrame({"split": ["val"] * n, "timestral_sample": True, "label_start": t,
-                      "vol_raw__timestral": x, "lrv_next": 1.0 + 0.9 * x + np.r_[np.zeros(n // 2), np.ones(n // 2)]})
-    f, fac, coefs = mr.crossfit_timestral_vol(p)
-    assert len(coefs) == 2 and all(c["fit_rows"] == c["scored_rows"] == n // 2 for c in coefs)
-    # first half scored with the second half's fit (intercept shifted by +1) and vice versa
-    assert np.allclose(f[: n // 2], 2.0 + 0.9 * x[: n // 2]) and np.allclose(f[n // 2:], 1.0 + 0.9 * x[n // 2:])
-    assert np.isfinite(fac).all()
+def _ts_frame(n_sess=100, per=3, seed=0):
+    rng = np.random.default_rng(seed)
+    days = pd.bdate_range("2018-01-01", periods=n_sess + 1)
+    org = np.repeat(days[:-1].to_numpy(), per)
+    lab = org.copy()
+    lab[per - 1::per] = days[1:].to_numpy()                     # last candle of each session: target in the next one
+    x = rng.normal(-12, 1, len(org))
+    return pd.DataFrame({"split": "val", "timestral_sample": True, "session_id": org, "label_session_id": lab,
+                         "label_start": pd.DatetimeIndex(org).tz_localize("UTC"), "vol_raw__timestral": x,
+                         "lrv_next": 1.0 + 0.9 * x + rng.normal(0, 0.3, len(org))})
+
+
+def test_timestral_vol_calibration_is_past_to_future():
+    p = _ts_frame()
+    f, fac, meta = mr.crossfit_timestral_vol(p)
+    org, lab = pd.to_datetime(p.session_id), pd.to_datetime(p.label_session_id)
+    # first block has no earlier calibration: not scored
+    first = org <= pd.Timestamp(meta[0]["eval_origin_sessions"][1])
+    assert not meta[0]["scored"] and np.isnan(f[first.to_numpy()]).all() and np.isfinite(f[~first.to_numpy()]).all()
+    for b in meta[1:]:
+        # every calibration target is realised before the first origin it is used for
+        assert pd.Timestamp(b["calib_target_sessions"][1]) < pd.Timestamp(b["eval_origin_sessions"][0])
+    assert np.isfinite(fac[~first.to_numpy()]).all()
+
+
+def test_changing_future_targets_does_not_change_earlier_timestral_forecasts():
+    p = _ts_frame()
+    f, fac, meta = mr.crossfit_timestral_vol(p)
+    cut = pd.Timestamp(meta[3]["eval_origin_sessions"][0])
+    q = p.copy()
+    later = pd.to_datetime(q.label_session_id) >= cut
+    q.loc[later, "lrv_next"] += 5.0                   # alter every target realised from block 3 on
+    g, gac, _ = mr.crossfit_timestral_vol(q)
+    early = (pd.to_datetime(p.session_id) < cut).to_numpy()
+    assert np.array_equal(f[early], g[early], equal_nan=True) and np.array_equal(fac[early], gac[early], equal_nan=True)
+    assert not np.allclose(f[~early & np.isfinite(f)], g[~early & np.isfinite(g)])   # later blocks do use them

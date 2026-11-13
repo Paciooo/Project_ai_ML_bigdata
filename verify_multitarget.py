@@ -72,21 +72,35 @@ def main(run, rep, pres=None):
         for sp in ("val", "test"):
             check(int((p.timestral_sample & (p.split == sp)).sum()) <= 20_000, f"{freq} {sp}: Timestral sample too large")
         check(str(p.session_id[p.split == "test"].max().date()) == fi["test"][1], f"{freq}: test end date differs from dataset_info")
-        # cross-fitted Timestral calibration on validation (independent implementation)
+        # past-to-future Timestral calibration on validation (independent implementation):
+        # 5 blocks of origin sessions, block k fitted on rows whose target session precedes it
         tsv = np.full(len(p), np.nan)
         tfac = np.full(len(p), np.nan)
+        tsok = np.zeros(len(p), bool)
         if "vol_raw__timestral" in p:
-            idx = np.flatnonzero(((p.split == "val") & p.timestral_sample).to_numpy())
-            idx = idx[np.argsort(p.label_start.to_numpy()[idx], kind="stable")]
-            h = np.array_split(idx, 2)
+            vs = ((p.split == "val") & p.timestral_sample).to_numpy()
+            org = pd.to_datetime(p.session_id)
+            lab = pd.to_datetime(p.label_session_id)
             x, y = p.vol_raw__timestral.to_numpy(), p.lrv_next.to_numpy()
-            for fit, prd in ((h[1], h[0]), (h[0], h[1])):
+            blocks = np.array_split(np.sort(org[vs].unique()), 5)
+            for k, bs in enumerate(blocks[1:], start=1):
+                fit = vs & (lab < bs[0]).to_numpy()
+                prd = vs & ((org >= bs[0]) & (org <= bs[-1])).to_numpy()
+                check(lab[fit].max() < org[prd].min(), f"{freq}: calibration block {k} uses targets after its origins")
                 b, a = np.polyfit(x[fit], y[fit], 1)
                 tsv[prd] = a + b * x[prd]
                 tfac[prd] = np.mean(np.exp(y[fit] - a - b * x[fit]))
+                tsok |= prd
             te = (p.split == "test").to_numpy()
+            check(lab[vs].max() < org[te & p.timestral_sample.to_numpy()].min(),
+                  f"{freq}: test calibration uses targets after the first test origin")
             tsv[te] = p.vol__timestral.to_numpy()[te]
             tfac[te] = c["vol_level_factor"]["vol__timestral"]
+            tsok |= te & p.timestral_sample.to_numpy()
+            cal = json.loads((rep / "timestral_calibration.json").read_text(encoding="utf-8"))[freq]
+            got = [b["eval_rows"] for b in cal["validation_past_to_future"] if b["scored"]]
+            check(got == [int(((org >= bs[0]) & (org <= bs[-1])).to_numpy()[vs].sum()) for bs in blocks[1:]],
+                  f"{freq}: timestral_calibration.json block sizes differ")
         for sp in ("val", "test"):
             for rows in ("all", "timestral_sample"):
                 m_ = (p.split == sp).to_numpy() & (np.ones(len(p), bool) if rows == "all" else p.timestral_sample.to_numpy())
@@ -124,7 +138,11 @@ def main(run, rep, pres=None):
                         check(close(x[k], v), f"{freq} {sp} {rows} direction {mdl} {k}: {x[k]} vs {v}")
                     if pd.notna(x.ci_lo_pp):
                         check(x.ci_lo_pp <= x.diff_pp + 1e-9 <= x.ci_hi_pp + 2e-9, f"{freq} {sp} direction {mdl}: interval order")
-                # volatility
+                # volatility (Timestral sample: only causally calibrated rows, same rows for benchmarks)
+                if rows == "timestral_sample" and "vol_raw__timestral" in p:
+                    m_ = m_ & tsok
+                    q = p[m_]
+                    check(sel(V).n.eq(len(q)).all(), f"{freq} {sp} volatility Timestral-sample row count")
                 lv, ln = q.lrv_next.to_numpy(), q.lrv_now.to_numpy()
                 rv, up = np.exp(lv), lv > ln
                 e_p = (lv - ln) ** 2
