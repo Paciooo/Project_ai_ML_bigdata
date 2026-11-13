@@ -8,7 +8,9 @@ removed from the project.
 * Main project (branch `main`): multi-target study. `multitarget.py` -> run
   `20261112T050812Z_82953a_final`; `multitarget_report.py` ->
   `reports/multitarget_final/`; deck `presentation/` (cover + 8 slides, the
-  last on reproducibility, built from its deck_data.json); check with
+  last on reproducibility, built from its deck_data.json; slides 5-7 compare
+  five models per task, slide 8 shows only the best model overall by
+  validation z); check with
   `verify_multitarget.py` (recomputes the numbers, not the bootstraps, data
   or models; do not call it a full audit).
 * The study is statistical only: no trading rules, P&L, costs or equity

@@ -9,7 +9,7 @@ predict, and on which timeframe?** The study is purely statistical: forecast
 accuracy against simple benchmarks, with uncertainty intervals. It contains
 no trading rules, P&L or cost assumptions.
 
-* Deck (cover + 8 slides, the last one on reproducibility):
+* Deck (cover + 8 slides: five models compared per task, the best model overall, reproducibility):
   [presentation/NASDAQ_multitarget_report.pptx](presentation/NASDAQ_multitarget_report.pptx)
   ([PDF](presentation/NASDAQ_multitarget_report.pdf)).
 * Result tables and charts: [reports/multitarget_final/](reports/multitarget_final/).
@@ -82,6 +82,41 @@ timeframes, 2021-07-15 → 2025-01-30 for daily candles (see "Data").
   the best network depth differs by task and timeframe (256-128-64-32,
   128-64-32 and 64-32), and differences between networks are a fraction of
   the gap to the benchmark (`results_*.csv`).
+
+## Five models per task and the best model overall (slides 5–8)
+
+For each task the deck compares five models, one per family, on the task's
+best validation timeframe (5 minutes for all three): a linear model (Ridge,
+or logistic regression for direction), random forest, XGBoost, the best
+neural-network architecture on validation, and Timestral (frozen weights;
+for volatility with the supervised calibration). Rows are ranked by the
+validation evidence score z (`comparison_by_task.csv`); all other columns
+are test results.
+
+| Task | #1 | #2 | #3 | #4 | #5 |
+|---|---|---|---|---|---|
+| Return (R² vs zero) | DNN 256-128-64-32 −0.04% | XGBoost +0.00% | Ridge −0.03% | Random forest −0.05% | Timestral −2.55% |
+| Direction (pp vs majority) | DNN 256-128-64-32 +0.69 | Random forest +0.62 | Logistic +0.50 | XGBoost +0.58 | Timestral −0.59 |
+| Volatility (log-RV R² vs persistence / vs HAR-OLS) | DNN 128-64-32 +40.0% / +6.8% | XGBoost +42.0% / +9.9% | Random forest +37.1% / +2.3% | Ridge +35.7% / +0.1% | Timestral + calibration +12.2% / −35.9% |
+
+Timestral is scored on its fixed random sample of 20,000 test candles.
+
+**Ranking rule (slide 8).** (1) Every model × timeframe is scored on
+validation by its improvement over the task's naive benchmark; (2) the
+evidence score z = improvement / block-bootstrap standard error is
+unit-free, so tasks can be compared; (3) the highest z wins within each
+task, and the best model overall is the task winner with the highest z;
+(4) only then is it scored on the test. Task winners: volatility DNN
+128-64-32 (z 44.0), direction DNN 256-128-64-32 (z 11.9), return DNN
+256-128-64-32 (z 3.1). **Best model overall: DNN 128-64-32 forecasting
+5-minute realized volatility.** On the test XGBoost (#2 on validation) is
+slightly better (+42.0% vs +40.0% over persistence); the ranking follows the
+validation rule fixed in advance, not the test.
+
+**Laboratory conditions.** Every number is measured on clean historical
+data with no commissions, bid-ask spread, slippage or latency. In live
+markets these costs apply, so the values shown are not reproducible in
+practice and a small edge (such as +0.69 pp in direction) may disappear.
 
 ## Data analysis (test sample, `data_profile.csv`)
 
@@ -315,7 +350,7 @@ of `data_profile.csv`, the per-year direction gains and the deck data (run
 id, rows, charts, no trading fields, no VIX). It does not re-run the
 bootstraps (it checks interval order only), rebuild the data from the
 1-minute bars or refit models. On the final run, with the presentation
-folder: 3,580 checks, 0 problems.
+folder: 3,922 checks, 0 problems.
 
 Outputs of `multitarget.py` (`results/multitarget/runs/<id>/`):
 `predictions_<freq>.parquet` (validation and test rows, every model's
@@ -324,7 +359,7 @@ forecast), `models.csv`, `dataset_info.json`, `console.log`, `run.json`
 from a working copy of commit `35be806`). Outputs of `multitarget_report.py`:
 `results_return.csv`, `results_direction.csv`, `results_volatility.csv`
 (every model × timeframe × split, plus the Timestral-sample rows),
-`data_profile.csv`, `selection_validation_ranking.csv`, `selected_five.csv`,
+`data_profile.csv`, `selection_validation_ranking.csv`, `comparison_by_task.csv` (slides 5–8), `selected_five.csv` (the earlier five-configuration selection),
 `configurations_tested.csv`, `timestral_calibration.json`,
 `chart_cfg<id>_*.png`, `deck_data.json`.
 

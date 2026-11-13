@@ -244,6 +244,35 @@ def main(run, rep, pres=None):
             v = d.mean() if x["year"] == "all" else d[yr == x["year"]].mean()
             check(close(x["gain_pp"], v, 1e-9), f"deck direction_by_year {sid} {x['year']}: {x['gain_pp']} vs {v}")
             check(x["ci_lo_pp"] <= x["gain_pp"] + 1e-9 <= x["ci_hi_pp"] + 2e-9, f"deck direction_by_year {sid} {x['year']}: interval order")
+    # five-model comparison per task (one per family, task's best validation timeframe) and winners
+    cmp_ = pd.read_csv(rep / "comparison_by_task.csv")
+    fams = {"return": ["ridge", "random_forest", "xgboost", "dnn", "timestral"],
+            "direction": ["logistic", "random_forest", "xgboost", "dnn", "timestral"],
+            "volatility": ["ridge", "random_forest", "xgboost", "dnn", "timestral_calibrated"]}
+    winners = []
+    for task, fl in fams.items():
+        rk = rank[rank.task == task].sort_values("val_z", ascending=False)
+        tf = rk.iloc[0].frequency
+        rk = rk[rk.frequency == tf]
+        want = []
+        for fam in fl:
+            x = rk[rk.model.str.startswith("mlp_")] if fam == "dnn" else rk[rk.model == fam]
+            if len(x):
+                want.append((x.iloc[0].model, x.iloc[0].val_z))
+        want = sorted(want, key=lambda t: -t[1])
+        got = cmp_[cmp_.task == task].sort_values("rank_in_task")
+        check([m for m, _ in want] == list(got.model) and (got.frequency == tf).all(), f"comparison {task}: rule gives {want}")
+        winners.append((task, want[0][0], want[0][1]))
+        df = {"return": R, "direction": D, "volatility": V}[task]
+        for _, r in got.iterrows():
+            rows = "timestral_sample" if str(r.model).startswith("timestral") else "all"
+            x = df[(df.split == "test") & (df.rows == rows) & (df.frequency == tf) & (df.model == r.model)].iloc[0]
+            for k in x.index:
+                if f"t_{k}" in cmp_ and isinstance(x[k], (int, float, np.number)):
+                    check(close(r[f"t_{k}"], x[k], 1e-9), f"comparison {task} {r.model}: t_{k} differs from results")
+        check([r["model"] for r in dd["comparison"][task]] == list(got.model), f"deck comparison {task} differs")
+    winners = sorted(winners, key=lambda t: -t[2])
+    check([(w["task"], w["model"]) for w in dd["winners"]] == [(t, m) for t, m, _ in winners], "deck winners / best overall differ")
     for f, fi in dd["dataset"].items():
         check(fi["test"] == info[f]["test"] and fi["train"] == info[f]["train"], f"deck dataset {f} differs")
     for sid, fn in dd["charts"].items():

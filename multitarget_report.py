@@ -386,6 +386,37 @@ def select(R, D, V):
     return c, sel.reset_index(drop=True)
 
 
+FAMILIES = {"return": ["ridge", "random_forest", "xgboost", "dnn", "timestral"],
+            "direction": ["logistic", "random_forest", "xgboost", "dnn", "timestral"],
+            "volatility": ["ridge", "random_forest", "xgboost", "dnn", "timestral_calibrated"]}
+
+
+def compare_by_task(cand, R, D, V):
+    """Five models per task, one per family (linear, random forest, XGBoost, best DNN
+    architecture, Timestral), on the task's best validation timeframe (the timeframe of its
+    highest validation z). Ranked by validation z; test fields from the results tables.
+    The best model overall is the task winner with the highest validation z (z = validation
+    improvement over the naive benchmark / its block-bootstrap standard error: unit-free)."""
+    rows = []
+    for task, fams in FAMILIES.items():
+        c = cand[cand.task == task]
+        tf = c.iloc[0].frequency                              # cand is sorted by val_z
+        c = c[c.frequency == tf]
+        for fam in fams:
+            x = c[c.model.str.startswith("mlp_")] if fam == "dnn" else c[c.model == fam]
+            if x.empty:
+                continue
+            r = x.iloc[0]
+            rows.append({"task": task, "family": fam, "frequency": tf, "model": r.model, "val_z": r.val_z,
+                         **test_row(task, r, R, D, V)})
+    cmp_ = pd.DataFrame(rows)
+    cmp_["rank_in_task"] = cmp_.groupby("task").val_z.rank(ascending=False, method="first").astype(int)
+    cmp_ = cmp_.sort_values(["task", "rank_in_task"], key=lambda s: s.map({"return": 0, "direction": 1, "volatility": 2})
+                            if s.name == "task" else s).reset_index(drop=True)
+    winners = cmp_[cmp_.rank_in_task == 1].sort_values("val_z", ascending=False)
+    return cmp_, winners
+
+
 def test_row(task, r, R, D, V):
     rows = "timestral_sample" if is_timestral(r.model) else "all"
     if task == "return":
@@ -523,6 +554,8 @@ def main(run, out=None):
     V.to_csv(out / "results_volatility.csv", index=False)
     cand.to_csv(out / "selection_validation_ranking.csv", index=False)
     five.to_csv(out / "selected_five.csv", index=False)
+    cmp_, winners = compare_by_task(cand, R, D, V)
+    cmp_.to_csv(out / "comparison_by_task.csv", index=False)
     (out / "timestral_calibration.json").write_text(json.dumps(clean(CAL), indent=1), encoding="utf-8")
     files, by_year = charts(run, sel, out, info)
     models = pd.read_csv(run / "models.csv")
@@ -540,7 +573,11 @@ def main(run, out=None):
             # qualitative Timestral outcome per timeframe (interval above zero on test); numbers in results_*.csv
             "timestral_outcome": ts,
             # direction: accuracy gain over the majority class per test year (block-bootstrap interval)
-            "direction_by_year": by_year}
+            "direction_by_year": by_year,
+            # slides 5-7: five models per task (one per family) on the task's best validation timeframe
+            "comparison": {t: cmp_[cmp_.task == t].to_dict("records") for t in FAMILIES},
+            # slide 8: task winners ranked by validation z; the first is the best model overall
+            "winners": winners.to_dict("records")}
     (out / "deck_data.json").write_text(json.dumps(clean(deck), indent=1), encoding="utf-8")
     pd.set_option("display.width", 250)
     print(five[["id", "task", "model", "frequency", "val_z", "slot", "key_metric", "baseline", "improvement"]].to_string())
