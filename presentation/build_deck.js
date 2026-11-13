@@ -98,12 +98,12 @@ const kfmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e4 ? Math.roun
 const acfRange = (k) => { const v = FREQS.map((f) => PROF(f)[k]); return [Math.min(...v), Math.max(...v)]; };
 const CMP = D.comparison, WIN = D.winners, BEST = WIN[0];
 const TMAP = (task, f) => D.timeframe_map.find((r) => r.task === task && r.frequency === f);
-const DAG = (r) => r.model.startsWith("timestral") ? " †" : "";
+const DAG = (r) => r.model.startsWith("timestral") ? " *" : "";
 const mName = (r) => MODEL[r.model] + DAG(r);
 const zTxt = (r) => r.val_z.toFixed(1);
 const rmseCut = (r) => 100 * (1 - r.t_rmse_log / r.t_rmse_log_persistence);
 const tsNote = (task) => { const t = CMP[task].find((r) => r.model.startsWith("timestral"));
-  return t ? `† Timestral: scored on its fixed random sample of ${t.t_n.toLocaleString("en-US")} test candles (its benchmark on the same candles; appendix A4).` : ""; };
+  return t ? `* Timestral: scored on its fixed random sample of ${t.t_n.toLocaleString("en-US")} test candles (its benchmark on the same candles; appendix A4).` : ""; };
 const rankNote = "Rows ranked by validation evidence z (validation improvement over the task's naive benchmark ÷ its block-bootstrap standard error); all other columns are test results.";
 const EXPLORATORY = "Exploratory: the test period (2021-07 → 2025-05; daily to 2025-01) was examined in earlier phases and the volatility selection score was revised after a first look at test results. Statistical accuracy only: no trading, costs or profitability were evaluated.";
 const tmV = (f) => TMAP("volatility", f);
