@@ -38,13 +38,17 @@ earlier phases of the project, and the volatility selection score was revised
 after a first report had printed test numbers (see "Selection"). Nothing
 here is a blind, confirmatory test.
 
-## Results (run `20261112T050812Z_82953a_final`)
+## Results (intraday: run `20261112T050812Z_82953a_final`; daily: run `20261114T024015Z_cf1504_daily_noflags`)
+
+The two runs are merged in `20261114T024015Z_cf1504_daily_noflags_merged`
+(`tools/merge_daily_run.py`): intraday forecasts unchanged, daily forecasts
+from a new daily-only run in which flagged 1-minute bars no longer exclude
+sessions ("Sample checks" A).
 
 **Answer (exploratory): realized volatility is the most predictable
-characteristic in this study, on every intraday candle length tested (5
-minutes to 1 hour); on daily candles it beats persistence too, but only on a
-filtered sample that under-represents turbulent periods (see "Sample
-checks"), so the daily result is not a robust conclusion. For next-candle
+characteristic in this study, on every candle length tested (5 minutes to 1
+day; daily: 937 of the 1,002 test sessions, holiday-shortened sessions
+excluded, flagged minutes kept in the candles). For next-candle
 returns no improvement over forecasting zero was demonstrated with the
 models, data and horizons tried. For next-candle direction a small accuracy
 gain was measured on 5-minute candles only, and it is not stable across the
@@ -65,21 +69,24 @@ that task and candle length, scored on the test (95% interval):
 
 | Task (test) | 5 min | 15 min | 30 min | 1 hour | 1 day |
 |---|---|---|---|---|---|
-| Return: R² vs zero (%) | −0.04 [−0.10, +0.02] | −0.01 [−0.07, +0.04] | +0.00 [−0.02, +0.02] | −0.01 [−0.06, +0.04] | −1.95 [−6.11, +1.73] |
-| Direction: accuracy gain vs majority (pp) | **+0.69 [+0.40, +0.98]** | +0.25 [−0.07, +0.57] | +0.16 [−0.12, +0.38] | +0.26 [−0.08, +0.55] | −0.78 [−1.52, +0.00] |
-| Volatility: squared log-RV error cut vs persistence (%) | **40.0 [39.5, 40.4]** | **36.5 [35.1, 37.7]** | **42.6 [40.8, 44.3]** | **52.0 [50.0, 54.1]** | **18.7 [9.7, 24.5]** |
-| Volatility: squared log-RV error cut vs HAR-OLS (%) | **6.8 [6.2, 7.3]** | **10.3 [8.8, 11.6]** | **16.7 [14.5, 18.7]** | **26.1 [23.8, 28.5]** | 7.6 [−0.9, 14.6] |
+| Return: R² vs zero (%) | −0.04 [−0.10, +0.02] | −0.01 [−0.07, +0.04] | +0.00 [−0.02, +0.02] | −0.01 [−0.06, +0.04] | +0.43 [−0.68, +1.53] |
+| Direction: accuracy gain vs majority (pp) | **+0.69 [+0.40, +0.98]** | +0.25 [−0.07, +0.57] | +0.16 [−0.12, +0.38] | +0.26 [−0.08, +0.55] | +0.00 [+0.00, +0.00] |
+| Volatility: squared log-RV error cut vs persistence (%) | **40.0 [39.5, 40.4]** | **36.5 [35.1, 37.7]** | **42.6 [40.8, 44.3]** | **52.0 [50.0, 54.1]** | **20.1 [14.8, 24.5]** |
+| Volatility: squared log-RV error cut vs HAR-OLS (%) | **6.8 [6.2, 7.3]** | **10.3 [8.8, 11.6]** | **16.7 [14.5, 18.7]** | **26.1 [23.8, 28.5]** | **7.1 [0.9, 12.3]** |
 
 Bold: interval above zero. The gain over HAR-OLS grows with candle length up
-to one hour; on daily candles the interval includes zero.
+to one hour; on daily candles it is 7.1%, with an interval just above zero.
+The daily direction model (DNN 256-128-64-32) always calls the majority
+class on the test, hence +0.00 pp.
 
-> **Daily caveat.** The 1-day column is a filtered sample: 642 of the 1,002
-> daily test sessions. 304 sessions lie within 50 sessions after a session
-> with a flagged 1-minute bar and are excluded by the data-quality filter
-> (another 56 for other reasons, below), so turbulent periods are
-> under-represented. The daily results are exploratory and hold for this
-> filtered sample only; they say nothing robust about the unfiltered daily
-> series.
+> **Daily sample.** The 1-day column covers 937 of the 1,002 daily test
+> sessions (2021-07-15 → 2025-05-29), from a separate daily run in which
+> flagged 1-minute bars no longer exclude sessions, in every split. Not
+> included: 35 holiday-shortened sessions, 29 sessions whose next session is
+> shortened, and the last session (no next session). The flagged minutes stay
+> in the daily candles, so their realized variance includes those moves. The
+> earlier rule kept 642 sessions (results in Git history, commit `ebe8948`);
+> daily results remain exploratory.
 
 ### Five models per task (slides 6–8, `comparison_by_task.csv`)
 
@@ -142,7 +149,7 @@ direction may not survive them.
 | 15 min | 90,189 | 50.7% / 48.3% / 1.0% | 13.3 | +0.003 | 0.84 |
 | 30 min | 44,395 | 51.1% / 48.1% / 0.8% | 18.5 | −0.002 | 0.84 |
 | 1 hour | 21,507 | 51.5% / 48.0% / 0.5% | 26.2 | −0.000 | 0.83 |
-| 1 day | 642 | 54.2% / 45.8% / 0.0% | 116.9 | −0.001 | 0.81 |
+| 1 day | 937 | 53.0% / 47.0% / 0.0% | 137.2 | −0.057 | 0.81 |
 
 ACF = lag-1 autocorrelation (intraday: pairs within a session; daily:
 consecutive sessions). Candle direction is close to a coin flip, consecutive
@@ -175,8 +182,9 @@ The same statistics for the validation block are in `data_profile.csv`.
 
 Measured from the 1-minute data and the saved forecasts, without training.
 
-**A. Why the daily test ends on 2025-01-30.** All 85 sessions from 2025-01-31
-to 2025-05-30 are dropped. 84 of them fall within 50 sessions after a session
+**A. Daily sample: the earlier flagged-bar filter and the new daily run.**
+*Earlier rule (until 2026-11-13).* The daily test ended on 2025-01-30: all 85
+sessions from 2025-01-31 to 2025-05-30 were dropped. 84 of them fall within 50 sessions after a session
 containing a flagged 1-minute bar: `study.build` keeps a row only if none of
 the last 50 candles contains one (`clean50`), and `quality.flag_suspect`
 flags any 1-minute bar whose log return against the previous bar exceeds 2%
@@ -202,17 +210,28 @@ those values and reports the filtered-sequence returns separately
 | Move persists 30 minutes later | 9 (2020-03-09, 2020-03-23, 2022-02-28, 2022-07-13, 2022-10-13, 2022-11-10, 2025-02-03, 2025-04-07, 2025-04-09) | −4.5% to +2.6% vs an in-schedule predecessor, still beyond 2% in the same direction 30 in-schedule minutes later | 5 follow a weekend gap; the 2022 ones fall at 8:30 ET (US data releases); 2025-04-09 at 13:19 ET. Consistent with genuine moves, not proof of them |
 | Unresolved | 2 (2020-03-02, 2020-03-16) | −2.4% and −3.0%, partly retraced within 30 minutes (−1.7%, −1.6%) | weekend reopening / 15-minute gap; nothing decisive |
 
-*Impact on the daily sample.* 304 of the 1,002 daily test sessions (train
+*Impact of the earlier rule.* 304 of the 1,002 daily test sessions (train
 150, validation 115) lie in 50-session windows after an in-schedule flag and
-all 304 are excluded; 50 of them only because of the 2023-03-16 flag, whose
+all 304 were excluded; 50 of them only because of the 2023-03-16 flag, whose
 predecessor is the dropped 16:59 CT bar, 254 because of flags whose move
-persists. Another 56 test sessions are excluded because their label is not
+persists. Another 56 test sessions were excluded because their label is not
 the next session (`timeframes.next_label_eligible`; the conditions overlap), so 642
-are kept. The **daily sample under-represents turbulent periods**: the daily
-results are exploratory and refer to this filtered sample. Intraday the
-window is 50 candles, a negligible loss. Changing the filter changes the
-sample and needs a new daily run; this was not done, so the daily limitation
-is documented, not resolved (see "Future experiments").
+were kept and turbulent periods were under-represented.
+
+*New daily run (2026-11-14).* `multitarget.py --freqs session
+--daily-ignore-flags` sets the flag to false for daily candles only (prices
+unchanged), so flagged bars exclude no daily session, in any split (train
+2,122, validation 937, test 937 rows). Still not included in the test (65,
+`daily_sample_used` in `sample_checks.json`): 35 holiday-shortened sessions
+(`is_partial`: e.g. 4 July, Thanksgiving, Martin Luther King Day), 29
+sessions whose next session is shortened (their label would be a
+shortened candle) and 2025-05-30 (no next session). The flagged minutes stay
+in the daily candles: their realized variance includes those moves, whether
+genuine or not (the Yahoo comparison, C, checks closing returns only).
+Intraday timeframes keep the original run and its filter (50-candle window,
+a negligible loss). The new daily run was merged with the intraday forecasts
+(`tools/merge_daily_run.py`); the daily models were refitted, so the change
+in daily results mixes the new sample and the new fit.
 
 **B. Incomplete intraday candles.** `timeframes.aggregate` stores the number
 of 1-minute bars in each candle (`n_minutes`) but does not use it: a
@@ -314,7 +333,7 @@ candle, the single minutes or the realized volatility.
 
 | Daily sessions | With a Yahoo quote | Confirmed | Median gap to ^NDX |
 |---|---|---|---|
-| Test, in the 50-session windows (excluded) | 292 of 304 | 100% | 0.034 pp |
+| Test, in the 50-session windows (excluded by the earlier rule) | 292 of 304 | 100% | 0.034 pp |
 | Test, outside the windows | 658 of 698 | 99.5% | 0.030 pp |
 | All splits, in the windows | 551 of 569 | 99.6% | 0.032 pp |
 | All splits, outside the windows | 4,214 of 4,442 | 99.7% | 0.032 pp |
@@ -323,20 +342,17 @@ candle, the single minutes or the realized volatility.
   2023-12-18, 2024-12-23). Almost all fall on a quarterly expiry Friday or
   the Monday after it, consistent with the contract switch in the continuous
   series rather than with bad prices; 2020-03-18/19 were futures limit-down
-  days. None of them is among the excluded sessions.
+  days. None of them was in the earlier 50-session windows.
 
-**Conclusion.** The reconciled daily returns of the excluded sessions agree
-with the Yahoo references within the chosen tolerance. This suggests that
-the quarantine also removes plausible sessions, but it does not verify the
-correctness of the single minutes or of the realized volatility; Yahoo is
-not a certification of data quality. A daily filter based on this check (a flagged minute excludes a
-session only if Yahoo does not confirm its daily candle) would currently
-remove no session and keep about 921 of the 1,002 daily test sessions
-(the 81 whose label is not the next session stay out). This was **not**
-applied: it needs a new daily run (see "Future experiments"), so the daily
-limitation remains documented, not resolved. The check uses only end-of-day
-data and cannot validate single minutes; Yahoo NQ=F and ^NDX have their own
-errors (one reference is enough to confirm a day for that reason).
+**Conclusion.** The reconciled daily returns of the sessions the earlier
+rule excluded agree with the Yahoo references within the chosen tolerance.
+This suggests that the quarantine also removed plausible sessions, but it
+does not verify the correctness of the single minutes or of the realized
+volatility; Yahoo is not a certification of data quality. On 2026-11-14 the
+daily flag filter was removed in a new daily run ("Sample checks" A): 937
+test sessions instead of 642. The check uses only end-of-day data and cannot
+validate single minutes; Yahoo NQ=F and ^NDX have their own errors (one
+reference is enough to confirm a day for that reason).
 
 ## Timestral on the same sample (`tools/timestral_same_sample.py`, appendix A4)
 
@@ -349,13 +365,13 @@ intervals in `timestral_same_sample.csv`):
 | 15 min | −2.23% / −0.10% | +0.01 / −0.08 | +1.09 | −37.1% / +34.8% | 0.74 / 0.84 |
 | 30 min | −1.46% / +0.02% | −1.76 / −1.88 | +0.14 | −56.2% / +41.3% | 0.71 / 0.84 |
 | 1 hour | −1.59% / +0.00% | −2.28 / −2.36 | +0.02 | −74.3% / +41.8% | 0.64 / 0.83 |
-| 1 day | −1.83% / +0.17% | −1.87 / −1.56 | +0.00 | −19.3% / +18.7% | 0.75 / 0.82 |
+| 1 day | −1.94% / +0.43% | −2.03 / −1.60 | +0.00 | −7.4% / +17.2% | 0.77 / 0.81 |
 
 * **Target:** Timestral forecasts the next close (direction = median vs last
   close) while the study scores the candle body. Scored on the close-to-close
   direction it does no better, so the mismatch does not explain its result.
 * **Sample:** the trained models keep their advantage on Timestral's own
-  20,000-candle sample (daily: all 642 sessions), so the gap is not a
+  20,000-candle sample (daily: all 937 sessions), so the gap is not a
   sampling artefact.
 * **Volatility:** Timestral's volatility is indirect, the q10–q90 spread of
   its price forecast mapped to log RV by a linear calibration fitted on
@@ -390,11 +406,12 @@ intervals in `timestral_same_sample.csv`):
 | 15 min | 2006-01-10 → 2017-08-24, 263,691 | 2017-08-25 → 2021-07-14, 88,336 | 2021-07-15 → 2025-05-30, 90,189 |
 | 30 min | 2006-01-10 → 2017-08-24, 132,606 | 2017-08-25 → 2021-07-14, 44,513 | 2021-07-15 → 2025-05-30, 44,395 |
 | 1 hour | 2006-01-10 → 2017-08-24, 64,813 | 2017-08-25 → 2021-07-14, 21,642 | 2021-07-15 → 2025-05-30, 21,507 |
-| 1 day | 2006-03-13 → 2017-08-23, 1,991 | 2017-08-25 → 2021-07-13, 822 | 2021-07-15 → **2025-01-30**, 642 |
+| 1 day | 2006-03-13 → 2017-08-23, 2,122 | 2017-08-25 → 2021-07-13, 937 | 2021-07-15 → 2025-05-29, 937 |
 
   The daily sample starts later because the 50-candle moving-average
-  feature needs 50 sessions of history. It ends on 2025-01-30 because of the
-  flagged-bar filter (measured cause in "Sample checks").
+  feature needs 50 sessions of history. Daily rows come from the new daily
+  run without the flagged-bar filter; holiday-shortened sessions and the day
+  before each are not included ("Sample checks" A).
 * The test period was already inspected for the direction task in earlier
   project phases, so the test results are **exploratory**, not a clean
   confirmation.
@@ -551,9 +568,13 @@ python -m venv .venv; .venv\Scripts\Activate.ps1
 pip install -r requirements-lock.txt -r requirements-timestral.txt
 $env:FUTURES_DATA_DIR = "C:\path\to\futures-data"
 python multitarget.py --tag final                       # full training, ~30 min on 16 CPU threads
+python multitarget.py --freqs session --daily-ignore-flags --tag daily_noflags   # daily only, seconds
+python tools\merge_daily_run.py results\multitarget\runs\<final run> results\multitarget\runs\<daily run>
+# <run id> below = the merged folder (<daily run>_merged)
 python multitarget_report.py results\multitarget\runs\<run id> reports\multitarget_final
 python tools\timestral_same_sample.py results\multitarget\runs\<run id> reports\multitarget_final
 python tools\sample_checks.py results\multitarget\runs\<run id> reports\multitarget_final   # reads the 1-minute data, ~1 min
+python tools\render_equations.py presentation\eq           # slide-3 formulas as LaTeX-style images
 copy reports\multitarget_final\deck_data.json, reports\multitarget_final\chart_*.png, reports\multitarget_final\sample_checks.json, reports\multitarget_final\timestral_same_sample.json presentation\
 python verify_multitarget.py results\multitarget\runs\<run id> reports\multitarget_final presentation
 cd presentation
@@ -577,10 +598,12 @@ rows, charts, appendix inputs, no trading fields, no VIX). It also checks
 the content of `sample_checks.json`: every flag above the threshold and
 equal to the log return against its recorded predecessor, the categories
 re-derived from their rule, the counts and the daily accounting adding up,
-the daily test rows equal to the saved forecasts, no saved daily forecast
-within 50 sessions of an in-schedule flag, and the all-rows rescoring of the
-incomplete-candle check. On the final run, with the presentation folder:
-4,128 checks, 0 problems. The unit tests (`pytest`, 43 tests) cover
+the daily test rows of the run equal to the saved forecasts with one
+recorded reason for every missing test session, no saved daily forecast
+within 50 sessions of an in-schedule flag when the run used the flagged-bar
+filter, and the all-rows rescoring of the incomplete-candle check. On the
+merged run, with the presentation folder: 4,120 checks, 0 problems. The unit
+tests (`pytest`, 45 tests) cover the merge tool,
 targets, timing, sessions, splits, bootstrap, the ranking rule, the causal
 Timestral calibration and the flag provenance (a flag whose predecessor is
 an out-of-schedule bar dropped later).
@@ -610,14 +633,12 @@ Tools: `sample_checks.json`, `timestral_same_sample.csv/.json`.
 
 ## Future experiments (proposed, not run; by benefit and cost)
 
-1. **Daily sample fix** — high benefit, low cost (daily data set is small):
-   for daily candles, let a flagged minute exclude a session only if the
-   Yahoo comparison ("Sample checks" C) does not confirm its daily return
-   (ideally extended to the daily range and to RV) (today:
-   no session; test about 921 of 1,002 sessions instead of 642), keeping the
-   old rule as the default for reproducibility; then re-run
-   `multitarget.py --freqs session` as a new run, merge it with the intraday
-   predictions of the saved run and compare with the saved daily results.
+1. **Daily sample: separate the sample from the refit** — low cost: refit
+   the daily models on the old 642-session filter with the current code and
+   seed, to tell how much of the change in daily results comes from the
+   sample and how much from the new fit; and test the daily candles with the
+   flagged minutes replaced (e.g. by the previous close) to bound their effect
+   on daily RV. (The flag filter itself was removed on 2026-11-14.)
 2. **Aligned Timestral targets** — medium benefit, low–medium cost: forecast
    open and close of t+1 (body direction) and the quantiles of the next
    candle's 1-minute returns, derive RV from Timestral's own path, and add
@@ -650,6 +671,8 @@ Tools: `sample_checks.json`, `timestral_same_sample.csv/.json`.
 | `config.py`, `data.py`, `timeframes.py`, `quality.py`, `features.py`, `evaluation.py`, `runlog.py` | data loading, CME sessions and candles, data checks, features and splits, run folders |
 | `study.py`, `experiment.py`, `backtest.py`, `strategy.py`, `regimes.py`, `plots.py` | shared pipeline code from the earlier direction study; `multitarget.py` uses `study.build` (data set) and `experiment.load_minutes` / `bars_for`; their trading functions are not used here |
 | `tools/sample_checks.py`, `tools/timestral_same_sample.py` | sample checks (appendix A3) and Timestral on the same sample (appendix A4) |
+| `tools/merge_daily_run.py` | merges a daily-only run into a copy of a full run (intraday forecasts unchanged) |
+| `tools/yahoo_compare.py`, `tools/render_equations.py` | Yahoo Finance comparison (appendix A6); slide-3 formulas as LaTeX-style images (`presentation/eq/`) |
 | `tools/mt_fix_majority.py`, `tools/timestral_direction.py` | majority-class fix without refitting; original zero-shot Timestral direction tool |
 | `tests/` | unit tests (`python -m pytest -q`) |
 | `presentation/` | deck generator, deck data, charts, main deck and appendix (`.pptx`, `.pdf`) |

@@ -59,18 +59,18 @@ frequency,n,task,target,model,metric,value,ci_lo,ci_hi,accuracy,corr_with_next_l
 1h,20000,volatility,log RV,har_ols,R2_log_vs_persistence_pct,34.697815801647316,31.350991859657185,38.04911122437804,,0.8836363015135938
 1h,20000,volatility,log RV,timestral raw spread (uncalibrated),corr_with_next_log_rv,0.636991209227104,,,,0.636991209227104
 1h,20000,volatility,log RV,persistence (current log RV),corr_with_next_log_rv,0.829355327263912,,,,0.829355327263912
-session,642,return,log return,timestral,R2_vs_zero_pct,-1.8334386844099493,-4.377088652836047,0.189267944328764,,
-session,642,return,log return,mlp_256-128-64-32,R2_vs_zero_pct,0.1705229173801448,-0.7185736413001048,1.0414570838055466,,
-session,642,return,log return,xgboost,R2_vs_zero_pct,-1.9481565871805717,-6.105949618698271,1.7312218669506236,,
-session,642,direction,body C(t+1) vs O(t+1),timestral,acc_minus_majority_pp,-1.8691588785046727,-5.606060606060606,1.9734848484848275,0.5233644859813084,
-session,642,direction,close-to-close C(t+1) vs C(t),timestral,acc_minus_majority_pp,-1.557632398753894,-5.151515151515151,2.124999999999979,0.5311526479750779,
-session,642,direction,body C(t+1) vs O(t+1),mlp_256-128-64-32,acc_minus_majority_pp,0.0,0.0,0.0,0.5420560747663551,
-session,642,direction,close-to-close C(t+1) vs C(t),mlp_256-128-64-32,acc_minus_majority_pp,0.0,0.0,0.0,0.5467289719626168,
-session,642,direction,body C(t+1) vs O(t+1),xgboost,acc_minus_majority_pp,0.0,0.0,0.0,0.5420560747663551,
-session,642,direction,close-to-close C(t+1) vs C(t),xgboost,acc_minus_majority_pp,0.0,0.0,0.0,0.5467289719626168,
-session,642,volatility,log RV,timestral (spread + calibration),R2_log_vs_persistence_pct,-19.30299246540459,-46.985722199211665,-1.9821934615819177,,0.7523657675270858
-session,642,volatility,log RV,mlp_128-64-32,R2_log_vs_persistence_pct,18.65273232468573,9.687967641381922,24.548495886101403,,0.8467871377845121
-session,642,volatility,log RV,xgboost,R2_log_vs_persistence_pct,9.000161704802156,-2.5527238721641887,15.880513995874576,,0.8311822453837555
-session,642,volatility,log RV,har_ols,R2_log_vs_persistence_pct,11.925140738094065,5.026404863064286,16.740186041771185,,0.8285537004090325
-session,642,volatility,log RV,timestral raw spread (uncalibrated),corr_with_next_log_rv,0.7523657675270868,,,,0.7523657675270868
-session,642,volatility,log RV,persistence (current log RV),corr_with_next_log_rv,0.8175958306423744,,,,0.8175958306423744
+session,937,return,log return,timestral,R2_vs_zero_pct,-1.9407798632881779,-3.7861255823176108,-0.18266712114876582,,
+session,937,return,log return,mlp_256-128-64-32,R2_vs_zero_pct,0.4256094612622441,-0.6804451969478675,1.528327009369691,,
+session,937,return,log return,xgboost,R2_vs_zero_pct,-1.0581090264224935,-3.236635504961298,1.1223758810626099,,
+session,937,direction,body C(t+1) vs O(t+1),timestral,acc_minus_majority_pp,-2.0277481323372464,-5.531914893617021,2.021276595744681,0.5101387406616862,
+session,937,direction,close-to-close C(t+1) vs C(t),timestral,acc_minus_majority_pp,-1.6008537886872998,-4.789893617021276,2.2340425531914896,0.5165421558164355,
+session,937,direction,body C(t+1) vs O(t+1),mlp_256-128-64-32,acc_minus_majority_pp,0.0,0.0,0.0,0.5304162219850587,
+session,937,direction,close-to-close C(t+1) vs C(t),mlp_256-128-64-32,acc_minus_majority_pp,0.0,0.0,0.0,0.5325506937033084,
+session,937,direction,body C(t+1) vs O(t+1),xgboost,acc_minus_majority_pp,0.32017075773745995,-0.2127659574468085,0.6382978723404255,0.5336179295624333,
+session,937,direction,close-to-close C(t+1) vs C(t),xgboost,acc_minus_majority_pp,0.32017075773745995,-0.2127659574468085,0.6382978723404255,0.535752401280683,
+session,937,volatility,log RV,timestral (spread + calibration),R2_log_vs_persistence_pct,-7.3701361373291085,-27.31483322571676,8.28044103665229,,0.7698989603226347
+session,937,volatility,log RV,mlp_128-64-32,R2_log_vs_persistence_pct,17.15055892232249,10.910089268759208,22.069249158599188,,0.8398882149290224
+session,937,volatility,log RV,xgboost,R2_log_vs_persistence_pct,7.27467756650475,-4.980550608601639,16.97810119193787,,0.8254458963775757
+session,937,volatility,log RV,har_ols,R2_log_vs_persistence_pct,13.957351453168865,8.796201773220961,18.382494152263625,,0.8251726646666692
+session,937,volatility,log RV,timestral raw spread (uncalibrated),corr_with_next_log_rv,0.7698989603226352,,,,0.7698989603226352
+session,937,volatility,log RV,persistence (current log RV),corr_with_next_log_rv,0.8097708072791895,,,,0.8097708072791895

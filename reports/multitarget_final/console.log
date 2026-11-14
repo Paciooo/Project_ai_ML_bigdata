@@ -125,3 +125,32 @@ run folder: C:\Users\aless\Desktop\py\AI_ML_BD\nasdaq-multi-target-forecasting\r
   [session] timestral val: 822 origins, 1s
   [session] timestral test: 642 origins, 1s
 done: C:\Users\aless\Desktop\py\AI_ML_BD\nasdaq-multi-target-forecasting\results\multitarget\runs\20261112T050812Z_82953a_final
+
+=== daily run ===
+run folder: C:\Users\aless\Desktop\py\AI_ML_BD\Project_ai_ML_bigdata\.claude\worktrees\nq-direction-baseline-0227c9\results\multitarget\runs\20261114T024015Z_cf1504_daily_noflags; timestral: mistralai/Timestral-5M
+[session] rows 3,998; train ['2006-03-13', '2017-08-23', 2122] val ['2017-08-25', '2021-07-13', 937] test ['2021-07-15', '2025-05-29', 937]
+  [session] return     ridge                 0.0s {'chosen': 'alpha=1000.0'}
+  [session] return     random_forest         0.2s {}
+  [session] return     xgboost               0.6s {'best_iteration': 26}
+  [session] return     mlp_64-32-16          2.0s {'epochs': 7, 'best_val_loss': 2.738424062728882}
+  [session] return     mlp_64-32             0.1s {'epochs': 7, 'best_val_loss': 2.729496955871582}
+  [session] return     mlp_128-64-32         0.1s {'epochs': 7, 'best_val_loss': 2.7145445346832275}
+  [session] return     mlp_256-128-64-32     0.1s {'epochs': 5, 'best_val_loss': 2.741462469100952}
+  [session] direction  logistic              0.0s {'chosen': 'C=0.01'}
+  [session] direction  random_forest         0.2s {}
+  [session] direction  xgboost               0.1s {'best_iteration': 11}
+  [session] direction  mlp_64-32-16          0.2s {'epochs': 7, 'best_val_loss': 0.686729371547699}
+  [session] direction  mlp_64-32             0.1s {'epochs': 7, 'best_val_loss': 0.6891282796859741}
+  [session] direction  mlp_128-64-32         0.1s {'epochs': 6, 'best_val_loss': 0.6836605668067932}
+  [session] direction  mlp_256-128-64-32     0.1s {'epochs': 6, 'best_val_loss': 0.681556224822998}
+  [session] volatility har_ols               0.0s {}
+  [session] volatility ridge                 0.0s {'chosen': 'alpha=0.1'}
+  [session] volatility random_forest         0.2s {}
+  [session] volatility xgboost               0.8s {'best_iteration': 407}
+  [session] volatility mlp_64-32-16          0.4s {'epochs': 25, 'best_val_loss': 0.39358144998550415}
+  [session] volatility mlp_64-32             0.3s {'epochs': 23, 'best_val_loss': 0.40012240409851074}
+  [session] volatility mlp_128-64-32         0.3s {'epochs': 17, 'best_val_loss': 0.3954417109489441}
+  [session] volatility mlp_256-128-64-32     0.3s {'epochs': 13, 'best_val_loss': 0.38484910130500793}
+  [session] timestral val: 937 origins, 1s
+  [session] timestral test: 937 origins, 1s
+done: C:\Users\aless\Desktop\py\AI_ML_BD\Project_ai_ML_bigdata\.claude\worktrees\nq-direction-baseline-0227c9\results\multitarget\runs\20261114T024015Z_cf1504_daily_noflags

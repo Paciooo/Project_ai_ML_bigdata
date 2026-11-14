@@ -6,11 +6,15 @@ removed from the project.
 ## State
 
 * Main project (branch `main`): multi-target study. `multitarget.py` -> run
-  `20261112T050812Z_82953a_final`; `multitarget_report.py` ->
+  `20261112T050812Z_82953a_final` (intraday) + daily-only run
+  `20261114T024015Z_cf1504_daily_noflags` (`--daily-ignore-flags`), merged by
+  `tools/merge_daily_run.py` into `..._daily_noflags_merged` (the run the
+  report, deck and verify use); `multitarget_report.py` ->
   `reports/multitarget_final/`; `presentation/build_deck.js` writes the main
   deck (cover + 9 slides: slide 4 task x timeframe map, slides 6-8 five models
   per task, slide 9 strongest evidence, slide 10 reproducibility + references)
-  and the appendix A1-A5. Check with `verify_multitarget.py` (recomputes the
+  and the appendix A1-A6. Slide-3 formulas: `tools/render_equations.py` ->
+  `presentation/eq/`. Check with `verify_multitarget.py` (recomputes the
   numbers, not the bootstraps, data or models; do not call it a full audit).
   `tools/sample_checks.py` and `tools/timestral_same_sample.py` feed A3/A4.
 * Wording: z = strength of evidence against each task's OWN naive benchmark,
@@ -18,19 +22,20 @@ removed from the project.
   SQUARED log-RV error (not RMSE; vs HAR-OLS stated separately); the ranking
   is not pre-registered (volatility score revised after test numbers);
   statistical accuracy only, economic value not studied; no option strategies.
-* Known sample issues (README "Sample checks"): 304 of 1,002 daily test
-  sessions lie in the 50-session flagged-bar window and are excluded (50 of
-  them only because of a flag measured against a dropped 16:59 CT bar); 56
-  more are excluded for label eligibility; 642 kept (ends 2025-01-30). Daily
-  results = filtered sample, exploratory: never "volatility predictable on
-  every horizon" without that caveat; the daily issue is documented, NOT
-  resolved. Flags are computed before the schedule filter: describe them with
+* Daily sample (README "Sample checks" A): on 2026-11-14, at the user's
+  request, the daily flagged-bar filter was removed in a new daily run: 937 of
+  1,002 test sessions (to 2025-05-29); not included: 35 holiday-shortened
+  sessions, 29 whose next session is shortened, the last session (the user
+  chose to keep these out). Flagged minutes stay in the daily candles (their
+  RV includes them). The earlier rule kept 642 (304 in the 50-session window,
+  50 of them only because of a dropped 16:59 CT bar). Daily models were
+  refitted: the change mixes sample and refit. Daily results stay
+  exploratory. Intraday keeps the original run and filter. Flags are computed before the schedule filter: describe them with
   `suspect_flag_details` (the values that generated them), not with
   filtered-sequence returns; timing/persistence are clues, not proof.
   Incomplete intraday candles are accepted; the < 0.4-point figure is a
   rescoring of saved TEST forecasts only (training, features and a refit not
-  evaluated). Fixing either needs a new run: propose it, do not run it
-  unasked.
+  evaluated). A fix needs a new run: propose it, do not run it unasked.
 * Prices are additively back-adjusted (TradeStation): percentage returns are
   compressed (vs ^NDX: std ratio 0.42 in 2006-2012, 0.90 in the test;
   re-levelled correlation 0.998; re-levelling = retrospective estimate from
@@ -39,13 +44,11 @@ removed from the project.
   (never write "should change little"); a fix (ratio adjustment) needs a new
   run.
 * Yahoo day-by-day comparison: the reconciled daily close-to-close returns
-  of all 16 flagged sessions and of the 292 excluded test sessions with a
-  quote agree with ^NDX / NQ=F within 0.5 pp. "Confirmed" = closing returns
-  only (range not in the rule): it suggests the quarantine also removes
-  plausible sessions, it does not verify minutes or RV. Never call Yahoo a
-  certification of data quality. A
-  daily filter based on this comparison (about 921 test sessions) was proposed; the
-  user chose "documentation only" (2026-11-13): no new run.
+  of all 16 flagged sessions and of the 292 test sessions the earlier rule
+  excluded (with a quote) agree with ^NDX / NQ=F within 0.5 pp. "Confirmed" =
+  closing returns only (range not in the rule): it suggests the quarantine
+  removed plausible sessions, it does not verify minutes or RV. Never call
+  Yahoo a certification of data quality.
 * The study is statistical only: no trading rules, P&L, costs or equity
   curves anywhere in the main project, at the user's request.
 * Exploratory verdict: realized volatility predictable (log-RV R² vs

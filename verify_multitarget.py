@@ -25,9 +25,11 @@ Checks:
   * sample_checks.json (tools/sample_checks.py): every flag above the
     threshold and equal to log(close / predecessor close) on the sequence
     that generated it, predecessor times, categories re-derived from their
-    rule, counts and the daily accounting adding up, the daily test rows
-    equal to the saved forecasts, no saved daily forecast within 50 sessions
-    of an in-schedule flag, and the all-rows rescoring of the incomplete-
+    rule, counts and the daily accounting adding up, the daily test rows of
+    the run (daily_sample_used) equal to the saved forecasts with every
+    missing session given one reason, no saved daily forecast within 50
+    sessions of an in-schedule flag when the run used the flagged-bar filter
+    (dataset_info flagged_bar_filter), and the all-rows rescoring of the incomplete-
     candle check recomputed from the saved forecasts. The 1-minute prices and
     the incomplete-candle classes themselves are not re-read.
 It does NOT re-run the bootstrap (interval values), rebuild the data from the
@@ -351,11 +353,22 @@ def check_sample_checks(sc, run, info, check, close):
     check(d["n_flags_in_schedule"] == len(ins) and d["n_flags_inconsistent_with_threshold"] == 0, "sample checks: in-schedule / inconsistent counts")
     check(d["flag_categories_in_schedule"] == pd.Series([r["category"] for r in ins]).value_counts().to_dict(), "sample checks: category counts")
     check(d["flagged_in_schedule_after_gap_over_60min"] == sum(r["minutes_since_prev"] > 60 for r in ins), "sample checks: gap count")
-    # daily accounting vs the saved daily forecasts
-    a = d["daily_test_sessions_accounting"]
+    # daily sample of THIS run vs the saved daily forecasts
+    u = sc["daily_sample_used"]
     ps = pd.read_parquet(run / "predictions_session.parquet")
     test_days = pd.DatetimeIndex(ps.loc[ps.split == "test", "session_id"])
-    check(a["in_data_set"] == len(test_days) == info["session"]["test"][2], "sample checks: daily test rows differ from the saved forecasts")
+    flt = info["session"].get("flagged_bar_filter", True)
+    check(u["flagged_bar_filter"] == flt, "sample checks: flag-filter setting differs from dataset_info")
+    check(u["test_sessions_with_forecast"] == len(test_days) == info["session"]["test"][2], "sample checks: daily test rows differ from the saved forecasts")
+    check(u["test_sessions"] == u["test_sessions_with_forecast"] + u["test_sessions_without_forecast"]
+          == d["daily_sessions_by_split"]["test"], "sample checks: daily sample used does not add up")
+    check(sum(u["reasons"].values()) == u["test_sessions_without_forecast"]
+          and all(len(u["sessions_by_reason"][k]) == v for k, v in u["reasons"].items()), "sample checks: exclusion reasons")
+    check(not set(pd.DatetimeIndex([s for v in u["sessions_by_reason"].values() for s in v])) & set(test_days),
+          "sample checks: an excluded session has a saved forecast")
+    check(flt or "flagged_bar_filter" not in u["reasons"], "sample checks: flag exclusions with the filter off")
+    # the flagged-bar filter as originally applied (study.build): internal accounting
+    a = d["daily_test_sessions_accounting"]
     check(a["test_sessions"] == a["in_data_set"] + a["not_in_data_set"]
           and a["not_in_data_set"] == a["not_in_data_set_and_in_50_session_window"] + a["not_in_data_set_outside_window"], "sample checks: daily accounting does not add up")
     w = d["daily_test_sessions_in_50_session_window_by_flag_category"]
@@ -365,11 +378,11 @@ def check_sample_checks(sc, run, info, check, close):
     c = d["daily_test_sessions_not_in_data_set_by_condition (not exclusive)"]
     check(c["total"] == a["not_in_data_set"] and c["flagged_minute_in_last_50_sessions (study.build)"] == a["not_in_data_set_and_in_50_session_window"],
           "sample checks: exclusion conditions")
-    # no saved daily forecast lies in the 50-session window after a flagged session
+    # with the filter on, no saved daily forecast lies in the 50-session window after a flagged session
     # (session calendar = sessions seen in the 5-minute forecasts plus the daily ones)
     p5 = pd.read_parquet(run / "predictions_5min.parquet", columns=["session_id"])
     cal = pd.DatetimeIndex(sorted(set(pd.DatetimeIndex(p5.session_id)) | set(pd.DatetimeIndex(ps.session_id))))
-    for r in ins:
+    for r in (ins if flt else []):
         s = pd.Timestamp(r["session"])
         if cal[0] <= s <= cal[-1]:
             k = cal.searchsorted(s)

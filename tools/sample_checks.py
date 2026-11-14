@@ -205,14 +205,48 @@ def candle_checks(minutes, run):
     return out
 
 
+def daily_used(minutes, run):
+    """The daily test sample of THIS run: which test sessions have a saved
+    forecast and why the others do not (flag filter on or off, as recorded
+    in dataset_info.json)."""
+    info = json.loads((run / "dataset_info.json").read_text())
+    flt = info["session"].get("flagged_bar_filter", True)
+    m = minutes if flt else minutes.assign(suspect=False)
+    b, elig = experiment.bars_for(m, None, "session")
+    b = b.reset_index(drop=True)
+    sid = pd.DatetimeIndex(b["session_id"])
+    ps = pd.read_parquet(run / "predictions_session.parquet")
+    have = set(pd.DatetimeIndex(ps.loc[ps.split == "test", "session_id"]))
+    test = split_of(sid) == "test"
+    part = b["is_partial"].astype(bool).to_numpy()
+    nxt_part = np.r_[part[1:], False]
+    last = np.r_[np.zeros(len(b) - 1, bool), True]
+    gap = np.r_[(sid[1:] - sid[:-1]) > pd.Timedelta(days=5), False]
+    missing = test & ~np.isin(sid, list(have))
+    reasons = {}
+    for i in np.flatnonzero(missing):
+        r = ("no_next_session_in_data" if last[i] else "session_shortened" if part[i]
+             else "next_session_shortened" if nxt_part[i] else "next_session_over_5_days_later" if gap[i]
+             else "flagged_bar_filter" if flt else "other")
+        reasons.setdefault(r, []).append(str(sid[i].date()))
+    return {"flagged_bar_filter": bool(flt), "test_sessions": int(test.sum()), "test_sessions_with_forecast": len(have),
+            "test_sessions_without_forecast": int(missing.sum()),
+            "reasons": {k: len(v) for k, v in reasons.items()}, "sessions_by_reason": reasons,
+            "first_last_test_forecast": [str(min(have).date()), str(max(have).date())]}
+
+
 def main(run, out):
     run, out = Path(run), Path(out)
     minutes, _, rep, _ = experiment.load_minutes("nq")
-    res = {"note": "point estimates from saved forecasts; no training, no bootstrap",
+    res = {"note": "point estimates from saved forecasts; no training, no bootstrap. daily_sample describes the "
+                   "flagged-bar filter (study.build) as originally applied; daily_sample_used is the sample of this run.",
+           "daily_sample_used": daily_used(minutes, run),
            "daily_sample": daily_checks(minutes, rep), "incomplete_candles": candle_checks(minutes, run)}
     (out / "sample_checks.json").write_text(json.dumps(res, indent=1, default=str), encoding="utf-8")
     d = res["daily_sample"]
     print(json.dumps({k: d[k] for k in d if k != "flagged_minutes"}, indent=1))
+    u = res["daily_sample_used"]
+    print(json.dumps({k: u[k] for k in u if k != "sessions_by_reason"}, indent=1))
     for f, r in res["incomplete_candles"].items():
         print(f, r["share_full_candles_with_missing_minutes_pct"], r["test_rows_label_candle_incomplete"], r["test_rescored"])
     return 0

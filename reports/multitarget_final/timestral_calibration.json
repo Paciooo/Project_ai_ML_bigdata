@@ -381,91 +381,91 @@
     "block": 0,
     "eval_origin_sessions": [
      "2017-08-25",
-     "2018-05-01"
+     "2018-06-05"
     ],
-    "eval_rows": 165,
+    "eval_rows": 188,
     "scored": false,
     "reason": "no earlier calibration data"
    },
    {
     "block": 1,
     "eval_origin_sessions": [
-     "2018-05-02",
-     "2019-01-09"
+     "2018-06-06",
+     "2019-03-20"
     ],
-    "eval_rows": 165,
+    "eval_rows": 188,
     "scored": true,
-    "calib_rows": 164,
+    "calib_rows": 187,
     "calib_target_sessions": [
      "2017-08-28",
-     "2018-05-01"
+     "2018-06-05"
     ],
-    "intercept": 1.6033650324015614,
-    "slope": 1.1336174107154404
+    "intercept": 0.6665160861183773,
+    "slope": 1.049797997479947
    },
    {
     "block": 2,
     "eval_origin_sessions": [
-     "2019-01-10",
-     "2019-11-22"
+     "2019-03-21",
+     "2019-12-26"
     ],
-    "eval_rows": 164,
+    "eval_rows": 187,
     "scored": true,
-    "calib_rows": 329,
+    "calib_rows": 375,
     "calib_target_sessions": [
      "2017-08-28",
-     "2019-01-09"
+     "2019-03-20"
     ],
-    "intercept": 0.4849178349674461,
-    "slope": 1.039077844381973
+    "intercept": -0.1867517792256509,
+    "slope": 0.9779589426748233
    },
    {
     "block": 3,
     "eval_origin_sessions": [
-     "2019-11-25",
-     "2020-11-02"
+     "2019-12-27",
+     "2020-09-30"
     ],
-    "eval_rows": 164,
+    "eval_rows": 187,
     "scored": true,
-    "calib_rows": 493,
+    "calib_rows": 562,
     "calib_target_sessions": [
      "2017-08-28",
-     "2019-11-22"
+     "2019-12-23"
     ],
-    "intercept": -0.5105023272214234,
-    "slope": 0.9505759800768468
+    "intercept": -0.4801295858930919,
+    "slope": 0.9566865303742389
    },
    {
     "block": 4,
     "eval_origin_sessions": [
-     "2020-11-03",
+     "2020-10-01",
      "2021-07-13"
     ],
-    "eval_rows": 164,
+    "eval_rows": 187,
     "scored": true,
-    "calib_rows": 657,
+    "calib_rows": 749,
     "calib_target_sessions": [
      "2017-08-28",
-     "2020-11-02"
+     "2020-09-30"
     ],
-    "intercept": -0.2678665225594746,
-    "slope": 0.9758505935960496
+    "intercept": -0.1301211697127672,
+    "slope": 0.9907722742384075
    }
   ],
   "test": {
-   "intercept": -0.6642826996671934,
-   "slope": 0.9389134457608368,
+   "intercept": -0.42287052195945435,
+   "slope": 0.9640387377599501,
    "fitted_on": "validation sample",
    "calib_target_sessions": [
     "2017-08-28",
     "2021-07-14"
    ],
-   "calib_rows": 822,
+   "calib_rows": 937,
    "eval_origin_sessions": [
     "2021-07-15",
-    "2025-01-30"
+    "2025-05-29"
    ],
-   "eval_rows": 642,
+   "eval_rows": 937,
    "calib_targets_before_every_test_origin": true
   }
  }

@@ -106,14 +106,14 @@ const rmseCut = (r) => 100 * (1 - r.t_rmse_log / r.t_rmse_log_persistence);
 const tsNote = (task) => { const t = CMP[task].find((r) => r.model.startsWith("timestral"));
   return t ? `* Timestral: scored on its fixed random sample of ${t.t_n.toLocaleString("en-US")} test candles (its benchmark on the same candles; appendix A4).` : ""; };
 const rankNote = "Rows ranked by validation evidence z (validation improvement over the task's naive benchmark ÷ its block-bootstrap standard error); all other columns are test results.";
-const EXPLORATORY = "Exploratory: the test period (2021-07 → 2025-05; daily: 642 of 1,002 sessions, turbulent periods under-represented) was examined in earlier phases and the volatility selection score was revised after a first look at test results. Statistical accuracy only: no trading, costs or profitability were evaluated.";
 const tmV = (f) => TMAP("volatility", f);
 const DAILY_N = D.dataset.session.test[2];
 const DAILY_ALL = SC ? SC.daily_sample.daily_sessions_by_split.test : null;
-const DAILY_WIN = SC ? SC.daily_sample.daily_rows_in_50_session_window_by_split.test : null;
-const DAILY_CAVEAT = SC
-  ? `1 day = filtered sample: ${DAILY_N} of ${DAILY_ALL.toLocaleString("en-US")} test sessions. The ${DAILY_WIN} sessions within 50 sessions after a session with a flagged 1-minute bar are excluded, so turbulent periods are under-represented; daily results are exploratory and hold for this filtered sample only (appendix A3).`
-  : `1 day = filtered sample of ${DAILY_N} test sessions (appendix A3).`;
+const DAILY_FLT = D.dataset.session.flagged_bar_filter !== false;
+const EXPLORATORY = `Exploratory: the test period (2021-07 → 2025-05; daily: ${DAILY_N} of ${DAILY_ALL ? DAILY_ALL.toLocaleString("en-US") : "?"} sessions${DAILY_FLT ? ", turbulent periods under-represented" : ", holiday-shortened sessions excluded"}) was examined in earlier phases and the volatility selection score was revised after a first look at test results. Statistical accuracy only: no trading, costs or profitability were evaluated.`;
+const DAILY_CAVEAT = DAILY_FLT
+  ? `1 day = filtered sample of ${DAILY_N} test sessions (appendix A3).`
+  : `1 day = ${DAILY_N} of ${DAILY_ALL ? DAILY_ALL.toLocaleString("en-US") : "?"} test sessions from a separate daily run in which flagged 1-minute bars no longer exclude sessions; holiday-shortened sessions (and the day before each) are not included. Flagged minutes stay in the daily candles; daily results are exploratory (appendix A3).`;
 
 // ================================================================================ MAIN DECK
 pres = newPres("What Can Machine Learning Predict in NASDAQ Markets?");
@@ -132,7 +132,9 @@ pres = newPres("What Can Machine Learning Predict in NASDAQ Markets?");
 
 // ---------------------------------------------------------------- 2. Executive summary (stands alone)
 {
-  const s = content("Executive Summary", "Volatility is predictable from 5 minutes to 1 hour (daily: filtered sample only); returns and direction show no useful improvement");
+  const s = content("Executive Summary", DAILY_FLT
+    ? "Volatility is predictable from 5 minutes to 1 hour (daily: filtered sample only); returns and direction show no useful improvement"
+    : `Volatility is predictable from 5 minutes to 1 day (daily: ${DAILY_N} of ${DAILY_ALL ? DAILY_ALL.toLocaleString("en-US") : "?"} sessions); returns and direction show no useful improvement`);
   s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: L, y: 1.52, w: CW, h: 0.46, rectRadius: 0.08, fill: { color: PALE }, line: { type: "none" } });
   T(s, [{ text: "Problem  ", options: { bold: true, color: RED } },
         { text: "Markets are hard to forecast, but are all their characteristics equally hard? For the next NQ futures candle we ask what machine learning can predict: the return, the direction or the realized volatility." }],
@@ -208,14 +210,26 @@ pres = newPres("What Can Machine Learning Predict in NASDAQ Markets?");
     ["2  Next-candle direction", "UP if C(t+1) > O(t+1); doji = miss", "accuracy vs the majority class"],
     ["3  Realized volatility", "RV = Σ (1-min log returns)² in t+1", "log-RV error vs persistence and HAR-OLS"],
   ];
-  s.addTable([[hdr("Target"), hdr("Definition"), hdr("Main metric")], ...tg.map(([a, b, c]) => [cell(a, { bold: true }), cell(b), cell(c)])],
-    topts(L, 3.07, 6.1, [1.9, 2.25, 1.95], { fontSize: 10.5, rowH: 0.42 }));
+  // definitions as LaTeX-style equation images (tools/render_equations.py); text fallback if missing
+  const EQF = path.join(__dirname, "eq", "equations.json");
+  const EQ = fs.existsSync(EQF) ? JSON.parse(fs.readFileSync(EQF, "utf-8")) : null;
+  const eqRows = [0.5, 0.5, 0.66], eqKeys = ["ret", "dir", "vol"], eqScale = [1.0, 1.0, 0.9];
+  s.addTable([[hdr("Target"), hdr("Definition"), hdr("Main metric")], ...tg.map(([a, b, c]) => [cell(a, { bold: true }), cell(EQ ? "" : b), cell(c)])],
+    topts(L, 3.07, 6.1, [1.9, 2.25, 1.95], EQ ? { fontSize: 10.5, rowH: [0.38, ...eqRows] } : { fontSize: 10.5, rowH: 0.42 }));
+  if (EQ) {
+    let y = 3.07 + 0.38;
+    eqKeys.forEach((k, i) => {
+      const e = EQ[k], w = e.w * eqScale[i], h = e.h * eqScale[i];
+      s.addImage({ path: path.join(__dirname, "eq", e.file), x: L + 1.9 + 0.08, y: y + (eqRows[i] - h) / 2, w, h });
+      y += eqRows[i];
+    });
+  }
   bullets(s, [
     [{ text: "Data: ", o: { bold: true } }, { text: "E-mini Nasdaq-100 futures (NQ, CME), back-adjusted 1-minute series. No other market, no VIX." }],
-    [{ text: "Split: ", o: { bold: true } }, { text: `train → ${D.dataset["5min"].train[1]}, validation → ${D.dataset["5min"].validation[1]}, test ${testRange("5min")} (daily: ${DAILY_N} of ${DAILY_ALL ? DAILY_ALL.toLocaleString("en-US") : "?"} test sessions after the flagged-bar filter; appendix A3).` }],
+    [{ text: "Split: ", o: { bold: true } }, { text: `train → ${D.dataset["5min"].train[1]}, validation → ${D.dataset["5min"].validation[1]}, test ${testRange("5min")} (daily: ${DAILY_N} of ${DAILY_ALL ? DAILY_ALL.toLocaleString("en-US") : "?"} test sessions${DAILY_FLT ? " after the flagged-bar filter" : "; holiday-shortened sessions excluded"}; appendix A3).` }],
     [{ text: "No look-ahead: ", o: { bold: true } }, { text: "features use candles ≤ t; scaling fitted on training data; intraday labels stay within a session; all labels respect split boundaries." }],
     [{ text: "Uncertainty: ", o: { bold: true } }, { text: "95% intervals from a moving-block bootstrap in 20-session blocks (Künsch, 1989)." }],
-  ], { x: L, y: 4.95, w: 6.1, h: 1.95, fontSize: 10.5 });
+  ], { x: L, y: EQ ? 5.15 : 4.95, w: 6.1, h: EQ ? 1.75 : 1.95, fontSize: 10.5 });
   const x2 = L + 6.45, w2 = CW - 6.45;
   header(s, x2, 2.6, w2, "Data profile, test sample");
   const rows = FREQS.map((f) => { const p = PROF(f);
@@ -232,7 +246,7 @@ pres = newPres("What Can Machine Learning Predict in NASDAQ Markets?");
 
 // ---------------------------------------------------------------- 4. Task x timeframe map
 {
-  const s = content("What Is Predictable, and on Which Horizon?", "Volatility beats persistence on every candle length (daily: filtered sample); its gain over HAR-OLS grows up to 1 hour");
+  const s = content("What Is Predictable, and on Which Horizon?", `Volatility beats persistence on every candle length${DAILY_FLT ? " (daily: filtered sample)" : ""}; its gain over HAR-OLS grows up to 1 hour`);
   const fill = (lo, hi) => lo > 0 ? GREEN_T : hi < 0 ? RED_T : PALE;
   const SHORT = (m) => MODEL[m].replace("DNN ", "DNN ");
   const c = (txt, model, lo, hi, d) => cell([{ text: txt, options: { bold: true, breakLine: true, fontSize: 11 } },
@@ -244,7 +258,7 @@ pres = newPres("What Can Machine Learning Predict in NASDAQ Markets?");
     ["Volatility\nsquared log-RV error cut vs persistence (%)", (f) => { const r = tmV(f); return c(`${f2(r.value, 1)}%`, r.model, r.ci_lo, r.ci_hi, 1); }],
     ["Volatility\nsquared log-RV error cut vs HAR-OLS (%)", (f) => { const r = tmV(f); return c(`${f2(r.vs_har, 1)}%`, r.model, r.vs_har_lo, r.vs_har_hi, 1); }],
   ];
-  const body = [[hdr("Task / metric (test)"), ...FREQS.map((f) => hdr(f === "session" ? `1 day (filtered)\n${kfmt(TMAP("return", f).n_test)} of ${kfmt(DAILY_ALL || 0)} sessions` : `${FREQ[f]}\n${kfmt(TMAP("return", f).n_test)} candles`))],
+  const body = [[hdr("Task / metric (test)"), ...FREQS.map((f) => hdr(f === "session" ? `1 day${DAILY_FLT ? " (filtered)" : ""}\n${kfmt(TMAP("return", f).n_test)} of ${kfmt(DAILY_ALL || 0)} sessions` : `${FREQ[f]}\n${kfmt(TMAP("return", f).n_test)} candles`))],
     ...rowsDef.map(([lab, fn]) => { const [a, b] = lab.split("\n");
       return [cell([{ text: a, options: { bold: true, color: RED, breakLine: true } }, { text: b, options: { fontSize: 9, color: MID } }]), ...FREQS.map(fn)]; })];
   s.addTable(body, topts(L, 1.52, CW, [2.4, ...FREQS.map(() => (CW - 2.4) / FREQS.length)], { fontSize: 10, rowH: 0.66 }));
@@ -260,11 +274,11 @@ pres = newPres("What Can Machine Learning Predict in NASDAQ Markets?");
       dataLabelFontSize: 9, valAxisHidden: true, valGridLine: { style: "none" }, catAxisLabelFontSize: 9, showLegend: false,
       showTitle: true, title: "Volatility: squared log-RV error cut vs HAR-OLS (%)", titleFontSize: 10, titleColor: MID });
   bullets(s, [
-    [{ text: "Volatility: ", o: { bold: true } }, { text: `every candle length beats persistence (squared log-RV error ${Math.min(...FREQS.map((f) => tmV(f).value)).toFixed(0)}% to ${Math.max(...FREQS.map((f) => tmV(f).value)).toFixed(0)}% lower). The extra gain over HAR-OLS rises from ${tmV("5min").vs_har.toFixed(1)}% (5 min) to ${tmV("1h").vs_har.toFixed(1)}% (1 hour); daily: the interval includes zero.` }],
+    [{ text: "Volatility: ", o: { bold: true } }, { text: `every candle length beats persistence (squared log-RV error ${Math.min(...FREQS.map((f) => tmV(f).value)).toFixed(0)}% to ${Math.max(...FREQS.map((f) => tmV(f).value)).toFixed(0)}% lower). The extra gain over HAR-OLS rises from ${tmV("5min").vs_har.toFixed(1)}% (5 min) to ${tmV("1h").vs_har.toFixed(1)}% (1 hour); daily: ${tmV("session").vs_har_lo > 0 ? `${tmV("session").vs_har.toFixed(1)}%, interval ${ciTxt(tmV("session").vs_har_lo, tmV("session").vs_har_hi, 1)}` : "the interval includes zero"}.` }],
     [{ text: "Return and direction: ", o: { bold: true } }, { text: "no interval is above zero except 5-minute direction (+0.69 pp)." }],
   ], { x: L, y: 5.27, w: 7.4, h: 0.95, fontSize: 10.5 });
   s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: L, y: 6.22, w: 7.4, h: 0.7, rectRadius: 0.05, fill: { color: "FFF4D6" }, line: { color: GOLD, width: 1 } });
-  T(s, [{ text: "Daily caveat  ", options: { bold: true, color: RED_DARK } }, { text: DAILY_CAVEAT }],
+  T(s, [{ text: DAILY_FLT ? "Daily caveat  " : "Daily sample  ", options: { bold: true, color: RED_DARK } }, { text: DAILY_CAVEAT }],
     { x: L + 0.1, y: 6.22, w: 7.2, h: 0.7, fontSize: 9, valign: "middle" });
 }
 
@@ -413,7 +427,7 @@ pres = newPres("What Can Machine Learning Predict in NASDAQ Markets?");
   T(s, [{ text: "Implications: ", options: { bold: true, color: RED_DARK } },
         { text: "realized volatility is the most predictable characteristic here, useful as an input to risk limits and sizing; for returns no improvement was demonstrated, and the direction gain is small and fades after 2023. " },
         { text: "Limits: ", options: { bold: true, color: RED_DARK } },
-        { text: "exploratory test; one market; daily results on a filtered sample (turbulent sessions under-represented); statistical accuracy only — commissions, spread and latency were not modelled, so economic value (e.g. of a +0.69 pp direction gain) is unknown." }],
+        { text: `exploratory test; one market; ${DAILY_FLT ? "daily results on a filtered sample (turbulent sessions under-represented)" : "daily results exclude holiday-shortened sessions and keep flagged 1-minute bars"}; statistical accuracy only — commissions, spread and latency were not modelled, so economic value (e.g. of a +0.69 pp direction gain) is unknown.` }],
     { x: L, y: 6.05, w: CW, h: 0.85, fontSize: 10.5 });
 }
 
@@ -461,7 +475,8 @@ const appx = (title, subtitle) => { An += 1; return content(`A${An}  ${title}`, 
   const steps = [
     ["1  Environment", "Python 3.12.3, CPU; exact run versions in requirements-lock.txt and run.json", "pip install -r requirements-lock.txt -r requirements-timestral.txt"],
     ["2  Data (not in Git)", "NQ 1-minute bars 2006–2025 (TradeStation, licensed); Timestral-5M weights in the local Hugging Face cache", "$env:FUTURES_DATA_DIR = \"C:\\path\\to\\futures-data\""],
-    ["3  Train and forecast", "all models, five timeframes", "python multitarget.py --tag final"],
+    ["3  Train and forecast", "all models, five timeframes; then the daily timeframe again without the flagged-bar filter, merged with the intraday forecasts (<run> = merged folder)",
+      "python multitarget.py --tag final\npython multitarget.py --freqs session --daily-ignore-flags --tag daily_noflags\npython tools\\merge_daily_run.py <final run> <daily run>"],
     ["4  Tables and charts", "results, rankings, timeframe map, charts, deck_data.json", "python multitarget_report.py <run> reports\\multitarget_final"],
     ["5  Sample and Timestral checks", "appendix A3, A4, A6 (1-minute data, saved forecasts, Yahoo daily data)", "python tools\\sample_checks.py <run> reports\\multitarget_final\npython tools\\timestral_same_sample.py <run> reports\\multitarget_final\npython tools\\yahoo_compare.py data_raw\\yahoo reports\\multitarget_final presentation"],
     ["6  Copy, verify, build", "copy deck_data.json, charts and the three JSON files to presentation\\", "python verify_multitarget.py <run> reports\\multitarget_final presentation\ncd presentation; npm ci; node build_deck.js"],
@@ -480,6 +495,7 @@ const appx = (title, subtitle) => { An += 1; return content(`A${An}  ${title}`, 
   bullets(s, ["the raw 1-minute data and the candle building (measured separately in A3, not re-read by the verifier)",
     "the training: models were not re-fitted",
     "bootstrap intervals: only their order is checked",
+    "two runs: intraday forecasts from the 2026-11-12 run, daily forecasts from the 2026-11-14 daily run (no flagged-bar filter)",
     `the run used an uncommitted version of multitarget.py (hash in run.json); later changes: majority-class fix applied to saved outputs, docstrings`],
     { x: x2, y: 4.75, w: w2, h: 2.15, fontSize: 9.5 });
 }
@@ -499,9 +515,9 @@ const appx = (title, subtitle) => { An += 1; return content(`A${An}  ${title}`, 
 
 // ---------------------------------------------------------------- A3. Sample checks
 if (SC) {
-  const s = appx("Sample Checks", "Why the daily test ends on 2025-01-30, and whether incomplete candles matter");
-  const d = SC.daily_sample, lr = d.lost_reasons;
-  header(s, L, 1.5, 6.0, "A. Daily sample end (measured, tools/sample_checks.py)");
+  const s = appx("Sample Checks", "Daily sample after removing the flagged-bar filter, and whether incomplete candles matter");
+  const d = SC.daily_sample, lr = d.lost_reasons, U = SC.daily_sample_used, UR = U.reasons;
+  header(s, L, 1.5, 6.0, "A. Daily sample (measured, tools/sample_checks.py)");
   const ins = d.flagged_minutes.filter((m) => m.bar_in_schedule), cat = d.flag_categories_in_schedule;
   const oos = ins.filter((m) => m.category === "out_of_schedule_predecessor");
   const per = ins.filter((m) => m.category === "move_persists_30min"), unr = ins.filter((m) => m.category === "unresolved");
@@ -509,13 +525,13 @@ if (SC) {
   const cond = d["daily_test_sessions_not_in_data_set_by_condition (not exclusive)"];
   const drops = d.flagged_minutes.filter((m) => m.category === "flagged_bar_out_of_schedule").map((m) => m.prev_close - m.close);
   const off = [Math.floor(Math.min(...drops)), Math.ceil(Math.max(...drops))];
+  const nShort = (UR.session_shortened || 0) + (UR.next_session_shortened || 0);
   bullets(s, [
-    [{ text: "Cause: ", o: { bold: true } }, { text: `all ${d.of_which_not_in_data_set} sessions from 2025-01-31 to 2025-05-30 are dropped; ${lr["flagged_minute_in_last_50_sessions (study.build)"]} fall within 50 sessions after a session with a flagged 1-minute bar (|log return vs the previous bar| > ${d.flag_threshold_pct}%).` }],
-    [{ text: "What generated each flag: ", o: { bold: true } }, { text: `the flag is computed before out-of-schedule bars are dropped. Measured on that sequence, all ${d.n_flags_unfiltered_sequence} flags (${d.n_flags_in_schedule} in schedule) exceed the threshold.` }],
-    [{ text: "Verified facts: ", o: { bold: true } }, { text: `${oos.length} in-schedule flags (e.g. ${oos.slice(-1).map((m) => `${m.session}, ${f2(m.flag_log_return_pct, 1)}%`).join("")}) are measured against a dropped 16:59 CT bar ${off[0]}–${off[1]} points below the bars just before and after it; against the last kept bar they move < 0.05%. ${per.length} move more than 2% and are still beyond 2% 30 minutes later (${per.filter((m) => m.minutes_since_prev > 60).length} of them after a weekend gap). ${unr.length} partly retrace (${unr.map((m) => m.session).join(", ")}): unresolved.` }],
-    [{ text: "Clues, not proof: ", o: { bold: true } }, { text: "several persistent moves coincide with the 8:30 ET data releases (2022) or a weekend reopening; the five 16:59 CT bars look like data artefacts. Neither timing nor persistence proves that a price is genuine or wrong." }],
-    [{ text: "Impact: ", o: { bold: true } }, { text: `${w.total_in_window} of ${acc.test_sessions.toLocaleString("en-US")} daily test sessions lie in such 50-session windows and are excluded (${w.only_out_of_schedule_predecessor} of them only because of the 2023-03-16 flag of the first kind). Another ${acc.not_in_data_set_outside_window} sessions are excluded because the next session is not the label (conditions overlap); ${acc.in_data_set} are kept. The daily sample under-represents turbulent periods.` }],
-    [{ text: "Not corrected: ", o: { bold: true } }, { text: "the reconciled daily returns of the excluded sessions agree with Yahoo (A6): the quarantine also removes plausible sessions (minutes and RV not verified). Changing the rule needs a new daily run (not done); the saved results are kept, exploratory, for the filtered sample." }],
+    [{ text: "Earlier rule: ", o: { bold: true } }, { text: `a session was excluded if any of the last 50 sessions had a flagged 1-minute bar (|log return vs the previous bar| > ${d.flag_threshold_pct}%): ${w.total_in_window} of ${acc.test_sessions.toLocaleString("en-US")} test sessions (${w.only_out_of_schedule_predecessor} only because of the 2023-03-16 flag described below), ${acc.in_data_set} kept, daily test ending ${d.last_daily_test_session_kept}.` }],
+    [{ text: "Now (new daily run): ", o: { bold: true } }, { text: `flagged bars no longer exclude daily sessions (all splits; prices unchanged, intraday run unchanged). ${U.test_sessions_with_forecast} of ${U.test_sessions.toLocaleString("en-US")} test sessions have a forecast, to ${U.first_last_test_forecast[1]}. Not included: ${nShort} holiday-shortened sessions or sessions whose next session is shortened${UR.no_next_session_in_data ? `, and the last session (no next session)` : ""}.` }],
+    [{ text: "What generated each flag: ", o: { bold: true } }, { text: `computed before out-of-schedule bars are dropped; all ${d.n_flags_unfiltered_sequence} flags (${d.n_flags_in_schedule} in schedule) exceed the threshold. ${oos.length} in-schedule flags are measured against a dropped 16:59 CT bar ${off[0]}–${off[1]} points off (against the last kept bar < 0.05%); ${per.length} move more than 2% and stay beyond 2% 30 minutes later; ${unr.length} partly retrace (${unr.map((m) => m.session).join(", ")}).` }],
+    [{ text: "Clues, not proof: ", o: { bold: true } }, { text: "persistent moves often coincide with 8:30 ET data releases or a weekend reopening; the 16:59 CT bars look like artefacts. Neither timing nor persistence proves that a price is genuine or wrong." }],
+    [{ text: "Consequence: ", o: { bold: true } }, { text: "the daily candles keep the flagged minutes, so their realized variance includes those moves. The reconciled daily closing returns of the sessions the earlier rule excluded agree with Yahoo (A6); single minutes and RV are not verified." }],
   ], { x: L, y: 1.92, w: 6.0, h: 5.0, fontSize: 9.5 });
   const x2 = L + 6.35, w2 = CW - 6.35;
   header(s, x2, 1.5, w2, "B. Full-length candles with missing 1-minute bars");
@@ -577,11 +593,11 @@ if (TSS) {
 if (YC) {
   const s = appx("External Comparison: Yahoo Finance", "Daily candles vs ^NDX (cash index) and NQ=F (front-month futures, not adjusted): tools/yahoo_compare.py");
   const dc = YC.day_checks, w1 = 6.0;
-  header(s, L, 1.5, w1, "A. Daily returns of the excluded sessions vs Yahoo");
+  header(s, L, 1.5, w1, "A. Sessions the earlier filter excluded: daily returns vs Yahoo");
   const g = (k, lab) => { const r = dc[k]; return [num(lab, { bold: true, align: "left" }), num(`${r.n.toLocaleString("en-US")} of ${(r.n + r.no_reference).toLocaleString("en-US")}`),
     num(`${r.confirmed_pct.toFixed(1)}%`), num(`${r.median_gap_ndx_pp.toFixed(3)} pp`)]; };
   s.addTable([[hdr("Daily sessions"), hdr("With a quote"), hdr("Returns agree"), hdr("Median gap to ^NDX")],
-    g("test_in_50_window", "Test, in 50-session windows (excluded)"), g("test_outside_window", "Test, outside the windows"),
+    g("test_in_50_window", "Test, in 50-session windows (earlier rule)"), g("test_outside_window", "Test, outside the windows"),
     g("all_in_50_window", "All splits, in the windows"), g("all_outside_window", "All splits, outside")],
     topts(L, 1.92, w1, [2.6, 1.15, 1.0, w1 - 4.75], { fontSize: 9.5, rowH: 0.36 }));
   const fs16 = dc.flag_sessions, ok16 = fs16.filter((r) => r.status === "confirmed").length;
@@ -590,8 +606,8 @@ if (YC) {
   bullets(s, [
     [{ text: "Rule: ", o: { bold: true } }, { text: `"agree" = re-levelled close-to-close return within ${dc.tolerance_pp} pp of ^NDX (15:00 CT close) or of NQ=F (session close). Closing returns only: the range is not in the rule, so the candle, single minutes and RV are not validated.` }],
     [{ text: "Flagged sessions: ", o: { bold: true } }, { text: `returns agree for ${ok16} of ${fs16.length} (${ex("2023-03-16")}; ${ex("2020-03-16")}); their ranges are also close to NQ=F (descriptive).` }],
-    [{ text: "Disagreeing: ", o: { bold: true } }, { text: `${dis.length} sessions in 2006–2025 (test: ${disT.join(", ")}), mostly quarterly-expiry days; none is excluded.` }],
-    [{ text: "Conclusion: ", o: { bold: true } }, { text: "the reconciled daily returns of the excluded sessions agree with the Yahoo references within the chosen tolerance. This suggests that the quarantine also removes plausible sessions, but it does not verify the single minutes or the realized volatility. Not a data-quality certification; no filter changed." }],
+    [{ text: "Disagreeing: ", o: { bold: true } }, { text: `${dis.length} sessions in 2006–2025 (test: ${disT.join(", ")}), mostly quarterly-expiry days; none was in the earlier 50-session windows.` }],
+    [{ text: "Conclusion: ", o: { bold: true } }, { text: "the reconciled daily returns of the sessions the earlier rule excluded agree with the Yahoo references within the chosen tolerance: the quarantine also removed plausible sessions, and the new daily run includes them (A3). This does not verify the single minutes or the realized volatility; not a data-quality certification." }],
   ], { x: L, y: 3.95, w: w1, h: 2.95, fontSize: 9.5 });
   const x2 = L + 6.35, w2 = CW - 6.35, P = YC.by_period_vs_NDX;
   header(s, x2, 1.5, w2, "B. Additive back-adjustment compresses % returns");

@@ -41,6 +41,8 @@ Tables, selection and charts: multitarget_report.py.
 Usage:
   python multitarget.py                               # 5min 15min 30min 1h session
   python multitarget.py --freqs 1h --years 2015 2019 --quick --no-timestral   # pipeline check
+  python multitarget.py --freqs session --daily-ignore-flags --tag daily_noflags
+      # daily only, flagged bars do not exclude sessions; merge: tools/merge_daily_run.py
 """
 
 import argparse
@@ -301,6 +303,10 @@ def timestral_forecasts(fc, close, pos, batch=256):
 
 def run_freq(minutes, freq, args, session_open_of, holdout_start, fc, out, log):
     t_start = time.time()
+    if freq == "session" and args.daily_ignore_flags:
+        # daily candles only: flagged 1-minute bars do not exclude sessions (no 50-session
+        # window, no feature-window or label-bar exclusion); bars are unchanged
+        minutes = minutes.assign(suspect=False)
     X, y3, meta, move, elig, tg, bars = build(minutes, freq)
     usable = pd.DatetimeIndex(sorted(minutes["session_id"].unique()))
     usable = usable[usable < holdout_start]
@@ -318,7 +324,8 @@ def run_freq(minutes, freq, args, session_open_of, holdout_start, fc, out, log):
             "validation": [str(meta.session_id[va].min().date()), str(meta.session_id[va].max().date()), int(va.sum())],
             "test": [str(meta.session_id[te].min().date()), str(meta.session_id[te].max().date()), int(te.sum())],
             "data_period": [str(meta.session_id.min().date()), str(meta.session_id.max().date())],
-            "features": cols_all, "har_features": cols["har"]}
+            "features": cols_all, "har_features": cols["har"],
+            "flagged_bar_filter": not (freq == "session" and args.daily_ignore_flags)}
     log(f"[{freq}] rows {len(X):,}; train {info['train']} val {info['validation']} test {info['test']}")
 
     ret, lrv, lrv_now = tg.ret_bps.to_numpy(), tg.lrv_next.to_numpy(), tg.lrv_now.to_numpy()
@@ -412,6 +419,8 @@ def main(argv=None):
     p.add_argument("--quick", action="store_true")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--tag", default="")
+    p.add_argument("--daily-ignore-flags", action="store_true",
+                   help="daily candles: do not exclude sessions for flagged 1-minute bars")
     args = p.parse_args(argv)
     import torch
     torch.set_num_threads(12)

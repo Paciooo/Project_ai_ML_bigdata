@@ -346,26 +346,26 @@
   "session": {
     "frequency": "session",
     "horizon": "one candle (t+1)",
-    "n_rows": 3457,
+    "n_rows": 3998,
     "train": [
       "2006-03-13",
       "2017-08-23",
-      1991
+      2122
     ],
-    "train_fit_rows": 1991,
+    "train_fit_rows": 2122,
     "validation": [
       "2017-08-25",
       "2021-07-13",
-      822
+      937
     ],
     "test": [
       "2021-07-15",
-      "2025-01-30",
-      642
+      "2025-05-29",
+      937
     ],
     "data_period": [
       "2006-03-13",
-      "2025-01-30"
+      "2025-05-29"
     ],
     "features": [
       "ret_lag1",
@@ -396,35 +396,34 @@
       "lrv_5",
       "lrv_22"
     ],
+    "flagged_bar_filter": false,
     "consts": {
       "majority_direction": 1,
       "majority_vol_up": 1,
-      "train_mean_ret_bps": 3.855457760738274,
+      "train_mean_ret_bps": 3.867915810073021,
       "ret_winsor_bps": [
-        -296.5158028761972,
-        285.2585629089033
+        -296.14875146167356,
+        284.3890165867586
       ],
       "vol_level_factor": {
-        "vol__persistence": 1.1282721262070083,
-        "vol__rolling_mean_22": 1.103555313898474,
-        "vol__har_ols": 1.0917989313637197,
-        "vol__ridge": 1.0833346088363376,
-        "vol__random_forest": 1.081801225746858,
-        "vol__xgboost": 1.0324549260745874,
-        "vol__mlp_64-32-16": 1.0443446118508974,
-        "vol__mlp_64-32": 1.0693380306834643,
-        "vol__mlp_128-64-32": 1.0713307760618467,
-        "vol__mlp_256-128-64-32": 1.0568707622644535,
-        "vol__timestral": 1.2132804294619157
+        "vol__persistence": 1.1318200918624184,
+        "vol__rolling_mean_22": 1.1126247867759471,
+        "vol__har_ols": 1.095813345991069,
+        "vol__ridge": 1.0876922804352407,
+        "vol__random_forest": 1.0847761678903471,
+        "vol__xgboost": 1.0326396682567838,
+        "vol__mlp_64-32-16": 1.060002780104263,
+        "vol__mlp_64-32": 1.078528498313658,
+        "vol__mlp_128-64-32": 1.0485578464806045,
+        "vol__mlp_256-128-64-32": 1.0694949141689143,
+        "vol__timestral": 1.219101090797376
       },
       "timestral_vol_calibration": {
-        "intercept": -0.6642826996671934,
-        "slope": 0.9389134457608368,
+        "intercept": -0.42287052195945435,
+        "slope": 0.9640387377599501,
         "fitted_on": "validation sample"
-      },
-      "majority_direction_before_fix": 1,
-      "train_up_share_nonflat": 0.5668179525970751
+      }
     },
-    "seconds": 7
+    "seconds": 11
   }
 }

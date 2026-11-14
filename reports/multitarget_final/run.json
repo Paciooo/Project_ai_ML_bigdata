@@ -1,108 +1,406 @@
 {
-  "created_utc": "2026-11-12T05:08:17.552340+00:00",
-  "git": {
-    "commit": "35be8060098a7750492a57b72921aaef57a016aa",
-    "dirty": true
-  },
-  "versions": {
-    "python": "3.12.3",
-    "platform": "Windows-11-10.0.26300-SP0",
-    "numpy": "2.5.4",
-    "pandas": "3.0.6",
-    "scikit-learn": "1.9.1",
-    "xgboost": "3.4.1",
-    "pyarrow": "26.0.0",
-    "matplotlib": "3.11.2",
-    "torch": "2.15.0",
-    "ib_async": "2.1.0"
-  },
-  "source_sha256_16": {
-    "backtest.py": "a909c6d345ba21ac",
-    "config.py": "e5ffcc93f7d65a93",
-    "data.py": "14e9f1134fa59f34",
-    "evaluation.py": "ca228391d8f04c24",
-    "experiment.py": "930933dca3ec95cf",
-    "features.py": "7cef3e233a91b3c1",
-    "main.py": "daae760bb0e87fca",
-    "models.py": "71b641b2f914d668",
-    "multitarget.py": "a448847f8d7d931f",
-    "plots.py": "b5da59688efaa5e5",
-    "quality.py": "f2423f2d75e87a9c",
-    "regimes.py": "79a70e2ab1d2582f",
-    "report.py": "2054bb7173e25eae",
-    "runlog.py": "35639a1fb468a093",
-    "strategy.py": "53438a9bf9bbff93",
-    "study.py": "5acc63802a1becfb",
-    "timeframes.py": "ca7d2b8f2e29c97c",
-    "verify.py": "064314387f0ee3d0",
-    "tools\\check_ticks.py": "dc66347bbc025d7b",
-    "tools\\download_bars_ibkr.py": "7c37eed709bf03d7",
-    "tools\\download_ticks_databento.py": "033e724cc399849b",
-    "tools\\download_ticks_ibkr.py": "49188098d800531b",
-    "tools\\ib_common.py": "e5787518e13878ba",
-    "tools\\merge_runs.py": "1aec75c7ba2a67b5",
-    "tools\\wf_threshold_status.py": "42cf44d696b588b4"
-  },
-  "args": {
-    "freqs": [
-      "5min",
-      "15min",
-      "30min",
-      "1h",
-      "session"
-    ],
-    "years": null,
-    "max_train_rows": 2000000,
-    "timestral_n": 20000,
-    "no_timestral": false,
-    "quick": false,
-    "seed": 42,
-    "tag": "final"
-  },
-  "data_report": {
-    "source": "nq",
-    "spike_policy": "quarantine",
-    "dst_invalid_timestamps_dropped": 0,
-    "futures_data_dir": "C:/Users/aless/Desktop/py/futures-data",
-    "years": [
-      2006,
-      2025
-    ],
-    "n_suspect_minutes": 21,
-    "validation": {
-      "n_bars": 6193869,
-      "first": "2006-01-02 23:00:00+00:00",
-      "last": "2025-05-30 20:59:00+00:00",
-      "n_missing_ranges_over_1day": 20,
-      "missing_ranges_sample": [
-        "2006-12-22 21:14:00+00:00 -> 2006-12-26 11:00:00+00:00",
-        "2006-12-29 21:14:00+00:00 -> 2007-01-02 11:00:00+00:00",
-        "2007-12-24 18:14:00+00:00 -> 2007-12-26 11:00:00+00:00",
-        "2007-12-31 21:14:00+00:00 -> 2008-01-02 11:00:00+00:00",
-        "2008-12-24 18:14:00+00:00 -> 2008-12-26 11:00:00+00:00",
-        "2008-12-31 21:14:00+00:00 -> 2009-01-02 10:59:00+00:00",
-        "2011-12-23 21:14:00+00:00 -> 2011-12-27 11:00:00+00:00",
-        "2011-12-29 22:26:00+00:00 -> 2012-01-03 11:00:00+00:00",
-        "2012-12-24 18:14:00+00:00 -> 2012-12-26 11:00:00+00:00",
-        "2012-12-31 22:14:00+00:00 -> 2013-01-02 11:00:00+00:00"
-      ]
+  "merged": true,
+  "intraday_from": "20261112T050812Z_82953a_final",
+  "daily_from": "20261114T024015Z_cf1504_daily_noflags",
+  "base_run_json": {
+    "created_utc": "2026-11-12T05:08:17.552340+00:00",
+    "git": {
+      "commit": "35be8060098a7750492a57b72921aaef57a016aa",
+      "dirty": true
     },
-    "bars_outside_schedule_dropped": 13706
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "numpy": "2.5.4",
+      "pandas": "3.0.6",
+      "scikit-learn": "1.9.1",
+      "xgboost": "3.4.1",
+      "pyarrow": "26.0.0",
+      "matplotlib": "3.11.2",
+      "torch": "2.15.0",
+      "ib_async": "2.1.0"
+    },
+    "source_sha256_16": {
+      "backtest.py": "a909c6d345ba21ac",
+      "config.py": "e5ffcc93f7d65a93",
+      "data.py": "14e9f1134fa59f34",
+      "evaluation.py": "ca228391d8f04c24",
+      "experiment.py": "930933dca3ec95cf",
+      "features.py": "7cef3e233a91b3c1",
+      "main.py": "daae760bb0e87fca",
+      "models.py": "71b641b2f914d668",
+      "multitarget.py": "a448847f8d7d931f",
+      "plots.py": "b5da59688efaa5e5",
+      "quality.py": "f2423f2d75e87a9c",
+      "regimes.py": "79a70e2ab1d2582f",
+      "report.py": "2054bb7173e25eae",
+      "runlog.py": "35639a1fb468a093",
+      "strategy.py": "53438a9bf9bbff93",
+      "study.py": "5acc63802a1becfb",
+      "timeframes.py": "ca7d2b8f2e29c97c",
+      "verify.py": "064314387f0ee3d0",
+      "tools\\check_ticks.py": "dc66347bbc025d7b",
+      "tools\\download_bars_ibkr.py": "7c37eed709bf03d7",
+      "tools\\download_ticks_databento.py": "033e724cc399849b",
+      "tools\\download_ticks_ibkr.py": "49188098d800531b",
+      "tools\\ib_common.py": "e5787518e13878ba",
+      "tools\\merge_runs.py": "1aec75c7ba2a67b5",
+      "tools\\wf_threshold_status.py": "42cf44d696b588b4"
+    },
+    "args": {
+      "freqs": [
+        "5min",
+        "15min",
+        "30min",
+        "1h",
+        "session"
+      ],
+      "years": null,
+      "max_train_rows": 2000000,
+      "timestral_n": 20000,
+      "no_timestral": false,
+      "quick": false,
+      "seed": 42,
+      "tag": "final"
+    },
+    "data_report": {
+      "source": "nq",
+      "spike_policy": "quarantine",
+      "dst_invalid_timestamps_dropped": 0,
+      "futures_data_dir": "C:/Users/aless/Desktop/py/futures-data",
+      "years": [
+        2006,
+        2025
+      ],
+      "n_suspect_minutes": 21,
+      "validation": {
+        "n_bars": 6193869,
+        "first": "2006-01-02 23:00:00+00:00",
+        "last": "2025-05-30 20:59:00+00:00",
+        "n_missing_ranges_over_1day": 20,
+        "missing_ranges_sample": [
+          "2006-12-22 21:14:00+00:00 -> 2006-12-26 11:00:00+00:00",
+          "2006-12-29 21:14:00+00:00 -> 2007-01-02 11:00:00+00:00",
+          "2007-12-24 18:14:00+00:00 -> 2007-12-26 11:00:00+00:00",
+          "2007-12-31 21:14:00+00:00 -> 2008-01-02 11:00:00+00:00",
+          "2008-12-24 18:14:00+00:00 -> 2008-12-26 11:00:00+00:00",
+          "2008-12-31 21:14:00+00:00 -> 2009-01-02 10:59:00+00:00",
+          "2011-12-23 21:14:00+00:00 -> 2011-12-27 11:00:00+00:00",
+          "2011-12-29 22:26:00+00:00 -> 2012-01-03 11:00:00+00:00",
+          "2012-12-24 18:14:00+00:00 -> 2012-12-26 11:00:00+00:00",
+          "2012-12-31 22:14:00+00:00 -> 2013-01-02 11:00:00+00:00"
+        ]
+      },
+      "bars_outside_schedule_dropped": 13706
+    },
+    "contract": {
+      "series": "TradeStation continuous NQ, additive back-adjusted",
+      "tradable_prices": false,
+      "roll_dates": "not in data (estimated, see backtest.py)",
+      "timestamps": "Europe/Rome wall clock, bar END"
+    },
+    "instrument": {
+      "symbol": "NQ",
+      "multiplier_usd_per_point": 20.0
+    },
+    "timestral": {
+      "model_id": "mistralai/Timestral-5M",
+      "context": 512,
+      "zero_shot": true,
+      "api": "none (local weights)"
+    }
   },
-  "contract": {
-    "series": "TradeStation continuous NQ, additive back-adjusted",
-    "tradable_prices": false,
-    "roll_dates": "not in data (estimated, see backtest.py)",
-    "timestamps": "Europe/Rome wall clock, bar END"
-  },
-  "instrument": {
-    "symbol": "NQ",
-    "multiplier_usd_per_point": 20.0
-  },
-  "timestral": {
-    "model_id": "mistralai/Timestral-5M",
-    "context": 512,
-    "zero_shot": true,
-    "api": "none (local weights)"
+  "daily_run_json": {
+    "created_utc": "2026-11-14T02:40:22.283246+00:00",
+    "git": {
+      "commit": "ebe89480b4ff867efedaa7e75bcd1c12ee46d69d",
+      "dirty": true
+    },
+    "versions": {
+      "python": "3.12.3",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "numpy": "2.5.4",
+      "pandas": "3.0.6",
+      "scikit-learn": "1.9.1",
+      "xgboost": "3.4.1",
+      "pyarrow": "26.0.0",
+      "matplotlib": "3.11.2",
+      "torch": "2.15.0",
+      "ib_async": "2.1.0"
+    },
+    "source_sha256_16": {
+      "backtest.py": "a909c6d345ba21ac",
+      "config.py": "e5ffcc93f7d65a93",
+      "data.py": "14e9f1134fa59f34",
+      "evaluation.py": "ca228391d8f04c24",
+      "experiment.py": "2f3ca33562e20b7b",
+      "features.py": "7cef3e233a91b3c1",
+      "multitarget.py": "97bf418192daae4d",
+      "multitarget_report.py": "f548ecdac3573e98",
+      "plots.py": "b5da59688efaa5e5",
+      "quality.py": "963e4e0360cd3c8c",
+      "regimes.py": "79a70e2ab1d2582f",
+      "runlog.py": "35639a1fb468a093",
+      "strategy.py": "53438a9bf9bbff93",
+      "study.py": "5acc63802a1becfb",
+      "timeframes.py": "57d7f3f8a3f572c6",
+      "verify_multitarget.py": "d99188ac09d3195e",
+      "tools\\mt_fix_majority.py": "052a52dd2df96aad",
+      "tools\\render_equations.py": "db537289a49a33ca",
+      "tools\\sample_checks.py": "e030f705ec24cf5e",
+      "tools\\timestral_direction.py": "4855d91157b2a852",
+      "tools\\timestral_same_sample.py": "4f6bf5063ba0449c",
+      "tools\\yahoo_compare.py": "d3fe5eb94e7fb3cf"
+    },
+    "args": {
+      "freqs": [
+        "session"
+      ],
+      "years": null,
+      "max_train_rows": 2000000,
+      "timestral_n": 20000,
+      "no_timestral": false,
+      "quick": false,
+      "seed": 42,
+      "tag": "daily_noflags",
+      "daily_ignore_flags": true
+    },
+    "data_report": {
+      "source": "nq",
+      "spike_policy": "quarantine",
+      "dst_invalid_timestamps_dropped": 0,
+      "futures_data_dir": "C:\\Users\\aless\\Desktop\\py\\futures-data",
+      "years": [
+        2006,
+        2025
+      ],
+      "suspect_flag_details": [
+        {
+          "bar_start_utc": "2010-03-16 21:59:00+00:00",
+          "close": 3142.25,
+          "flag_log_return_pct": -27.4064,
+          "prev_bar_start_utc": "2010-03-16 21:29:00+00:00",
+          "prev_close": 4133.0,
+          "minutes_since_prev": 30.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2010-03-16 22:04:00+00:00",
+          "close": 4132.5,
+          "flag_log_return_pct": 27.3943,
+          "prev_bar_start_utc": "2010-03-16 21:59:00+00:00",
+          "prev_close": 3142.25,
+          "minutes_since_prev": 5.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2013-03-11 21:59:00+00:00",
+          "close": 4070.25,
+          "flag_log_return_pct": -21.7613,
+          "prev_bar_start_utc": "2013-03-11 21:14:00+00:00",
+          "prev_close": 5059.75,
+          "minutes_since_prev": 45.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2013-03-11 22:00:00+00:00",
+          "close": 5059.5,
+          "flag_log_return_pct": 21.7563,
+          "prev_bar_start_utc": "2013-03-11 21:59:00+00:00",
+          "prev_close": 4070.25,
+          "minutes_since_prev": 1.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2017-03-23 21:59:00+00:00",
+          "close": 6708.75,
+          "flag_log_return_pct": -13.7775,
+          "prev_bar_start_utc": "2017-03-23 20:59:00+00:00",
+          "prev_close": 7699.75,
+          "minutes_since_prev": 60.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2017-03-23 22:00:00+00:00",
+          "close": 7700.5,
+          "flag_log_return_pct": 13.7873,
+          "prev_bar_start_utc": "2017-03-23 21:59:00+00:00",
+          "prev_close": 6708.75,
+          "minutes_since_prev": 1.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2019-03-13 21:59:00+00:00",
+          "close": 8489.25,
+          "flag_log_return_pct": -11.0305,
+          "prev_bar_start_utc": "2019-03-13 20:59:00+00:00",
+          "prev_close": 9479.25,
+          "minutes_since_prev": 60.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2019-03-13 22:00:00+00:00",
+          "close": 9480.0,
+          "flag_log_return_pct": 11.0384,
+          "prev_bar_start_utc": "2019-03-13 21:59:00+00:00",
+          "prev_close": 8489.25,
+          "minutes_since_prev": 1.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2020-03-01 23:00:00+00:00",
+          "close": 10407.25,
+          "flag_log_return_pct": -2.3574,
+          "prev_bar_start_utc": "2020-02-28 21:59:00+00:00",
+          "prev_close": 10655.5,
+          "minutes_since_prev": 2941.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2020-03-08 22:00:00+00:00",
+          "close": 10386.0,
+          "flag_log_return_pct": -2.1268,
+          "prev_bar_start_utc": "2020-03-06 21:59:00+00:00",
+          "prev_close": 10609.25,
+          "minutes_since_prev": 2881.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2020-03-16 13:45:00+00:00",
+          "close": 9223.0,
+          "flag_log_return_pct": -2.9618,
+          "prev_bar_start_utc": "2020-03-16 13:30:00+00:00",
+          "prev_close": 9500.25,
+          "minutes_since_prev": 15.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2020-03-22 22:00:00+00:00",
+          "close": 8808.0,
+          "flag_log_return_pct": -2.5916,
+          "prev_bar_start_utc": "2020-03-20 20:59:00+00:00",
+          "prev_close": 9039.25,
+          "minutes_since_prev": 2941.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2022-02-27 23:00:00+00:00",
+          "close": 15926.75,
+          "flag_log_return_pct": -2.6855,
+          "prev_bar_start_utc": "2022-02-25 21:59:00+00:00",
+          "prev_close": 16360.25,
+          "minutes_since_prev": 2941.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2022-07-13 12:30:00+00:00",
+          "close": 13755.0,
+          "flag_log_return_pct": -2.234,
+          "prev_bar_start_utc": "2022-07-13 12:29:00+00:00",
+          "prev_close": 14065.75,
+          "minutes_since_prev": 1.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2022-10-13 12:30:00+00:00",
+          "close": 12622.25,
+          "flag_log_return_pct": -2.9604,
+          "prev_bar_start_utc": "2022-10-13 12:29:00+00:00",
+          "prev_close": 13001.5,
+          "minutes_since_prev": 1.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2022-11-10 13:30:00+00:00",
+          "close": 13232.75,
+          "flag_log_return_pct": 2.1753,
+          "prev_bar_start_utc": "2022-11-10 13:29:00+00:00",
+          "prev_close": 12948.0,
+          "minutes_since_prev": 1.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2023-03-15 21:59:00+00:00",
+          "close": 13235.5,
+          "flag_log_return_pct": -7.2063,
+          "prev_bar_start_utc": "2023-03-15 20:59:00+00:00",
+          "prev_close": 14224.5,
+          "minutes_since_prev": 60.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2023-03-15 22:00:00+00:00",
+          "close": 14219.75,
+          "flag_log_return_pct": 7.1729,
+          "prev_bar_start_utc": "2023-03-15 21:59:00+00:00",
+          "prev_close": 13235.5,
+          "minutes_since_prev": 1.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2025-02-02 23:00:00+00:00",
+          "close": 21194.0,
+          "flag_log_return_pct": -2.7205,
+          "prev_bar_start_utc": "2025-01-31 21:59:00+00:00",
+          "prev_close": 21778.5,
+          "minutes_since_prev": 2941.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2025-04-06 22:00:00+00:00",
+          "close": 16706.5,
+          "flag_log_return_pct": -4.5445,
+          "prev_bar_start_utc": "2025-04-04 20:59:00+00:00",
+          "prev_close": 17483.25,
+          "minutes_since_prev": 2941.0,
+          "threshold_pct": 2.0
+        },
+        {
+          "bar_start_utc": "2025-04-09 17:19:00+00:00",
+          "close": 17977.75,
+          "flag_log_return_pct": 2.632,
+          "prev_bar_start_utc": "2025-04-09 17:18:00+00:00",
+          "prev_close": 17510.75,
+          "minutes_since_prev": 1.0,
+          "threshold_pct": 2.0
+        }
+      ],
+      "n_suspect_minutes": 21,
+      "validation": {
+        "n_bars": 6193869,
+        "first": "2006-01-02 23:00:00+00:00",
+        "last": "2025-05-30 20:59:00+00:00",
+        "n_missing_ranges_over_1day": 20,
+        "missing_ranges_sample": [
+          "2006-12-22 21:14:00+00:00 -> 2006-12-26 11:00:00+00:00",
+          "2006-12-29 21:14:00+00:00 -> 2007-01-02 11:00:00+00:00",
+          "2007-12-24 18:14:00+00:00 -> 2007-12-26 11:00:00+00:00",
+          "2007-12-31 21:14:00+00:00 -> 2008-01-02 11:00:00+00:00",
+          "2008-12-24 18:14:00+00:00 -> 2008-12-26 11:00:00+00:00",
+          "2008-12-31 21:14:00+00:00 -> 2009-01-02 10:59:00+00:00",
+          "2011-12-23 21:14:00+00:00 -> 2011-12-27 11:00:00+00:00",
+          "2011-12-29 22:26:00+00:00 -> 2012-01-03 11:00:00+00:00",
+          "2012-12-24 18:14:00+00:00 -> 2012-12-26 11:00:00+00:00",
+          "2012-12-31 22:14:00+00:00 -> 2013-01-02 11:00:00+00:00"
+        ]
+      },
+      "bars_outside_schedule_dropped": 13706
+    },
+    "contract": {
+      "series": "TradeStation continuous NQ, additive back-adjusted",
+      "tradable_prices": false,
+      "roll_dates": "not in data (estimated, see backtest.py)",
+      "timestamps": "Europe/Rome wall clock, bar END"
+    },
+    "instrument": {
+      "symbol": "NQ",
+      "multiplier_usd_per_point": 20.0
+    },
+    "timestral": {
+      "model_id": "mistralai/Timestral-5M",
+      "context": 512,
+      "zero_shot": true,
+      "api": "none (local weights)"
+    }
   }
 }
