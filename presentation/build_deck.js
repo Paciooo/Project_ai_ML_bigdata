@@ -22,7 +22,7 @@ const REPO = "github.com/Paciooo/Project_ai_ML_bigdata";
 const RED = "8E1728", RED_DARK = "5E0F1B", TINT = "F6E7E9", GOLD = "B8964B", GREEN = "2E6B3F", BLUE = "1F5FA8";
 const INK = "1A1A1A", GREY = "7F7F7F", MID = "595959", LINE = "BFBFBF", PALE = "F4F4F4", GREEN_T = "E3F0E6", RED_T = "F6E0E2";
 const W = 13.333, L = 0.55, R = W - 0.55, CW = R - L;
-const FOOT = "© Alessandro Pacifici · Waseda University";
+const FOOT = "Alessandro Pacifici · Waseda University";
 
 let pres;
 function newPres(title) {
@@ -126,7 +126,7 @@ pres = newPres("What Can Machine Learning Predict in NASDAQ Markets?");
   s.addShape(pres.shapes.LINE, { x: 0.8, y: 4.25, w: 3.2, h: 0, line: { color: GOLD, width: 2 } });
   T(s, [{ text: "Alessandro Pacifici", options: { bold: true, breakLine: true } },
         { text: "AI, Machine Learning and Big Data for Finance and Management · Waseda University", options: { breakLine: true } },
-        { text: "Final report · November 2026 · E-mini Nasdaq-100 futures (NQ), 2006–2025" }],
+        { text: "Final report" }],
     { x: 0.8, y: 4.45, w: 11.7, h: 1.2, fontSize: 14, color: "FFFFFF" });
 }
 
