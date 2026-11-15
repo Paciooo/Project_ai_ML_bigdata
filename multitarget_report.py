@@ -439,6 +439,40 @@ def timeframe_map(cand, R, D, V):
     return pd.DataFrame(rows)
 
 
+VAL_METRIC = {"return": ("r2_oos_pct", "rmse_bps"), "direction": ("diff_pp", None),
+              "volatility": ("r2_log_vs_persistence_pct", "rmse_log")}
+
+
+def criteria_comparison(cand, R, D, V):
+    """Which configuration each selection criterion would pick on the SAME validation rows
+    (the candidates of `select`): highest z (the rule used), highest improvement over the
+    task's benchmark (R² / accuracy gain) on any timeframe and on the z winner's timeframe,
+    lowest RMSE on any timeframe (return and volatility). Descriptive only: the study's
+    selection is unchanged. RMSE is in the units of each timeframe's target, so across
+    timeframes it compares different quantities."""
+    out = []
+    for task, df in (("return", R), ("direction", D), ("volatility", V)):
+        imp, rm = VAL_METRIC[task]
+        v = df[df.split == "val"].set_index(["frequency", "model", "rows"])
+        c = cand[cand.task == task].copy()
+        key = list(zip(c.frequency, c.model, c.rows))
+        c["val_improvement"] = v.loc[key, imp].to_numpy()
+        c["val_rmse"] = v.loc[key, rm].to_numpy() if rm else np.nan
+        zw = c.sort_values("val_z", ascending=False).iloc[0]
+        picks = [("highest z (used)", zw),
+                 ("highest improvement, any timeframe", c.sort_values("val_improvement", ascending=False).iloc[0]),
+                 ("highest improvement, same timeframe as z", c[c.frequency == zw.frequency].sort_values("val_improvement", ascending=False).iloc[0])]
+        if rm:
+            picks.append(("lowest RMSE, any timeframe", c.sort_values("val_rmse").iloc[0]))
+        for crit, r in picks:
+            t = test_row(task, r, R, D, V)
+            out.append({"task": task, "criterion": crit, "frequency": r.frequency, "model": r.model, "rows": r.rows,
+                        "val_z": r.val_z, "val_improvement": r.val_improvement, "val_rmse": r.val_rmse,
+                        "test_improvement": t["improvement_value"], "test_ci_lo": t["ci_lo"], "test_ci_hi": t["ci_hi"],
+                        "same_as_z": bool(r.frequency == zw.frequency and r.model == zw.model)})
+    return pd.DataFrame(out)
+
+
 def test_row(task, r, R, D, V):
     rows = "timestral_sample" if is_timestral(r.model) else "all"
     if task == "return":
@@ -580,6 +614,8 @@ def main(run, out=None):
     cmp_.to_csv(out / "comparison_by_task.csv", index=False)
     tmap = timeframe_map(cand, R, D, V)
     tmap.to_csv(out / "timeframe_map.csv", index=False)
+    crit = criteria_comparison(cand, R, D, V)
+    crit.to_csv(out / "selection_criteria_comparison.csv", index=False)
     (out / "timestral_calibration.json").write_text(json.dumps(clean(CAL), indent=1), encoding="utf-8")
     files, by_year = charts(run, sel, out, info)
     models = pd.read_csv(run / "models.csv")
@@ -603,7 +639,9 @@ def main(run, out=None):
             # slide 9: task winners ranked by validation z (strongest evidence against own benchmark first)
             "winners": winners.to_dict("records"),
             # task x timeframe map: validation-chosen trained model per cell, test improvement
-            "timeframe_map": tmap.to_dict("records")}
+            "timeframe_map": tmap.to_dict("records"),
+            # appendix A2: the configuration each selection criterion would pick (descriptive)
+            "criteria_comparison": crit.to_dict("records")}
     (out / "deck_data.json").write_text(json.dumps(clean(deck), indent=1), encoding="utf-8")
     pd.set_option("display.width", 250)
     print(five[["id", "task", "model", "frequency", "val_z", "slot", "key_metric", "baseline", "improvement"]].to_string())

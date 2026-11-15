@@ -124,6 +124,24 @@ scored on its fixed random sample of 20,000 test candles.
 Ranking rule: (1) every model × timeframe is scored on validation by its
 improvement over its task's naive benchmark; (2) z = that improvement / its
 block-bootstrap standard error; (3) the highest z wins within each task.
+
+Formula (`multitarget_report.block_boot`, appendix A7). For each validation
+row i, d_i = L_i(benchmark) − L_i(model), with the loss L_i = (r_i − r̂_i)²
+for returns (benchmark r̂ = 0), L_i = 1 − 1[call_i = y_i] for direction
+(benchmark: majority class) and L_i = (ln RV_i − forecast)² for volatility
+(benchmark: persistence). Then
+
+    z = d̄ / SE_boot(d̄),   d̄ = (1/n) Σ_i d_i,
+
+where SE_boot is the standard deviation of d̄ over 2,000 moving-block
+bootstrap samples of 20-session blocks. The R² used in the tables shares the
+numerator (R² = d̄ / mean benchmark loss); z divides by the uncertainty
+instead, so it measures how sure the gain is rather than how large.
+`selection_criteria_comparison.csv` (appendix A7) shows, descriptively, what
+other criteria would have picked on the same validation rows: highest R²
+would choose the 1-hour XGBoost for volatility and the daily return model
+(validation R² 2.94% but z 1.0), lowest RMSE compares targets in different
+units across timeframes. The selection was not changed.
 Across tasks, z only says where the evidence of beating the **task's own**
 naive benchmark is strongest; it is not a common scale of usefulness and does
 not show that one task's model is "better" than another's. Task winners:
@@ -602,7 +620,7 @@ the daily test rows of the run equal to the saved forecasts with one
 recorded reason for every missing test session, no saved daily forecast
 within 50 sessions of an in-schedule flag when the run used the flagged-bar
 filter, and the all-rows rescoring of the incomplete-candle check. On the
-merged run, with the presentation folder: 4,120 checks, 0 problems. The unit
+merged run, with the presentation folder: 4,147 checks, 0 problems. The unit
 tests (`pytest`, 45 tests) cover the merge tool,
 targets, timing, sessions, splits, bootstrap, the ranking rule, the causal
 Timestral calibration and the flag provenance (a flag whose predecessor is

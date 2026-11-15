@@ -13,7 +13,7 @@ removed from the project.
   `reports/multitarget_final/`; `presentation/build_deck.js` writes the main
   deck (cover + 9 slides: slide 4 task x timeframe map, slides 6-8 five models
   per task, slide 9 strongest evidence, slide 10 reproducibility + references)
-  and the appendix A1-A6. Slide-3 formulas: `tools/render_equations.py` ->
+  and the appendix A1-A7 (A7: selection score z formula and what R²/RMSE would pick). Slide-3 formulas: `tools/render_equations.py` ->
   `presentation/eq/`. Check with `verify_multitarget.py` (recomputes the
   numbers, not the bootstraps, data or models; do not call it a full audit).
   `tools/sample_checks.py` and `tools/timestral_same_sample.py` feed A3/A4.

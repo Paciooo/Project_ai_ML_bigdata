@@ -13,5 +13,25 @@
     "file": "vol.png",
     "w": 1.9467,
     "h": 0.6067
+  },
+  "zdef": {
+    "file": "zdef.png",
+    "w": 4.1017,
+    "h": 0.5667
+  },
+  "zshort": {
+    "file": "zshort.png",
+    "w": 3.2717,
+    "h": 0.4567
+  },
+  "zloss": {
+    "file": "zloss.png",
+    "w": 5.4117,
+    "h": 1.165
+  },
+  "r2rmse": {
+    "file": "r2rmse.png",
+    "w": 4.0633,
+    "h": 0.8433
   }
 }

@@ -27,6 +27,17 @@ EQUATIONS = {
             (r"doji ($C_{t+1} = O_{t+1}$) = miss", 9.5, 0.27)],
     "vol": [(r"$\mathrm{RV}_{t+1} = \sum_{i \in t+1} r_{i}^{2}$", 13, 0.0),
             (r"$r_{i}$: 1-min log returns in candle $t+1$", 9, 0.47)],
+    # appendix A2: selection score (multitarget_report.block_boot) and the two alternatives
+    "zdef": [(r"$z = \dfrac{\bar d}{\mathrm{SE}_{\mathrm{boot}}(\bar d)}, \qquad "
+              r"\bar d = \dfrac{1}{n}\sum_{i=1}^{n}\left(L_i^{\mathrm{bench}} - L_i^{\mathrm{model}}\right)$", 15, 0.0)],
+    "zshort": [(r"$z = \dfrac{\bar d}{\mathrm{SE}_{\mathrm{boot}}(\bar d)}, \qquad "
+                r"\bar d = \dfrac{1}{n}\sum_{i}\left(L_i^{\mathrm{bench}} - L_i^{\mathrm{model}}\right)$", 12, 0.0)],
+    "zloss": [(r"Return:  $L_i = (r_i - \hat r_i)^2$,  benchmark $\hat r_i = 0$", 11, 0.0),
+              (r"Direction:  $L_i = 1 - \mathbf{1}[\hat y_i = y_i]$,  benchmark: majority class", 11, 0.30),
+              (r"Volatility:  $L_i = (\ln \mathrm{RV}_i - \widehat{\ln \mathrm{RV}}_i)^2$,  benchmark: persistence", 11, 0.62),
+              (r"$\mathrm{SE}_{\mathrm{boot}}$: s.d. of $\bar d$ over 2,000 moving-block bootstrap samples (20-session blocks)", 11, 0.98)],
+    "r2rmse": [(r"$R^2 = 1 - \dfrac{\sum_i L_i^{\mathrm{model}}}{\sum_i L_i^{\mathrm{bench}}} = "
+                r"\dfrac{\bar d}{\bar L^{\mathrm{bench}}}, \qquad \mathrm{RMSE} = \sqrt{\bar L^{\mathrm{model}}}$", 13, 0.0)],
 }
 
 

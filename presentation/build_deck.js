@@ -76,6 +76,9 @@ const topts = (x, y, w, colW, extra = {}) => Object.assign({ x, y, w, colW, font
 const note = (s, text, y, h = 0.42, x = L, w = CW) => T(s, text, { x, y, w, h, fontSize: 9.5, color: GREY });
 
 // ---------------------------------------------------------------- data helpers
+// equation images (tools/render_equations.py); text fallback where missing
+const EQF = path.join(__dirname, "eq", "equations.json");
+const EQ = fs.existsSync(EQF) ? JSON.parse(fs.readFileSync(EQF, "utf-8")) : null;
 const FREQ = { "5min": "5 min", "15min": "15 min", "30min": "30 min", "1h": "1 hour", session: "1 day" };
 const FREQS = ["5min", "15min", "30min", "1h", "session"].filter((f) => D.dataset[f]);
 const MODEL = { zero: "Zero return", train_mean: "Training mean", majority: "Majority class", persistence: "Persistence",
@@ -211,8 +214,6 @@ pres = newPres("What Can Machine Learning Predict in NASDAQ Markets?");
     ["3  Realized volatility", "RV = Σ (1-min log returns)² in t+1", "log-RV error vs persistence and HAR-OLS"],
   ];
   // definitions as LaTeX-style equation images (tools/render_equations.py); text fallback if missing
-  const EQF = path.join(__dirname, "eq", "equations.json");
-  const EQ = fs.existsSync(EQF) ? JSON.parse(fs.readFileSync(EQF, "utf-8")) : null;
   const eqRows = [0.5, 0.5, 0.66], eqKeys = ["ret", "dir", "vol"], eqScale = [1.0, 1.0, 0.9];
   s.addTable([[hdr("Target"), hdr("Definition"), hdr("Main metric")], ...tg.map(([a, b, c]) => [cell(a, { bold: true }), cell(EQ ? "" : b), cell(c)])],
     topts(L, 3.07, 6.1, [1.9, 2.25, 1.95], EQ ? { fontSize: 10.5, rowH: [0.38, ...eqRows] } : { fontSize: 10.5, rowH: 0.42 }));
@@ -388,15 +389,23 @@ pres = newPres("What Can Machine Learning Predict in NASDAQ Markets?");
   header(s, L, 1.5, 6.1, "How the configurations were ranked");
   const steps = [
     ["1", "Each model × timeframe is scored on VALIDATION data (2017–2021) by its improvement over its task's naive benchmark."],
-    ["2", "z = that improvement ÷ its bootstrap standard error: the strength of evidence against that benchmark, not a common scale of usefulness across tasks."],
+    ["2", EQ ? "Score z: mean loss reduction vs that benchmark ÷ its block-bootstrap standard error = strength of evidence (losses, R² and RMSE: appendix A7)."
+      : "z = that improvement ÷ its bootstrap standard error: the strength of evidence against that benchmark, not a common scale of usefulness across tasks (formula, and what R² or RMSE would pick: appendix A7)."],
     ["3", "The highest z wins within each task (slides 6–8); across tasks z only says where the evidence of beating the naive benchmark is strongest."],
     ["4", "Winners are then scored on the TEST block. The volatility score was revised after a first look at test numbers: the ranking is exploratory."],
   ];
+  const stepH = EQ ? [0.5, 0.97, 0.5, 0.5] : [0.6, 0.6, 0.6, 0.6];
+  let sy = 1.95;
   steps.forEach(([k, t], i) => {
-    const y = 1.95 + i * 0.6;
-    s.addShape(pres.shapes.OVAL, { x: L, y: y + 0.06, w: 0.36, h: 0.36, fill: { color: RED }, line: { type: "none" } });
-    T(s, k, { x: L, y: y + 0.06, w: 0.36, h: 0.36, fontSize: 12, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
-    T(s, t, { x: L + 0.5, y, w: 5.6, h: 0.6, fontSize: 10.5, valign: "middle" });
+    const y = sy, th = EQ && i === 1 ? 0.5 : stepH[i];
+    s.addShape(pres.shapes.OVAL, { x: L, y: y + (th - 0.36) / 2, w: 0.36, h: 0.36, fill: { color: RED }, line: { type: "none" } });
+    T(s, k, { x: L, y: y + (th - 0.36) / 2, w: 0.36, h: 0.36, fontSize: 12, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
+    T(s, t, { x: L + 0.5, y, w: 5.6, h: th, fontSize: EQ ? 10 : 10.5, valign: "middle" });
+    if (EQ && i === 1) {
+      const e = EQ.zshort, sc = 0.95;
+      s.addImage({ path: path.join(__dirname, "eq", e.file), x: L + 0.6, y: y + 0.5 + (0.47 - e.h * sc) / 2, w: e.w * sc, h: e.h * sc });
+    }
+    sy += stepH[i];
   });
   const res = (r) => r.task === "volatility" ? `${f2(r.t_r2_log_vs_persistence_pct, 1)}% error cut vs persistence` : r.task === "direction" ? `${f2(r.t_diff_pp)} pp vs majority` : `R² ${f2(r.t_r2_oos_pct, 2)}% vs zero`;
   s.addTable([[hdr("Task"), hdr("Task winner (validation)"), hdr("Val. z"), hdr("Test vs naive benchmark")],
@@ -505,7 +514,7 @@ const appx = (title, subtitle) => { An += 1; return content(`A${An}  ${title}`, 
   const s = appx("Selection and Statistics", "How models were tuned, ranked and given uncertainty intervals");
   bullets(s, [
     [{ text: "Tuning: ", o: { bold: true } }, { text: "hyper-parameters (Ridge α, logistic C) and early stopping (XGBoost, networks) use the validation block (2017-08-25 → 2021-07-14) only." }],
-    [{ text: "Evidence score z: ", o: { bold: true } }, { text: "paired validation improvement over the task's naive benchmark (squared-error reduction vs zero; accuracy gain vs majority; squared log-RV error reduction vs persistence) divided by its moving-block bootstrap standard error (20-session blocks, 2,000 replicates)." }],
+    [{ text: "Evidence score z: ", o: { bold: true } }, { text: "paired validation improvement over the task's naive benchmark (squared-error reduction vs zero; accuracy gain vs majority; squared log-RV error reduction vs persistence) divided by its moving-block bootstrap standard error (20-session blocks, 2,000 replicates). Formula and comparison with R² and RMSE: appendix A7." }],
     [{ text: "Revision (not blind): ", o: { bold: true } }, { text: "the first volatility score was the QLIKE reduction (Patton, 2011). On validation a few limit-locked March 2020 candles with almost zero variance dominated it, so after a first report had printed test numbers it was replaced by the log-RV squared-error reduction." }],
     [{ text: "Five-model tables (slides 6–8): ", o: { bold: true } }, { text: "one model per family on each task's best validation timeframe, ranked by z. Timeframe map (slide 4): the highest-z trained model per task and timeframe." }],
     [{ text: "Intervals: ", o: { bold: true } }, { text: "differences (accuracy gains) use the bootstrap of paired per-row differences; ratios (R²-type error cuts) resample model and benchmark losses together and recompute the ratio in each replicate (Künsch, 1989)." }],
@@ -621,6 +630,51 @@ if (YC) {
     `Re-levelled = a retrospective estimate (offset: centred 21-day median of Yahoo NQ=F minus futures-data), not the contracts' original prices nor an independent validation. After it, daily returns are close to ^NDX (correlation ${YC.unadj_fut1500_vs_NDX.corr_returns.toFixed(3)}, beta ${YC.unadj_fut1500_vs_NDX.beta_a_on_b.toFixed(2)}).`,
     "Return and log-RV levels and the training history are scaled (log-RV shift ≈ −1.7 in 2006–2012, −0.3 to 0 in the test); the factor changes over time and between training and test. The effect on relative performance was not measured; a fix needs ratio adjustment and a new run.",
   ], { x: x2, y: 3.95, w: w2, h: 2.95, fontSize: 9.5 });
+}
+
+// ---------------------------------------------------------------- A7. Selection score: formula and other criteria
+if (D.criteria_comparison && EQ) {
+  const s = appx("Selection Score z: Formula and Other Criteria", "How the configurations were ranked on validation, and what R² or RMSE would have picked instead");
+  const eqImg = (k, x, y, sc = 1) => { const e = EQ[k]; s.addImage({ path: path.join(__dirname, "eq", e.file), x, y, w: e.w * sc, h: e.h * sc }); return y + e.h * sc; };
+  const wl = 5.45;
+  header(s, L, 1.5, wl, "A. The score used: z (validation rows)");
+  let y = eqImg("zdef", L + 0.1, 1.95, 1.0);
+  y = eqImg("zloss", L + 0.05, y + 0.15, 0.97);
+  header(s, L, y + 0.15, wl, "B. The alternatives");
+  y = eqImg("r2rmse", L + 0.1, y + 0.6, 0.85);
+  bullets(s, [
+    [{ text: "Same numerator: ", o: { bold: true } }, { text: "R² divides the mean gain by the benchmark loss (how large), z by its bootstrap standard error (how sure)." }],
+    [{ text: "RMSE ", o: { bold: true } }, { text: "has no benchmark and is in each timeframe's units: within one task and timeframe it ranks exactly like R²; across timeframes it compares different targets." }],
+  ], { x: L, y: y + 0.08, w: wl, h: 6.95 - y - 0.08, fontSize: 9.5 });
+  const x2 = L + 5.75, w2 = CW - 5.75, CR = D.criteria_comparison;
+  header(s, x2, 1.5, w2, "C. What each criterion picks (validation; test for reference)");
+  const unit = { return: "%", direction: " pp", volatility: "%" };
+  const lab = (c, t) => ({ "highest z (used)": "highest z (used)", "highest improvement, any timeframe": `highest ${t === "direction" ? "gain" : "R²"}, any timeframe`,
+    "highest improvement, same timeframe as z": `highest ${t === "direction" ? "gain" : "R²"}, z's timeframe`, "lowest RMSE, any timeframe": "lowest RMSE, any timeframe" })[c];
+  const body = [];
+  ["volatility", "direction", "return"].forEach((t) => {
+    const groups = [];
+    CR.filter((r) => r.task === t).forEach((r) => {
+      const g = groups.find((x) => x.r.frequency === r.frequency && x.r.model === r.model);
+      if (g) g.labs.push(lab(r.criterion, t)); else groups.push({ r, labs: [lab(r.criterion, t)] });
+    });
+    groups.forEach((g, i) => {
+      const r = g.r, used = g.labs.some((x) => x.includes("used")), d = t === "return" ? 2 : 1;
+      const o = used ? { bold: true } : {};
+      body.push([i === 0 ? cell(t[0].toUpperCase() + t.slice(1), { bold: true, color: RED, rowspan: groups.length }) : null,
+        cell(g.labs.join("; "), o), cell(`${FREQ[r.frequency]}, ${MODEL[r.model] || r.model}`, o), num(f2(r.val_z, 1), o),
+        num(`${f2(r.val_improvement, d)}${unit[t]}`, o), num(`${f2(r.test_improvement, d)}${unit[t]} ${ciTxt(r.test_ci_lo, r.test_ci_hi, d)}`, o)].filter((c) => c !== null));
+    });
+  });
+  s.addTable([[hdr("Task"), hdr("Criterion"), hdr("Pick"), hdr("Val. z"), hdr("Val. gain"), hdr("Test gain [95%]")], ...body],
+    topts(x2, 1.92, w2, [0.85, 1.6, 1.45, 0.5, 0.7, w2 - 5.1], { fontSize: 8.5, rowH: 0.3, margin: [2, 4, 2, 4] }));
+  const vr = CR.find((r) => r.task === "return" && r.criterion.startsWith("highest improvement, any"));
+  const vv = CR.find((r) => r.task === "volatility" && r.criterion.startsWith("highest improvement, any"));
+  bullets(s, [
+    `R² alone would pick the daily return model (validation R² ${f2(vr.val_improvement, 2)}%, but z ${f2(vr.val_z, 1)}: within noise) and the 1-hour XGBoost for volatility (${f2(vv.val_improvement, 1)}% vs ${f2(CR.find((r) => r.task === "volatility" && r.criterion.startsWith("highest z")).val_improvement, 1)}% at 5 min, with fewer candles and a larger standard error).`,
+    "RMSE alone would pick the configuration whose target is easiest to measure (5-minute returns in basis points, daily log-RV), not the best model.",
+    "z favours gains that are both non-trivial and precisely estimated; with many 5-minute candles the standard error is small, so z leans towards short timeframes. Descriptive: the selection was not changed.",
+  ], { x: x2, y: 5.45, w: w2, h: 1.45, fontSize: 9 });
 }
 
 pres.writeFile({ fileName: path.join(__dirname, OUT_APPX) }).then((f) => console.log("wrote " + f));

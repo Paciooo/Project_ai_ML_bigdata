@@ -297,6 +297,35 @@ def main(run, rep, pres=None):
             check(close(r.vs_har, x.r2_log_vs_har_pct, 1e-9), f"timeframe map {r.frequency}: vs HAR")
     check(len(dd["timeframe_map"]) == len(tmap) and [(m["task"], m["frequency"]) for m in dd["timeframe_map"]] == list(zip(tmap.task, tmap.frequency)),
           "deck timeframe map differs from timeframe_map.csv")
+    # appendix A7: the pick of each selection criterion, re-derived from the ranking and the results tables
+    cc = rep / "selection_criteria_comparison.csv"
+    check(cc.exists(), "selection_criteria_comparison.csv missing")
+    if cc.exists():
+        crit = pd.read_csv(cc)
+        vm = {"return": ("r2_oos_pct", "rmse_bps"), "direction": ("diff_pp", None), "volatility": ("r2_log_vs_persistence_pct", "rmse_log")}
+        for task, (imp, rm) in vm.items():
+            df = {"return": R, "direction": D, "volatility": V}[task]
+            c = rank[rank.task == task].copy()
+            v = df[df.split == "val"].set_index(["frequency", "model", "rows"])
+            k = list(zip(c.frequency, c.model, c.rows))
+            c["imp"] = v.loc[k, imp].to_numpy()
+            c["rmse"] = v.loc[k, rm].to_numpy() if rm else np.nan
+            zw = c.sort_values("val_z", ascending=False).iloc[0]
+            exp = {"highest z (used)": zw, "highest improvement, any timeframe": c.sort_values("imp", ascending=False).iloc[0],
+                   "highest improvement, same timeframe as z": c[c.frequency == zw.frequency].sort_values("imp", ascending=False).iloc[0]}
+            if rm:
+                exp["lowest RMSE, any timeframe"] = c.sort_values("rmse").iloc[0]
+            got = crit[crit.task == task]
+            check(list(got.criterion) == list(exp), f"criteria comparison {task}: criteria")
+            for _, g in got.iterrows():
+                e = exp.get(g.criterion)
+                if e is None:
+                    continue
+                check(g.frequency == e.frequency and g.model == e.model and close(g.val_z, e.val_z, 1e-9)
+                      and close(g.val_improvement, e.imp, 1e-9), f"criteria comparison {task} {g.criterion}: pick")
+                x = df[(df.split == "test") & (df.rows == e.rows) & (df.frequency == e.frequency) & (df.model == e.model)].iloc[0]
+                check(close(g.test_improvement, x[vm[task][0]], 1e-9), f"criteria comparison {task} {g.criterion}: test value")
+        check(len(dd.get("criteria_comparison", [])) == len(crit), "deck criteria comparison differs from the CSV")
     for f, fi in dd["dataset"].items():
         check(fi["test"] == info[f]["test"] and fi["train"] == info[f]["train"], f"deck dataset {f} differs")
     for sid, fn in dd["charts"].items():
